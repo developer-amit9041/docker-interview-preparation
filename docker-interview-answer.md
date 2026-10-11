@@ -5913,3 +5913,70 @@ The best base image depends on application compatibility, required libraries, se
 ### Interview-ready answer
 
 “A base image is the starting image specified by the `FROM` instruction in a Dockerfile. It provides the filesystem and any required runtime or libraries on top of which we add our application code and dependencies. For example, `node:22-alpine` is a common base image for compatible Node.js applications.”
+
+
+---
+
+## Q65. What is an Alpine image?
+
+### 1. English Definition
+
+An Alpine image is a Docker image based on Alpine Linux, a lightweight Linux distribution. Alpine-based images are often smaller than their standard counterparts, but compatibility with required libraries and tools must be checked.
+
+### 2. Hindi Definition
+
+Alpine image ek Docker image hoti hai jo Alpine Linux par based hoti hai. Alpine Linux lightweight hai, isliye us par based images aksar chhoti hoti hain aur download karne mein kam data lag sakta hai.
+
+### 3. Hinglish Explanation
+
+Maan lo aap Node.js application ke liye base image choose kar rahe ho. Aapko aise tags mil sakte hain:
+
+- `node:22`
+- `node:22-alpine`
+
+`node:22-alpine` Alpine Linux par based Node.js image hai. Ismein generally standard image ke comparison mein kam OS packages hote hain, isliye image size chhota ho sakta hai.
+
+Lekin Alpine har project ke liye automatically best nahi hai. Kuch native Node.js modules ko extra libraries ya build tools chahiye ho sakte hain. Isliye image choose karne se pehle application ko test karo.
+
+### 4. Practical Example
+
+```dockerfile
+FROM node:22-alpine
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN npm ci
+
+COPY . .
+
+CMD ["node", "server.js"]
+```
+
+Build the image:
+
+```bash
+docker build -t my-node-app:alpine .
+docker image ls
+```
+
+Compare sizes with another suitable base image by building the same application using each image and checking the resulting image sizes.
+
+### 5. Advantages and Trade-offs
+
+| Advantages | Trade-offs |
+|---|---|
+| Often smaller image size | Some packages/libraries may be absent |
+| Less data to transfer in many cases | Native dependencies may require extra setup |
+| Useful for reducing image footprint | Compatibility and debugging need testing |
+
+### 6. Important Points
+
+- Alpine is a Linux distribution, not a Docker instruction.
+- `node:22-alpine` means a Node.js image based on Alpine Linux.
+- Smaller size does not automatically mean more secure; keep the image updated and scan it.
+- Choose based on application compatibility, support requirements, security, and total operational cost.
+
+### Interview-ready answer
+
+“An Alpine image is based on Alpine Linux, a lightweight Linux distribution. Images such as `node:22-alpine` are often smaller than standard variants, which can reduce image transfer and storage costs. However, I test application compatibility because some native dependencies or system libraries may need additional setup.”
