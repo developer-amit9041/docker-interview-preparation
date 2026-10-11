@@ -4550,3 +4550,73 @@ In this example, `BUILD_MODE` is available to later build instructions in this s
 ### Interview-ready answer
 
 “The `ARG` instruction defines a build-time variable that can be overridden with `docker build --build-arg`. It is useful for configurable build settings, such as selecting a base image version. Unlike `ENV`, an `ARG` value is not automatically available inside the running container.”
+
+
+---
+
+## Q48. What is the difference between `ENV` and `ARG`?
+
+### 1. English Definition
+
+`ARG` defines a build-time variable that can be passed with `docker build --build-arg`. `ENV` sets an environment variable that is available to subsequent Dockerfile instructions and, by default, to processes in containers created from the image.
+
+### 2. Hindi Definition
+
+- `ARG`: Image build karte waqt use hone wala variable.
+- `ENV`: Environment variable jo image mein set hota hai aur default roop se container ke andar application ko available hota hai.
+
+### 3. Hinglish Explanation
+
+Amit bhai, maan lo aap Node.js ki base image ka version build ke waqt select karna chahte ho. Iske liye `ARG` useful hai. Lekin agar aap chahte ho ki running application ko pata ho ki woh production mode mein hai, toh `ENV` use kar sakte ho.
+
+- Build configuration: `ARG NODE_VERSION=22`
+- Runtime configuration: `ENV NODE_ENV=production`
+
+### 4. Practical Example
+
+```dockerfile
+ARG NODE_VERSION=22
+FROM node:${NODE_VERSION}-alpine
+
+ENV NODE_ENV=production
+ENV PORT=5000
+
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+
+CMD ["node", "server.js"]
+```
+
+Build the image:
+
+```bash
+docker build --build-arg NODE_VERSION=22 -t mern-backend:1.0 .
+```
+
+Override an environment variable at runtime:
+
+```bash
+docker run -d -p 5000:5000 -e NODE_ENV=development mern-backend:1.0
+```
+
+The container receives `NODE_ENV=development`, overriding the image's default `production` value. Note that an `ARG` declared before `FROM` is global to the build and must be redeclared inside a stage if it is needed by later instructions in that stage.
+
+### 5. Summary Table
+
+| Feature | `ARG` | `ENV` |
+|---|---|---|
+| Main purpose | Build-time configuration | Environment/runtime configuration |
+| Set in Dockerfile | `ARG NAME=value` | `ENV NAME=value` |
+| Override method | `docker build --build-arg NAME=value` | `docker run -e NAME=value` |
+| Automatically available in container | No | Yes, unless overridden |
+| Typical example | Base image version | `NODE_ENV`, application configuration |
+
+### 6. Important Security Note
+
+Neither `ARG` nor `ENV` should be used to embed sensitive secrets in an image. Build arguments may be exposed through build metadata or logs, and environment values may be inspectable in container configuration. Use an appropriate secret manager or supported BuildKit secret mounts for secrets.
+
+### Interview-ready answer
+
+“`ARG` is for build-time variables and can be overridden with `docker build --build-arg`. `ENV` sets environment variables that are available to subsequent build instructions and, by default, to processes in the running container. For example, I might use `ARG NODE_VERSION=22` to choose a base image and `ENV NODE_ENV=production` to configure the application.”
