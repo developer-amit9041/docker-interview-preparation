@@ -7898,3 +7898,56 @@ Host networking behaves differently by platform. It is native on Linux. Docker D
 ### 7. Interview-ready answer
 
 “Host networking allows a Docker container to share the host's network namespace instead of having an isolated container network. On supported Linux systems, the container uses host network interfaces directly, so port publishing with `-p` is unnecessary. It can reduce network isolation and cause port conflicts, so I use it only when required.”
+
+
+---
+
+## Q94. What is a none network?
+
+### 1. English Definition
+
+The Docker `none` network driver disables normal container networking. A container using this driver typically has only its loopback interface and no externally connected Docker network interface.
+
+### 2. Hindi Definition
+
+Docker ka `none` network container ki normal networking disable kar deta hai. Container mein loopback interface reh sakta hai, lekin normal Docker network ke through doosre containers ya external systems se communication nahi hota.
+
+### 3. Hinglish Explanation
+
+Maan lo aap koi aisa task container mein run karna chahte ho jise network access ki zaroorat nahi hai. Aap `--network none` use kar sakte ho. Isse container ko normal network connectivity nahi milegi.
+
+Yeh security isolation mein help kar sakta hai, lekin container ke andar application ko chalne ke liye required files aur dependencies phir bhi deni padti hain.
+
+### 4. Practical Example
+
+```bash
+docker run --rm --network none alpine ip addr
+```
+
+This runs an Alpine container without normal network connectivity and lists its network interfaces. You should typically see the loopback interface (`lo`) rather than a normal external Docker network interface.
+
+Run a shell to explore:
+
+```bash
+docker run --rm -it --network none alpine sh
+```
+
+Inside the container, commands requiring external network access, such as downloading a package, will not work unless networking is explicitly configured by another means.
+
+### 5. Compare Network Modes
+
+| Mode | Normal network connectivity |
+|---|---|
+| `bridge` | Available through the configured Docker network |
+| `host` | Uses the host network namespace on supported systems |
+| `none` | Disabled, apart from loopback/limited local networking |
+
+### 6. Important Points
+
+- `--network none` is useful for workloads that should not have normal network access.
+- It does not mean that every possible form of communication or every security risk is eliminated; it is specifically a Docker networking mode.
+- A container can still perform local processing and use mounted files or volumes.
+
+### Interview-ready answer
+
+“The Docker none network driver disables normal container networking, typically leaving only the loopback interface. I use it for workloads that do not need network access and should run without a normal Docker network connection.”
