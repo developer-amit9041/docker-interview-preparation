@@ -7519,3 +7519,101 @@ In the output, check the `Mounts` section for the volume name and destination pa
 ### Interview-ready answer
 
 “I attach a Docker volume when creating a container by using `-v volume-name:container-path` or `--mount type=volume,source=volume-name,target=container-path`. For example, I mount `mongo-data` at `/data/db` in a MongoDB container so the database data can persist independently of the container.”
+
+
+---
+
+## Q89. How do you persist MongoDB data in Docker?
+
+### 1. English Definition
+
+To persist MongoDB data in Docker, mount a Docker volume at MongoDB's data directory, typically `/data/db`. The database files are then stored in the volume rather than only in the container's writable layer, so they can survive container removal as long as the volume is retained.
+
+### 2. Hindi Definition
+
+Docker mein MongoDB ka data persist karne ke liye ek named volume create karke use container ke `/data/db` path par mount karte hain. Container delete hone ke baad bhi data volume mein rehta hai, jab tak volume khud delete na kiya jaye.
+
+### 3. Hinglish Explanation
+
+Maan lo aap MongoDB container mein users aur products ka data store karte ho. Agar data sirf container ke writable layer mein ho, toh container remove karne par woh data lose ho sakta hai.
+
+Named volume use karne par MongoDB ki data files Docker-managed storage mein rehti hain. Aap baad mein naya MongoDB container bana kar wahi volume reuse kar sakte ho.
+
+### 4. Practical Example
+
+**Step 1: Named volume create karo**
+
+```bash
+docker volume create mongo-data
+```
+
+**Step 2: MongoDB container ko volume ke saath run karo**
+
+```bash
+docker run -d \
+  --name mongodb \
+  -p 27017:27017 \
+  -v mongo-data:/data/db \
+  mongo:8
+```
+
+**Step 3: Confirm karo ki volume mount hua hai**
+
+```bash
+docker inspect mongodb
+docker volume inspect mongo-data
+```
+
+Container ke `Mounts` section mein `mongo-data` aur destination `/data/db` check karo.
+
+**Step 4: Container remove karo, volume ko nahi**
+
+```bash
+docker rm -f mongodb
+```
+
+Ab `mongo-data` volume retained rahega. Wahi volume reuse karke container dobara create kar sakte ho:
+
+```bash
+docker run -d \
+  --name mongodb-new \
+  -p 27017:27017 \
+  -v mongo-data:/data/db \
+  mongo:8
+```
+
+### 5. Alternative: Docker Compose
+
+```yaml
+services:
+  mongodb:
+    image: mongo:8
+    container_name: mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+volumes:
+  mongo-data:
+```
+
+Run it with:
+
+```bash
+docker compose up -d
+```
+
+Docker Compose creates and manages the named volume for the service. Avoid `docker compose down -v` when you want to retain the volume, because the `-v` option removes Compose-managed named volumes declared by the project (subject to Docker's volume-use rules).
+
+### 6. Important Points
+
+- MongoDB's standard data directory in the official image is `/data/db`.
+- Removing a container does not normally remove a named volume.
+- Removing the volume itself can permanently delete its data.
+- A volume is not a backup. Back up important databases and test restoration.
+- For production, also plan authentication, network access restrictions, upgrades, monitoring, and backups.
+
+### Interview-ready answer
+
+“To persist MongoDB data in Docker, I create a named volume and mount it at `/data/db`, for example, `-v mongo-data:/data/db`. MongoDB stores its database files in that volume, so the data remains available when the container is removed and recreated, provided the volume is not deleted. I also maintain backups for production data.”
