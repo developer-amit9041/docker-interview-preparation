@@ -7006,3 +7006,80 @@ docker inspect --format='{{json .State.Health}}' my-app
 ### Interview-ready answer
 
 “The Dockerfile `HEALTHCHECK` instruction configures a command that Docker runs periodically to test application health. Docker records the result as starting, healthy, or unhealthy based on the check results and retry settings. It reports health but does not itself restart or repair an unhealthy container.”
+
+
+---
+
+## Q81. What is a Docker volume?
+
+### 1. English Definition
+
+A Docker volume is a storage mechanism managed by Docker that stores data outside a container's writable layer. Volumes let data persist when containers are stopped, removed, or recreated, as long as the volume itself is retained.
+
+### 2. Hindi Definition
+
+Docker volume ek persistent storage mechanism hai jo container ke writable layer se alag data store karta hai. Isliye container remove hone ke baad bhi volume ka data available reh sakta hai.
+
+### 3. Hinglish Explanation
+
+Maan lo aapki MERN application mein MongoDB container ke andar database data save hota hai. Agar data sirf container ki writable layer mein ho aur aap container remove kar do, toh woh data generally lost ho sakta hai.
+
+Docker volume use karne par database ka data container se alag store hota hai. Aap container delete karke naya container bana sakte ho aur same volume attach karke existing data dobara use kar sakte ho.
+
+### 4. Practical Commands
+
+**Create a named volume:**
+
+```bash
+docker volume create mongo-data
+```
+
+**List volumes:**
+
+```bash
+docker volume ls
+```
+
+**Inspect a volume:**
+
+```bash
+docker volume inspect mongo-data
+```
+
+**Run MongoDB with a persistent volume:**
+
+```bash
+docker run -d \
+  --name mongodb \
+  -v mongo-data:/data/db \
+  mongo:8
+```
+
+The named volume `mongo-data` is mounted at `/data/db`, MongoDB's usual data directory in this image. Verify the image's data-directory configuration if you use a different image or custom setup.
+
+**Remove a volume (only when its data is no longer needed):**
+
+```bash
+docker volume rm mongo-data
+```
+
+Docker normally refuses to remove a volume that is still in use by a container.
+
+### 5. Volume vs Container Writable Layer
+
+| Storage location | Persists after container removal? |
+|---|---|
+| Container writable layer | Generally no |
+| Named volume | Yes, unless the volume is deleted |
+| Bind mount | Host files persist independently of the container |
+
+### 6. Important Notes
+
+- Volumes are useful for databases, uploaded files, and other persistent application data.
+- A volume can be reused by multiple containers, though concurrent access must be safe for the application.
+- Removing a container does not normally remove a named volume.
+- Avoid using `docker volume prune` or deleting volumes without checking whether their data is needed; volume cleanup can permanently remove data.
+
+### Interview-ready answer
+
+“A Docker volume is Docker-managed persistent storage that exists outside a container's writable layer. It allows data to survive container removal and recreation as long as the volume is retained and reattached. I commonly use named volumes to persist database data, such as mounting `mongo-data` at MongoDB's `/data/db` directory.”
