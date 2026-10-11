@@ -5076,3 +5076,160 @@ Yahan har `#` line ek comment hai. Ye instructions ka purpose explain karti hai,
 ### Interview-ready answer
 
 “In a Dockerfile, comments are written using the `#` character, usually at the beginning of a line. They document the purpose of instructions and are ignored as Dockerfile comment lines during the build.”
+
+
+---
+
+## Q55. How do you containerize a Node.js application using a Dockerfile?
+
+### 1. English Definition
+
+To containerize a Node.js application, create a Dockerfile that defines the base image, working directory, dependency installation, application files, and startup command. Then build a Docker image and run it as a container, configuring ports and environment variables as required.
+
+### 2. Hindi Definition
+
+Node.js application ko containerize karne ka matlab hai uske code, required dependencies aur run karne ki configuration ko Docker image mein package karna, taaki application alag-alag environments mein consistently run ho sake.
+
+### 3. Hinglish Explanation
+
+Basic process ye hai:
+
+1. Node.js project ready karo aur `package.json` mein start script confirm karo.
+2. Project root mein `Dockerfile` aur `.dockerignore` banao.
+3. Dockerfile mein Node.js base image choose karo, working directory set karo, dependencies install karo aur code copy karo.
+4. `docker build` se image banao.
+5. `docker run` se container start karo aur required port map karo.
+
+### 4. Example Node.js Application
+
+Assume project structure:
+
+```text
+my-node-app/
+├── server.js
+├── package.json
+├── package-lock.json
+├── Dockerfile
+└── .dockerignore
+```
+
+Example `server.js`:
+
+```javascript
+const express = require("express");
+
+const app = express();
+const PORT = process.env.PORT || 5000;
+
+app.get("/", (req, res) => {
+  res.send("Hello from Dockerized Node.js!");
+});
+
+// Listen on all container interfaces
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Server running on port ${PORT}`);
+});
+```
+
+Ensure Express is installed and listed in `package.json`, and the lockfile is present.
+
+### 5. Write the Dockerfile
+
+```dockerfile
+FROM node:22-alpine
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
+
+COPY --chown=node:node . .
+
+ENV NODE_ENV=production
+USER node
+
+EXPOSE 5000
+
+CMD ["node", "server.js"]
+```
+
+**What each instruction does:**
+
+- `FROM`: selects the Node.js base image.
+- `WORKDIR`: sets the working directory inside the image.
+- `COPY package.json package-lock.json ./`: copies dependency manifests first for cache reuse.
+- `RUN npm ci --omit=dev`: installs locked dependencies and omits dev dependencies.
+- `COPY --chown=node:node . .`: copies application files and assigns ownership to the non-root user.
+- `ENV`: sets the production environment variable.
+- `USER node`: runs the app as a non-root user.
+- `EXPOSE 5000`: documents the container port; it does not publish the port to the host.
+- `CMD`: defines the default startup command.
+
+### 6. Create a `.dockerignore` File
+
+```text
+node_modules
+.git
+.env
+*.log
+coverage
+```
+
+This excludes matching files from the build context. Supply secrets securely at runtime rather than baking them into the image.
+
+### 7. Build and Run the Container
+
+Run these commands from the project root:
+
+```bash
+docker build -t my-node-app .
+docker run -d --name my-node-container -p 5000:5000 my-node-app
+docker ps
+docker logs my-node-container
+```
+
+Open `http://localhost:5000` to test the endpoint.
+
+Useful lifecycle commands:
+
+```bash
+docker stop my-node-container
+docker start my-node-container
+docker rm -f my-node-container
+```
+
+### 8. How the Flow Works
+
+```text
+Node.js source code + package files
+                 |
+                 v
+             Dockerfile
+                 |
+          docker build
+                 |
+                 v
+             Docker image
+                 |
+           docker run
+                 |
+                 v
+          Running container
+                 |
+         Host port 5000
+                 |
+                 v
+          http://localhost:5000
+```
+
+### 9. Common Mistakes to Avoid
+
+- Ensure the application listens on `0.0.0.0` inside the container, not only on `127.0.0.1`.
+- Remember that `EXPOSE` does not publish a port; use `-p hostPort:containerPort`.
+- Keep `.env` and other secrets out of the image; provide runtime configuration securely.
+- Use `npm ci` when a valid lockfile is available.
+- Confirm the startup command and container port match your actual application.
+
+### Interview-ready answer
+
+“To containerize a Node.js application, I create a Dockerfile with a suitable Node.js base image, set the working directory, copy the package manifests, install dependencies, and copy the application source. I then build the image with `docker build` and run it with `docker run -p` to publish the application port. I also use a `.dockerignore` file, avoid baking secrets into the image, and run the app as a non-root user.”
