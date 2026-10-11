@@ -15912,3 +15912,92 @@ A restart policy such as \`--restart=always\` may restart a container after its 
 “I would start with \`docker ps -a\` and inspect the exit code, then use \`docker logs <container>\` to find the application error. Next, I would verify the Dockerfile's \`CMD\` and \`ENTRYPOINT\`, working directory, environment variables, mounted files, and dependency connectivity. I would also check whether the container was OOM-killed and run the image interactively if needed to isolate the issue.”
 
 ---
+## Q173. An application works on the local machine but fails in Docker. What would you check?
+
+### 1. English Interview Definition
+If an application works locally but fails inside Docker, I would compare the local and container environments and systematically check application logs, environment variables, dependencies, file paths, network configuration, port binding, file permissions, and the Docker build context. I would isolate the failure before changing the image or configuration.
+
+### 2. Hindi Definition
+Agar application local machine par chal rahi hai lekin Docker container mein fail ho rahi hai, toh humein environment differences, logs, dependencies, ports, networking aur file paths check karne chahiye.
+
+### 3. Hinglish Explanation
+Maan lo aapka Node.js backend local machine par sahi chal raha hai, lekin Docker mein start nahi hota ya MongoDB se connect nahi karta. Iska matlab zaroori nahi ki application code hi galat ho. Container ka environment local machine se different hota hai. Isliye pehle exact error identify karo, phir us category ko debug karo.
+
+### 4. Step-by-Step Debugging
+
+**Step 1: Check container status**
+\`\`\`bash
+docker ps -a
+\`\`\`
+Check whether the container is running, exited, or repeatedly restarting.
+
+**Step 2: Read application logs**
+\`\`\`bash
+docker logs <container-name>
+docker logs --tail 100 -f <container-name>
+\`\`\`
+Look for missing modules, invalid environment variables, connection errors, permission errors, or an incorrect startup command.
+
+**Step 3: Verify environment variables**
+\`\`\`bash
+docker inspect <container-name>
+\`\`\`
+Inspect the container configuration and environment carefully; avoid sharing output that contains secrets. Confirm required values such as \`NODE_ENV\` and the database connection variable are set correctly.
+
+**Step 4: Check hostnames and networking**
+- Inside a container, \`localhost\` refers to that same container, not the host machine or another container.
+- With Docker Compose, connect to another service by its service name, for example \`mongodb:27017\`.
+- Ensure both services share a suitable Docker network and MongoDB is listening on the expected interface and port.
+- If the database is on the host, use the appropriate host address for your OS and Docker setup rather than assuming container \`localhost\` will work.
+
+**Step 5: Check port binding**
+The Node.js app should listen on an address reachable inside the container, commonly \`0.0.0.0\), not only \`127.0.0.1\).
+\`\`\`js
+app.listen(3000, "0.0.0.0", () => {
+  console.log("Server listening on port 3000");
+});
+\`\`\`
+Also confirm the Dockerfile/Compose port mapping matches the application port. \`EXPOSE\` documents a port; it does not publish it to the host by itself.
+
+**Step 6: Verify dependencies and Dockerfile**
+\`\`\`dockerfile
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+CMD ["node", "server.js"]
+\`\`\`
+Check that:
+- The correct files are copied into the image.
+- The startup command and working directory are correct.
+- Required runtime packages are installed.
+- Build output and entry-point paths match the project.
+- The Node.js version is compatible with the application.
+
+**Step 7: Check \`.dockerignore\`, mounts, and file permissions**
+A required file may have been excluded by \`.dockerignore\`, or a bind mount may be hiding files that were copied into the image. Linux containers can also be case-sensitive, so \`./Config.js\` and \`./config.js\` may not refer to the same file. Verify that the runtime user can read required files.
+
+**Step 8: Rebuild and test**
+\`\`\`bash
+docker build --no-cache -t my-app:debug .
+docker run --rm -p 3000:3000 --env-file .env my-app:debug
+\`\`\`
+Use \`--no-cache\` when you specifically need to rule out stale build layers. Keep secret-bearing environment files out of the image and repository; use approved secret handling for production. Compare the actual image and runtime configuration with the known-working local setup.
+
+### 5. Common Causes and Fixes
+
+| Symptom | Likely check |
+|---|---|
+| \`Cannot find module\` | Dependencies, \`COPY\`, working directory, build output |
+| Database connection refused | Hostname, port, network, database readiness |
+| Works on host but inaccessible externally | Bind address and published port |
+| File not found | \`WORKDIR\`, path case, \`.dockerignore\`, bind mounts |
+| Permission denied | Container user and file permissions |
+| Missing configuration | Runtime environment variables or secrets |
+| App exits immediately | Logs, exit code, \`CMD\`/\`ENTRYPOINT\` |
+| Works with old image only | Rebuild inputs and image tag being run |
+
+### 6. Interview-Ready Answer
+“If an application works locally but fails in Docker, I first check the container status and logs. Then I verify environment variables, installed dependencies, Dockerfile paths and startup command, port binding, networking, file permissions, and mounted files. For a MERN application, I specifically check that the backend uses the MongoDB service name instead of \`localhost\` when both run in separate Compose containers. I then rebuild and retest after identifying the root cause.”
+
+---
