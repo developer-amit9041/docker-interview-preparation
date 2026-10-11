@@ -3932,3 +3932,80 @@ Application Docker image built
 ### Interview-ready answer
 
 “The `FROM` instruction specifies the base image used to build a Docker image. It provides the starting filesystem and environment for subsequent instructions. For example, `FROM node:22-alpine` starts a Node.js application image using the Node.js 22 Alpine-based image.”
+
+
+---
+
+## Q40. What does the `RUN` instruction do?
+
+### 1. English Definition
+
+The `RUN` instruction executes a command during the Docker image build process. Its changes are captured in an image layer, so the command does not normally run again each time a container starts.
+
+### 2. Hindi Definition
+
+`RUN` instruction Docker image build hote waqt command execute karta hai, jaise application ki dependencies install karna ya required packages setup karna.
+
+### 3. Hinglish Explanation
+
+Amit bhai, maan lo aapke MERN backend ko Node.js packages chahiye. Docker image banate waqt dependencies install karne ke liye aap likhte ho:
+
+```dockerfile
+COPY package*.json ./
+RUN npm ci
+```
+
+Jab aap `docker build` chalate ho, tab `RUN npm ci` execute hota hai aur installed dependencies image ki layer mein save hoti hain. Jab baad mein us image se container start hota hai, toh dependencies install karne wali command normally dobara execute nahi hoti.
+
+**Yaad rakho:** `RUN` = build time; `CMD` = container start time par default command.
+
+### 4. Practical Example
+
+```dockerfile
+FROM node:22-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+CMD ["node", "server.js"]
+```
+
+Build the image:
+
+```bash
+docker build -t mern-backend:1.0 .
+```
+
+During the build, Docker runs `npm ci`. Later, when you run a container, `CMD` starts the Node.js server.
+
+### 5. Common Uses of RUN
+
+| Example | Purpose |
+|---|---|
+| `RUN npm ci` | Install Node.js dependencies |
+| `RUN apt-get update && apt-get install -y curl` | Install a system package in a Debian/Ubuntu-based image |
+| `RUN mkdir -p /app/logs` | Create a directory during build |
+
+Use package-manager commands appropriate for the selected base image. For example, Alpine commonly uses `apk`, not `apt-get`.
+
+### 6. Build-time flow
+
+```text
+docker build
+    |
+    v
+RUN command executes
+    |
+    v
+Result saved in an image layer
+    |
+    v
+Image is created
+    |
+    v
+docker run -> CMD/ENTRYPOINT starts the app
+```
+
+### Interview-ready answer
+
+“The `RUN` instruction executes commands during Docker image building, and the resulting filesystem changes are stored in an image layer. It is commonly used to install dependencies or system packages. Unlike `CMD`, `RUN` does not normally execute each time a container starts.”
