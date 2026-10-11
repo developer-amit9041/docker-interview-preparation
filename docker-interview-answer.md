@@ -12779,3 +12779,117 @@ Make sure the application has permission to read its files and write only to req
 "I run containers as non-root by configuring a dedicated user in the Dockerfile and setting it with the \`USER\` instruction. For Node.js, I can use the \`node\` user provided by the official image and use \`COPY --chown\` to set correct file ownership. Then I build and run the image and verify the user with \`docker exec <container> whoami\`. This follows least privilege and reduces risk, although it must be combined with other container security controls."
 
 ---
+## Q138. What are Docker secrets?
+
+### 1. English Interview Definition
+
+Docker secrets are a mechanism for securely storing and providing sensitive information, such as database passwords, API keys, and TLS certificates, to containers without hardcoding those values into application code or Docker images. Docker Swarm provides built-in secrets management, while other deployment environments may use their own secret-management solutions.
+
+### 2. Hindi Definition
+
+Docker secrets ek secure mechanism hai jisse hum database password, API keys aur certificates jaise sensitive data ko application containers tak pahunchate hain, bina unhe Dockerfile ya source code mein hardcode kiye.
+
+### 3. Hinglish Explanation
+
+Maan lo aapki MERN application MongoDB se connect hoti hai. Connection string mein username aur password hai:
+
+\`\`\`text
+mongodb://admin:password123@mongodb:27017/farmlogic
+\`\`\`
+
+Agar aap ise Dockerfile mein hardcode kar doge, toh image ya source code access karne wala insaan credentials dekh sakta hai.
+
+**Docker secrets ka purpose:** Sensitive information ko image aur source code se alag rakhna aur authorized services ko hi provide karna.
+
+### 4. What information can be stored as a secret?
+
+- MongoDB connection credentials
+- Payment gateway API keys
+- TLS certificates and private keys
+- Third-party service credentials
+
+### 5. Docker Swarm secrets: Practical example
+
+Docker Swarm has built-in secrets management. Create a secret from a file:
+
+\`\`\`bash
+docker swarm init
+printf '%s' 'replace-with-a-strong-password' > mongo_password.txt
+docker secret create mongo_password mongo_password.txt
+rm mongo_password.txt
+\`\`\`
+
+The example creates a local temporary file, so use appropriate file permissions and a secure secret-injection process in real deployments. Removing the file does not erase all possible copies or shell/system backups.
+
+A Swarm service can be granted access to the secret:
+
+\`\`\`bash
+docker service create \
+  --name my-backend \
+  --secret mongo_password \
+  my-backend:1.0
+\`\`\`
+
+Inside the service task's container, the secret is made available as a file, typically at:
+
+\`\`\`text
+/run/secrets/mongo_password
+\`\`\`
+
+Your Node.js application can read it:
+
+\`\`\`javascript
+const fs = require('node:fs');
+
+const mongoPassword = fs
+  .readFileSync('/run/secrets/mongo_password', 'utf8')
+  .trim();
+\`\`\`
+
+The application can then use the password to construct its MongoDB connection configuration. Do not print the secret in logs.
+
+### 6. Docker Compose secrets: Basic example
+
+For a local Compose setup, a file-backed secret can be declared and mounted only into services that request it:
+
+\`\`\`yaml
+services:
+  backend:
+    build: ./backend
+    secrets:
+      - mongo_password
+
+secrets:
+  mongo_password:
+    file: ./secrets/mongo_password.txt
+\`\`\`
+
+The backend can read the mounted file from \`/run/secrets/mongo_password\`. Add the secrets directory to \`.gitignore\` and restrict file permissions.
+
+**Important distinction:** File-backed Compose secrets are not automatically equivalent to Docker Swarm's encrypted secrets management. Protect the source file and host carefully, and use an appropriate production secret manager when required.
+
+### 7. Docker secrets vs environment variables
+
+| Feature | Docker secrets | Environment variables |
+|---|---|---|
+| Typical use | Sensitive credentials and keys | Application configuration |
+| How app receives value | Often a mounted file | Process environment |
+| Exposure risk | Can reduce accidental exposure | May appear in inspection, diagnostics, or process environments |
+| Built-in management | Docker Swarm has native secrets management | Values are configured by the runtime/deployment setup |
+| Security note | Access must still be restricted | Can be acceptable in some setups, but protect sensitive values carefully |
+
+### 8. Best practices
+
+1. Never commit secret files or credentials to Git.
+2. Do not hardcode secrets in Dockerfiles or bake them into image layers.
+3. Grant each service access only to the secrets it needs.
+4. Restrict permissions on secret source files and the Docker host.
+5. Rotate credentials and audit access when appropriate.
+6. Never log secret values.
+7. For production, consider a dedicated secret manager such as AWS Secrets Manager or a platform-supported integration.
+
+### Interview-ready answer
+
+"Docker secrets provide sensitive values such as database passwords, API keys, and certificates to authorized containers without hardcoding them into source code or images. Docker Swarm has built-in secrets management and mounts secrets as files, commonly under \`/run/secrets/\`. Docker Compose can also mount file-backed secrets, but their security depends on how the source files and host are protected. I restrict access, keep secrets out of Git and images, avoid logging them, and rotate them when necessary."
+
+---
