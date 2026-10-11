@@ -15308,3 +15308,89 @@ A restart policy does not fix the underlying bug; a process that repeatedly cras
 “When a Docker container crashes, its main process exits and Docker records its state, exit code, and available logs. Automatic recovery depends on the restart policy or orchestration platform. I troubleshoot with \`docker ps -a\`, \`docker logs\`, and \`docker inspect\`, then fix the root cause and configure an appropriate restart policy.”
 
 ---
+## Q165. How do you configure a container to restart automatically?
+
+### 1. English Interview Definition
+Docker containers can be configured with a restart policy that tells Docker whether to restart a container when its process exits. Common policies are \`no\`, \`on-failure\`, \`always\`, and \`unless-stopped\`. The appropriate policy depends on the application's recovery requirements.
+
+### 2. Hindi Definition
+Docker container ko automatically restart karne ke liye hum restart policy configure karte hain. Agar container ka main process exit ho jata hai, toh policy ke according Docker use dobara start kar sakta hai.
+
+### 3. Hinglish Explanation
+Maan lo aapka Node.js backend container kisi unexpected error ki wajah se stop ho gaya. Agar suitable restart policy configured hai, toh Docker container ko automatically restart karne ki koshish karega. Lekin restart policy application ka bug fix nahi karti; repeated crash ka root cause logs aur configuration se investigate karna chahiye.
+
+### 4. Configure a Restart Policy with \`docker run\`
+
+**Recommended common choice for a long-running service:**
+\`\`\`bash
+docker run -d \
+  --name backend \
+  --restart unless-stopped \
+  -p 3000:3000 \
+  my-backend:1.0
+\`\`\`
+
+**Restart only when the process exits with a non-zero status, with up to five retries:**
+\`\`\`bash
+docker run -d \
+  --name backend \
+  --restart on-failure:5 \
+  my-backend:1.0
+\`\`\`
+
+**Change the policy for an existing container:**
+\`\`\`bash
+docker update --restart unless-stopped backend
+\`\`\`
+
+### 5. Docker Restart Policies
+
+| Policy | Behavior |
+|---|---|
+| \`no\` | Default; Docker does not automatically restart the container |
+| \`on-failure\` | Restarts if the container exits with a non-zero exit code; an optional retry limit can be specified |
+| \`always\` | Restarts when the container stops; Docker also applies this policy after daemon restart, subject to Docker's policy behavior |
+| \`unless-stopped\` | Similar to \`always\`, but an explicitly stopped container remains stopped across daemon restarts |
+
+A manual \`docker stop\` suppresses the restart policy while the container is intentionally stopped. With \`always\`, Docker can restart it when the daemon restarts; \`unless-stopped\` respects the explicit stop.
+
+### 6. Configure It in Docker Compose
+
+\`\`\`yaml
+services:
+  backend:
+    image: my-backend:1.0
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+\`\`\`
+
+Apply the configuration:
+\`\`\`bash
+docker compose up -d
+\`\`\`
+
+### 7. Verify and Troubleshoot
+
+**Inspect the configured policy:**
+\`\`\`bash
+docker inspect backend --format '{{.HostConfig.RestartPolicy.Name}}'
+\`\`\`
+
+**Check container state and exit code:**
+\`\`\`bash
+docker ps -a
+docker inspect backend --format '{{.State.Status}} {{.State.ExitCode}}'
+\`\`\`
+
+**Check application logs:**
+\`\`\`bash
+docker logs --tail 100 backend
+\`\`\`
+
+**Important:** A Docker restart policy does not restart a container solely because a health check reports it as \`unhealthy\`; health checks report health status, while restart policies react to container exit. Orchestrators such as Swarm or Kubernetes have their own workload recovery mechanisms.
+
+### 8. Interview-Ready Answer
+“We configure automatic restarts with Docker's \`--restart\` option, for example \`docker run -d --restart unless-stopped my-backend:1.0\`. Common policies include \`no\`, \`on-failure\`, \`always\`, and \`unless-stopped\`. In Docker Compose, we set \`restart: unless-stopped\`. We also check logs and exit codes to fix the underlying cause of repeated crashes.”
+
+---
