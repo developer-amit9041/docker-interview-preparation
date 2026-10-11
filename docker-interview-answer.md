@@ -2426,3 +2426,97 @@ docker rm my-nginx
 | `docker container prune` | Removes all stopped containers |
 
 **Interview-ready answer:** Use `docker rm CONTAINER_NAME` or `docker rm CONTAINER_ID` to remove a stopped container. To remove a running container, `docker rm -f` can be used intentionally. Removing a container is different from stopping it, and important data should be stored in volumes or backed up.
+
+
+---
+
+## Q24. How do you list Docker images?
+
+### 1. English Definition
+
+The `docker images` command lists Docker images stored locally on the host. The equivalent modern command is `docker image ls`.
+
+### 2. Hindi Definition
+
+Local system par available Docker images ki list dekhne ke liye `docker images` ya `docker image ls` command use karte hain.
+
+### 3. Hinglish Explanation
+
+Amit, image aur container mein difference yaad rakho:
+
+- **Image:** Application run karne ka template.
+- **Container:** Image se create hua running ya stopped instance.
+
+Jab aap `docker images` run karte ho, toh local machine par available images ke repository names, tags, image IDs, creation information aur sizes dikhte hain. Is command se registry ki saari images list nahi hoti—sirf local images dikhte hain.
+
+### 4. Practical Example / Code
+
+List local images:
+
+```bash
+docker images
+```
+
+Equivalent command:
+
+```bash
+docker image ls
+```
+
+Example output:
+
+```text
+REPOSITORY   TAG       IMAGE ID       CREATED        SIZE
+nginx        latest    a1b2c3d4e5f6   2 days ago     190MB
+node         22        f6e5d4c3b2a1   5 days ago     1.1GB
+```
+
+The IDs, dates, and sizes above are illustrative and may differ on your system.
+
+If an image is not available locally, pull it first:
+
+```bash
+docker pull nginx
+docker images
+```
+
+### 5. Architecture Diagram
+
+```text
+User runs: docker images
+          |
+          v
+      Docker CLI
+          |
+          v
+     Docker daemon
+          |
+          v
+ Read local image inventory
+          |
+          v
+ Display repositories, tags,
+ image IDs, and sizes
+```
+
+### 6. Practical Commands / Configuration
+
+| Command | Purpose |
+|---|---|
+| `docker images` | Lists local Docker images |
+| `docker image ls` | Modern equivalent to list local images |
+| `docker images nginx` | Lists local images matching the nginx repository |
+| `docker images -q` | Displays local image IDs |
+| `docker pull nginx` | Downloads the Nginx image from a registry |
+| `docker image inspect nginx` | Shows detailed metadata for an image |
+
+### 7. Summary Table
+
+| Command | What it shows |
+|---|---|
+| `docker images` | Local images |
+| `docker image ls` | Local images |
+| `docker images -q` | Image IDs only |
+| `docker pull nginx` | Downloads an image; it does not list images |
+
+**Interview-ready answer:** Use `docker images` or `docker image ls` to list Docker images available locally. The output includes the repository, tag, image ID, creation information, and size. It does not list every image available in a remote registry.
