@@ -12477,3 +12477,181 @@ Use readiness probes so traffic is sent only to ready Pods. Liveness probes can 
 
 ---
 
+## Q136. How do you secure Docker containers?
+
+### 1. English Interview Definition
+
+Docker container security involves reducing the attack surface of containerized applications by using trusted images, running containers with minimal privileges, managing secrets securely, limiting network access, scanning for vulnerabilities, and keeping Docker and host systems updated.
+
+### 2. Hindi Definition
+
+Docker containers ko secure karne ka matlab hai application ko unauthorized access, malware, vulnerabilities aur data leaks se protect karna. Iske liye trusted images, limited permissions, secure secrets, network restrictions aur regular security updates use karte hain.
+
+### 3. Hinglish Explanation
+
+Maan lo aapne MERN application Docker mein deploy ki hai. Agar attacker backend container ko compromise kar leta hai, toh humein ensure karna hai ki usse poore server ka access na mil jaye aur database credentials leak na hon.
+
+### 4. Important Docker Security Practices
+
+#### 1. Use trusted and updated base images
+
+Use official or verified images, pin a specific version (and, where appropriate, a digest), and rebuild regularly to pick up security fixes. Avoid unknown images and unnecessary packages.
+
+\`\`\`dockerfile
+FROM node:22-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --omit=dev
+COPY . .
+CMD ["node", "server.js"]
+\`\`\`
+
+Choose a Node.js version that is supported and compatible with your application. A small image can reduce the attack surface, but it is not automatically secure just because it is small.
+
+#### 2. Do not run as root
+
+By default, some containers run as root inside the container. Create a dedicated non-root user whenever possible.
+
+\`\`\`dockerfile
+FROM node:22-alpine
+WORKDIR /app
+COPY --chown=node:node package*.json ./
+RUN npm ci --omit=dev
+COPY --chown=node:node . .
+USER node
+CMD ["node", "server.js"]
+\`\`\`
+
+A non-root user limits the impact of a compromised application. It does not replace host isolation or other controls.
+
+#### 3. Never bake secrets into an image
+
+Do not put passwords, API keys, or database credentials in a Dockerfile, source code, or image layers. Use an appropriate secret manager or orchestrator secrets mechanism. Remember that ordinary environment variables can be visible to users with sufficient container-inspection permissions.
+
+\`\`\`bash
+docker run -d \
+  --name backend \
+  --env-file .env \
+  my-backend:1.0
+\`\`\`
+
+This is a basic example, not a complete production secret-management solution. Keep the file out of Git, restrict its permissions, and prefer managed secrets for production.
+
+#### 4. Avoid privileged containers
+
+Do not use \`--privileged\` unless there is a specific, reviewed requirement. Avoid mounting the Docker socket (\`/var/run/docker.sock\`) into application containers because it can grant powerful control over the Docker host.
+
+For example, use restricted settings where the application supports them:
+
+\`\`\`bash
+docker run -d \
+  --name backend \
+  --read-only \
+  --cap-drop=ALL \
+  --security-opt=no-new-privileges:true \
+  my-backend:1.0
+\`\`\`
+
+These options may require adjustments for applications that need writable paths or specific Linux capabilities. Add only the minimum permissions the application actually needs.
+
+#### 5. Use a read-only filesystem where possible
+
+A read-only root filesystem prevents the application from modifying its container's root filesystem at runtime. If it needs temporary files, explicitly mount a limited writable temporary directory.
+
+\`\`\`bash
+docker run --read-only \
+  --tmpfs /tmp \
+  my-backend:1.0
+\`\`\`
+
+Test this configuration before production because some frameworks need writable cache, upload, or temporary directories.
+
+#### 6. Limit exposed ports and network access
+
+Expose only required ports. Do not publish MongoDB to the public internet unless there is a specific, secured reason. In Docker Compose, internal services can communicate over a private Compose network without publishing every service port to the host.
+
+\`\`\`yaml
+services:
+  backend:
+    build: ./backend
+    expose:
+      - "5000"
+    networks:
+      - app-network
+
+  mongodb:
+    image: mongo:8
+    networks:
+      - app-network
+
+networks:
+  app-network:
+\`\`\`
+
+This is an illustrative network configuration; configure MongoDB authentication and persistent storage as well. \`expose\` documents internal ports but is not itself a firewall or access-control mechanism.
+
+#### 7. Scan images and dependencies for vulnerabilities
+
+Scan images before deployment and regularly afterwards. Use a trusted scanner such as Docker Scout or Trivy, and update vulnerable base images and application dependencies.
+
+Example using Trivy:
+
+\`\`\`bash
+trivy image my-backend:1.0
+\`\`\`
+
+Integrate scanning into CI/CD so high-severity findings can be reviewed or blocked according to the project's risk policy.
+
+#### 8. Use \`.dockerignore\`
+
+Prevent secrets, local dependencies, Git history, and unnecessary files from entering the build context.
+
+Example \`.dockerignore\`:
+
+\`\`\`text
+node_modules
+.env
+.git
+coverage
+npm-debug.log
+\`\`\`
+
+This reduces accidental leakage and can make builds smaller and faster. Do not rely on \`.dockerignore\` as the only protection for secrets.
+
+#### 9. Keep Docker and the host updated
+
+Apply security updates to the host OS, Docker Engine, container runtime, base images, and application dependencies. Use a supported Docker installation and restrict access to the Docker daemon because daemon access can effectively grant host-level control.
+
+#### 10. Apply resource limits and monitor containers
+
+Set appropriate CPU and memory limits to reduce the risk of one container exhausting host resources. Collect logs and monitor unusual behavior, restarts, network connections, and resource consumption.
+
+\`\`\`bash
+docker run -d \
+  --memory=512m \
+  --cpus=1 \
+  my-backend:1.0
+\`\`\`
+
+Choose limits based on testing and observed application needs; overly restrictive limits can cause failures.
+
+### 5. Docker Security Checklist
+
+| Practice | Why it matters |
+|---|---|
+| Trusted, patched images | Reduces known vulnerabilities |
+| Non-root user | Limits container-level privileges |
+| Secure secret management | Reduces credential leaks |
+| No unnecessary privileged access | Limits damage from compromise |
+| Restricted ports and networks | Reduces unwanted access |
+| Image and dependency scanning | Finds known vulnerabilities |
+| \`.dockerignore\` | Keeps sensitive/unneeded files out of build context |
+| Host and Docker updates | Fixes runtime and host vulnerabilities |
+| Resource limits and monitoring | Helps prevent resource exhaustion and detect incidents |
+
+### Interview-ready answer
+
+"I secure Docker containers by using trusted and regularly updated images, running applications as non-root users, and avoiding privileged mode and unnecessary Linux capabilities. I keep secrets out of Dockerfiles and images, restrict exposed ports and container networks, use \`.dockerignore\`, scan images and dependencies for vulnerabilities, and patch the host and Docker Engine. Where compatible, I use read-only filesystems, resource limits, logging, and monitoring. These controls reduce the attack surface and limit the impact of a compromised container."
+
+---
+
