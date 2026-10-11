@@ -5676,3 +5676,101 @@ docker push YOUR_DOCKERHUB_USERNAME/my-node-app:1.0
 ### Interview-ready answer
 
 “I can tag a Docker image during a build using `docker build -t image-name:tag .`, or tag an existing image using `docker tag source-image:tag target-image:tag`. Tags help identify versions and prepare images for pushing to a registry. The `latest` tag is not automatically the newest version; it is just a tag name.”
+
+
+---
+
+## Q62. How do you push a Docker image to Docker Hub?
+
+### 1. English Definition
+
+To push a Docker image to Docker Hub, build or obtain the image, tag it with your Docker Hub username and repository name, authenticate with Docker Hub, and run `docker push`.
+
+### 2. Hindi Definition
+
+Docker image ko Docker Hub par upload karne ke liye pehle image build ya pull karte hain, phir usko Docker Hub username aur repository ke naam se tag karte hain. Uske baad login karke `docker push` command chalate hain.
+
+### 3. Hinglish Explanation
+
+Maan lo aapne apne laptop par Node.js backend ki image banayi hai. Aap chahte ho ki woh image Docker Hub par upload ho jaaye, taaki baad mein server ya kisi doosri machine par `docker pull` karke use kar sako.
+
+### 4. Step-by-Step Practical Example
+
+**Step 1: Build the image**
+
+Project ke root folder mein:
+
+```bash
+docker build -t my-node-app:1.0 .
+```
+
+**Step 2: Log in to Docker Hub**
+
+```bash
+docker login
+```
+
+Prompt aane par Docker Hub credentials ya supported authentication method use karo. Public/shared machine par credentials save karne ke baare mein careful raho.
+
+**Step 3: Tag the image**
+
+Apne Docker Hub username ko `YOUR_DOCKERHUB_USERNAME` ki jagah likho:
+
+```bash
+docker tag my-node-app:1.0 YOUR_DOCKERHUB_USERNAME/my-node-app:1.0
+```
+
+Image ka naam Docker Hub repository ke saath match hona chahiye. Zaroorat ho toh Docker Hub par repository pehle create karo, ya apne account ki permissions ke mutabik repository create/push allow ho.
+
+**Step 4: Push the image**
+
+```bash
+docker push YOUR_DOCKERHUB_USERNAME/my-node-app:1.0
+```
+
+**Step 5: Verify**
+
+Docker Hub website par apni repository aur tag check karo. Image ko doosri machine par pull karke bhi verify kar sakte ho:
+
+```bash
+docker pull YOUR_DOCKERHUB_USERNAME/my-node-app:1.0
+```
+
+### 5. Complete Flow
+
+```text
+Node.js application
+        |
+        v
+docker build
+        |
+        v
+Local Docker image
+        |
+        v
+docker tag username/repository:tag
+        |
+        v
+docker login
+        |
+        v
+docker push username/repository:tag
+        |
+        v
+Docker Hub repository
+        |
+        v
+Another machine: docker pull
+```
+
+### 6. Important Points
+
+- Use the correct Docker Hub username and repository name.
+- The tag identifies the version, for example `1.0` or `1.1`.
+- Make sure you are authenticated and have permission to push to the repository.
+- Never put passwords, access tokens, or application secrets inside the image or Dockerfile.
+- A successful push uploads the image layers and manifest to the registry; it does not start a container.
+
+### Interview-ready answer
+
+“To push a Docker image to Docker Hub, I build the image, log in using `docker login`, tag it with my Docker Hub username and repository name using `docker tag`, and push it with `docker push`. I then verify the repository and tag on Docker Hub or pull the image from another machine.”
