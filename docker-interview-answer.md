@@ -7382,3 +7382,72 @@ A volume can be removed only when it is not in use by a container. Be careful wi
 ### Interview-ready answer
 
 “A named volume is a Docker-managed volume that has a user-defined name, such as `mongo-data`. It stores data separately from a container's writable layer and makes persistent data easy to identify and reuse across containers. The volume remains after container removal unless the volume itself is deleted.”
+
+
+---
+
+## Q87. How do you create a volume?
+
+### 1. English Definition
+
+You can create a Docker volume using the `docker volume create` command. The volume can then be mounted into a container to store data separately from the container's writable layer.
+
+### 2. Hindi Definition
+
+Docker volume banane ke liye `docker volume create` command use karte hain. Phir us volume ko container ke saath attach karke data persist kar sakte hain.
+
+### 3. Hinglish Explanation
+
+Maan lo aap MongoDB container chala rahe ho aur chahte ho ki container delete hone par bhi database ka data bacha rahe. Pehle ek named volume create karo, phir MongoDB container ke data directory ke saath mount kar do.
+
+### 4. Practical Example
+
+**Step 1: Volume create karo**
+
+```bash
+docker volume create mongo-data
+```
+
+**Step 2: Volume verify karo**
+
+```bash
+docker volume ls
+docker volume inspect mongo-data
+```
+
+**Step 3: MongoDB container mein volume mount karo**
+
+```bash
+docker run -d \
+  --name mongodb \
+  -v mongo-data:/data/db \
+  mongo:8
+```
+
+In this command, `mongo-data` is the volume name and `/data/db` is MongoDB's data directory inside the container.
+
+### 5. Command Breakdown
+
+| Command / Option | Meaning |
+|---|---|
+| `docker volume create mongo-data` | Creates a named volume |
+| `docker volume ls` | Lists Docker volumes |
+| `docker volume inspect mongo-data` | Shows details about the volume |
+| `-v mongo-data:/data/db` | Mounts the volume at the container path |
+
+### 6. Alternative: Create a Volume Automatically
+
+Docker can create the named volume if you reference it when running a container and it does not already exist:
+
+```bash
+docker run -d \
+  --name mongodb \
+  -v mongo-data:/data/db \
+  mongo:8
+```
+
+For clarity and explicit setup, you can create the volume first with `docker volume create`.
+
+### Interview-ready answer
+
+“I create a Docker volume using `docker volume create <volume-name>`, for example, `docker volume create mongo-data`. I can verify it with `docker volume ls` and mount it into a container using `-v mongo-data:/data/db`. This keeps the data separate from the container's writable layer.”
