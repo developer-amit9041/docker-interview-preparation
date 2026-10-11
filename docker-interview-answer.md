@@ -16230,3 +16230,91 @@ Compose creates and reuses the named volume \`mongo_data\` for the service. Avoi
 “If MongoDB data disappears after a container is recreated, I check whether the database directory is persisted. I mount a named Docker volume at \`/data/db\`, verify it with \`docker inspect\`, and ensure the same volume is reused after recreation. I also check MongoDB logs and the application connection string, avoid deleting volumes, and maintain separate backups for important data.”
 
 ---
+## Q177. A port is not accessible on a Docker container. What would you check?
+
+### 1. English Interview Definition
+If a Docker container's port is not accessible, I check whether the application is listening on the correct interface and port, whether the port is published to the host, and whether Docker networking, firewall rules, or the application itself are blocking the connection.
+
+### 2. Hindi Definition
+Agar Docker container ka port access nahi ho raha, toh hum check karte hain ki application sahi port par run ho rahi hai ya nahi, port host par publish hai ya nahi, aur networking ya firewall mein koi issue toh nahi hai.
+
+### 3. Hinglish Troubleshooting Steps
+
+**Step 1: Check whether the container is running**
+\`\`\`bash
+docker ps
+docker ps -a
+\`\`\`
+If it exited, inspect its logs and exit status before debugging the port.
+
+**Step 2: Check published ports**
+\`\`\`bash
+docker port <container-name>
+docker ps
+\`\`\`
+For example, a container port 3000 should be published to host port 3000 if you want to access it at \`http://localhost:3000\`.
+
+Run with port publishing:
+\`\`\`bash
+docker run -d --name backend -p 3000:3000 my-backend:1.0
+\`\`\`
+The format is \`-p HOST_PORT:CONTAINER_PORT\`. \`EXPOSE 3000\` in a Dockerfile documents the intended container port; by itself, it does not publish that port to the host.
+
+**Step 3: Ensure the application listens on the correct interface**
+For a Node.js server inside a container, bind to \`0.0.0.0\`, not only \`127.0.0.1\`:
+\`\`\`javascript
+app.listen(3000, "0.0.0.0", () => {
+  console.log("Server listening on port 3000");
+});
+\`\`\`
+If the app listens only on the container's loopback interface, port forwarding from outside the container may not reach it.
+
+**Step 4: Check logs and application startup**
+\`\`\`bash
+docker logs <container-name>
+docker logs --tail 100 <container-name>
+\`\`\`
+Confirm the app started successfully and is listening on the expected port.
+
+**Step 5: Test from inside the container**
+\`\`\`bash
+docker exec -it <container-name> sh
+\`\`\`
+Inside the container, use an available tool such as \`curl\` to test the app's local endpoint:
+\`\`\`bash
+curl -v http://127.0.0.1:3000
+\`\`\`
+If this fails, investigate the application, port, or startup configuration. If it works inside but not from the host, focus on port publishing, networking, and firewall rules.
+
+**Step 6: Check Docker Compose port mapping**
+\`\`\`yaml
+services:
+  backend:
+    build: .
+    ports:
+      - "3000:3000"
+\`\`\`
+The left side is the host port; the right side is the container port. If the application listens on port 5000 inside the container, map \`"3000:5000"\` to access it through host port 3000.
+
+**Step 7: Check port conflicts, firewall, and network**
+- Check whether another host process is already using the host port.
+- Verify host firewall, cloud security group, and network policies where applicable.
+- For container-to-container communication, put services on a shared Docker network and connect to the target service name and its container port; host port publishing is not normally needed for containers on the same user-defined network.
+- If accessing a remote Docker host, use that host's address instead of \`localhost\`.
+- Avoid exposing sensitive services publicly; publish only the ports that need external access.
+
+### 4. Quick Troubleshooting Table
+
+| Check | What it tells you |
+|---|---|
+| \`docker ps\` | Whether the container is running and which ports are published |
+| \`docker port <name>\` | Port mappings for the container |
+| \`docker logs <name>\` | Startup errors and application messages |
+| \`curl\` inside container | Whether the application responds locally |
+| Host-side \`curl\` | Whether the published endpoint is reachable |
+| Firewall/security rules | Whether network traffic is being blocked |
+
+### 5. Interview-Ready Answer
+“If a Docker port is not accessible, I first verify that the container is running and inspect its logs. Then I confirm the port mapping with \`docker ps\` or \`docker port\`, ensure the application listens on \`0.0.0.0\` and the correct container port, and test the endpoint from inside the container. If it works internally, I investigate host port conflicts, Docker networking, firewall rules, and cloud security groups.”
+
+---
