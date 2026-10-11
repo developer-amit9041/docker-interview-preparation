@@ -3347,3 +3347,103 @@ For a background Nginx container, attaching may not provide an interactive shell
 | Safe way to leave session | Exit the shell/command | Default detach sequence: `Ctrl+P`, then `Ctrl+Q` |
 
 **Interview-ready answer:** `docker exec` runs a new command inside a running container, such as opening a shell for debugging. `docker attach` connects to the container's existing main process streams. Use `docker exec` when you need a separate shell or command without attaching to the main process.
+
+
+---
+
+## Q34. What is the difference between `docker stop` and `docker kill`?
+
+### 1. English Definition
+
+`docker stop` asks a container's main process to shut down gracefully and waits for a configured timeout before forcefully killing it if needed. `docker kill` sends a signal to the container's main process immediately; by default, that signal is `SIGKILL`.
+
+### 2. Hindi Definition
+
+`docker stop` container ko pehle safely band hone ka mauka deta hai. `docker kill` default mein `SIGKILL` bhejkar process ko turant terminate karta hai.
+
+### 3. Hinglish Explanation
+
+Amit bhai, maan lo aapka Node.js backend container run ho raha hai.
+
+- **`docker stop`**: Docker pehle `SIGTERM` bhejta hai. Application ko ongoing requests complete karne aur cleanup karne ka chance milta hai. Default timeout 10 seconds hota hai on Linux containers; timeout ke baad process terminate na ho toh Docker `SIGKILL` bhejta hai.
+- **`docker kill`**: Default mein Docker turant `SIGKILL` bhejta hai. Process ko graceful cleanup ka mauka nahi milta.
+
+**Simple trick:** `stop` = graceful shutdown first; `kill` = force termination by default.
+
+Note: `docker kill` mein aap signal specify bhi kar sakte ho, jaise `docker kill --signal=SIGTERM my-backend`. Isliye technically `docker kill` hamesha SIGKILL hi bheje, aisa nahi hai.
+
+### 4. Practical Example / Code
+
+Start a container:
+
+```bash
+docker run -d --name my-backend node:22-alpine sh -c "while true; do sleep 1; done"
+```
+
+Gracefully stop it:
+
+```bash
+docker stop my-backend
+```
+
+Start it again and forcefully terminate it:
+
+```bash
+docker start my-backend
+docker kill my-backend
+```
+
+Use a custom stop timeout:
+
+```bash
+docker stop --timeout=20 my-backend
+```
+
+### 5. Architecture Diagram
+
+```text
+docker stop
+    |
+    v
+Send SIGTERM
+    |
+    v
+Application gets a chance to clean up
+    |
+    +---- exits in time ----> Container stops
+    |
+    +---- timeout expires --> Send SIGKILL
+                               |
+                               v
+                         Process terminates
+
+docker kill (default)
+    |
+    v
+Send SIGKILL
+    |
+    v
+Process is forcefully terminated
+```
+
+### 6. Practical Commands / Configuration
+
+| Command | Purpose |
+|---|---|
+| `docker stop my-backend` | Graceful stop, then force-kill if timeout expires |
+| `docker stop --timeout=20 my-backend` | Wait up to 20 seconds before force-killing |
+| `docker kill my-backend` | Forcefully terminate using default `SIGKILL` |
+| `docker kill --signal=SIGTERM my-backend` | Send a specified signal instead of the default |
+| `docker ps -a` | Check whether the container is still running |
+
+### 7. Summary Table
+
+| Feature | `docker stop` | `docker kill` |
+|---|---|---|
+| Default behavior | Graceful shutdown first | Immediate force termination |
+| Initial signal | `SIGTERM` | `SIGKILL` by default |
+| Waits for timeout? | Yes | No graceful timeout by default |
+| Cleanup opportunity | Usually yes | Not with default `SIGKILL` |
+| Typical use | Normal shutdown/deployment | Unresponsive container or urgent termination |
+
+**Interview-ready answer:** `docker stop` sends `SIGTERM` first and gives the container time to shut down gracefully; if it does not exit before the timeout, Docker sends `SIGKILL`. `docker kill` sends `SIGKILL` by default and terminates the process immediately. Use `docker stop` for normal shutdown and `docker kill` when forceful termination is needed.
