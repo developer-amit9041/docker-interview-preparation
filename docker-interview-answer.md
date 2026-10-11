@@ -5336,3 +5336,94 @@ Application source + dependencies
 ### Interview-ready answer
 
 “A Docker image is typically created from a Dockerfile using the `docker build` command. Docker reads the instructions, processes the build context, reuses cached layers where possible, and creates a tagged image. We can then use that image to run containers with `docker run`.”
+
+
+---
+
+## Q58. How do Docker image layers work?
+
+### 1. English Definition
+
+Docker image layers are reusable, read-only filesystem changes that make up an image. Dockerfile instructions such as `RUN`, `COPY`, and `ADD` can create layers, while the build cache can reuse unchanged layers to speed up subsequent builds.
+
+### 2. Hindi Definition
+
+Docker image layers image ke andar filesystem changes ki alag-alag layers hoti hain. Docker image in layers ko combine karke final filesystem banata hai, aur unchanged layers ko dobara build karne ke bajay cache se reuse kar sakta hai.
+
+### 3. Hinglish Explanation
+
+Maan lo aapka Dockerfile hai:
+
+```dockerfile
+FROM node:22-alpine
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY . .
+CMD ["node", "server.js"]
+```
+
+Docker base image se start karta hai. Phir instructions ke according filesystem changes record karta hai. `RUN`, `COPY`, aur `ADD` jaise instructions generally filesystem layers create karte hain; `WORKDIR`, `ENV`, aur `CMD` jaise metadata/configuration instructions ka layer behavior alag hota hai aur har instruction ka matlab ek filesystem layer nahi hota.
+
+Jab aap source code change karte ho lekin `package.json` aur `package-lock.json` same rehte hain, toh dependency installation wali layer cache se reuse ho sakti hai. Isse rebuild faster ho sakta hai.
+
+### 4. Layer Diagram
+
+```text
+          Final Docker Image
+        ┌─────────────────────┐
+        │ App source files    │  COPY . .
+        ├─────────────────────┤
+        │ Installed packages │  RUN npm ci
+        ├─────────────────────┤
+        │ package*.json       │  COPY package*.json
+        ├─────────────────────┤
+        │ Node.js base files  │  FROM node:22-alpine
+        └─────────────────────┘
+
+  Image = ordered filesystem layers + image configuration
+```
+
+This is a simplified conceptual diagram; not every Dockerfile instruction creates a filesystem layer.
+
+### 5. Why Are Layers Useful?
+
+- **Build cache:** Unchanged build steps can be reused.
+- **Faster rebuilds:** Docker can skip repeating cached work when cache inputs remain valid.
+- **Layer sharing:** Images based on the same compatible base layers can share stored layers.
+- **Storage efficiency:** Shared layers do not need to be stored independently for every image.
+- **Incremental builds:** Changes can invalidate the changed step and later dependent steps, rather than always rebuilding everything.
+
+### 6. Practical Commands
+
+Build the image:
+
+```bash
+docker build -t my-node-app:1.0 .
+```
+
+Inspect image history:
+
+```bash
+docker history my-node-app:1.0
+```
+
+List images:
+
+```bash
+docker image ls
+```
+
+To make better use of cache, copy dependency manifests before application source:
+
+```dockerfile
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY . .
+```
+
+This way, source-code-only changes do not necessarily invalidate the dependency-installation step.
+
+### Interview-ready answer
+
+“Docker image layers are reusable, read-only filesystem changes that make up an image. Docker can cache and reuse unchanged layers during subsequent builds, making builds faster and allowing images to share common layers. I improve cache efficiency by copying dependency manifests before frequently changing source files.”
