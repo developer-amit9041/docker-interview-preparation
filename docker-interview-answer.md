@@ -4325,3 +4325,77 @@ Current working directory = /app
 ### Interview-ready answer
 
 “The `WORKDIR` instruction sets the working directory for subsequent Dockerfile instructions, including `RUN`, `COPY`, and `CMD`. Docker creates the directory if it does not exist. For example, `WORKDIR /app` makes `/app` the working directory for subsequent instructions.”
+
+
+---
+
+## Q45. What does the `EXPOSE` instruction do?
+
+### 1. English Definition
+
+The `EXPOSE` instruction documents the port on which an application inside the container is expected to listen. By itself, it does not publish the port or make the application accessible from the host.
+
+### 2. Hindi Definition
+
+`EXPOSE` batata hai ki container ke andar application kaunsa port use karne ke liye intended hai. Sirf `EXPOSE` likhne se port host machine par open ya publish nahi hota.
+
+### 3. Hinglish Explanation
+
+Amit bhai, maan lo aapka Express backend container ke andar port `5000` par listen karta hai. Dockerfile mein likh sakte ho:
+
+```dockerfile
+EXPOSE 5000
+```
+
+Isse Dockerfile readers ko pata chalta hai ki application ka intended container port 5000 hai. Lekin host machine se access karne ke liye aam taur par `docker run -p` use karna hoga.
+
+### 4. Practical Example: MERN Backend
+
+**Dockerfile:**
+
+```dockerfile
+FROM node:22-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+EXPOSE 5000
+CMD ["node", "server.js"]
+```
+
+Publish the port when starting the container:
+
+```bash
+docker build -t mern-backend:1.0 .
+docker run -d --name mern-backend -p 5000:5000 mern-backend:1.0
+```
+
+Here, the first `5000` is the host port and the second `5000` is the container port. The Node.js application must actually listen on the container's port 5000.
+
+### 5. EXPOSE vs -p
+
+| Feature | `EXPOSE 5000` | `-p 5000:5000` |
+|---|---|---|
+| Where used | Dockerfile | `docker run` command |
+| Purpose | Documents intended container port | Publishes/maps a host port to a container port |
+| Makes port accessible from host by itself? | No | Yes, subject to networking and firewall configuration |
+| Example | `EXPOSE 5000` | `docker run -p 5000:5000 image` |
+
+### 6. Useful Commands
+
+Check published port mappings:
+
+```bash
+docker ps
+docker port mern-backend
+```
+
+To publish only on the local host interface, you can use:
+
+```bash
+docker run -d -p 127.0.0.1:5000:5000 mern-backend:1.0
+```
+
+### Interview-ready answer
+
+“The `EXPOSE` instruction documents the port on which a containerized application is expected to listen. It does not publish the port by itself. To make the application reachable through a host port, we typically use port mapping such as `docker run -p 5000:5000 image`.”
