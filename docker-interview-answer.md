@@ -16069,3 +16069,93 @@ In this example, `mongodb` is the service name used for DNS-based discovery on t
 “Inside a Docker container, `localhost` points to that same container, not to the host or another container. If my Node.js container needs MongoDB running in a separate Compose service, I use the MongoDB service name, such as `mongodb`, on their shared Docker network. I then verify service health, DNS resolution, ports, and network connectivity.”
 
 ---
+## Q175. A Docker image is too large. How would you reduce its size?
+
+### 1. English Interview Answer
+I would inspect the image layers, use an appropriate lightweight base image, apply multi-stage builds, install only production dependencies, and exclude unnecessary files with \`.dockerignore\`. I would then rebuild and compare the image size while verifying that the application still runs correctly and remains secure.
+
+### 2. Hindi Definition
+Agar Docker image ka size bahut zyada hai, toh unnecessary files, packages aur build tools ko remove karke, multi-stage build aur lightweight base image use karke size reduce kar sakte hain.
+
+### 3. Hinglish: Step-by-Step Debugging
+
+**Step 1: Check the current image size**
+\`\`\`bash
+docker image ls
+docker history my-backend:1.0
+\`\`\`
+\`docker image ls\` image ka size dikhata hai; \`docker history\` se pata lag sakta hai ki kaun-si layers zyada space le rahi hain.
+
+**Step 2: Add a \`.dockerignore\` file**
+\`\`\`dockerignore
+node_modules
+.git
+.env
+coverage
+npm-debug.log
+\`\`\`
+Isse local dependencies, Git history aur unnecessary files build context mein include nahi hongi. Secrets ko image mein copy karne ke bajaye securely runtime par provide karein.
+
+**Step 3: Use a suitable lightweight base image**
+\`\`\`dockerfile
+FROM node:22-alpine
+WORKDIR /app
+\`\`\`
+Lightweight base image choose karein, lekin native modules aur required system libraries ki compatibility test karein. Maintained, supported base image use karna size se bhi important hai.
+
+**Step 4: Use a multi-stage build**
+\`\`\`dockerfile
+FROM node:22-alpine AS build
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+FROM node:22-alpine AS production
+WORKDIR /app
+ENV NODE_ENV=production
+COPY package*.json ./
+RUN npm ci --omit=dev && npm cache clean --force
+COPY --from=build /app/dist ./dist
+CMD ["node", "dist/server.js"]
+\`\`\`
+Build stage mein development dependencies aur build tools use hote hain; final stage mein sirf runtime ke liye required files aur production dependencies copy ki jaati hain. Apne project ke output path aur entry point ke hisaab se \`/app/dist\` aur \`dist/server.js\` adjust karein.
+
+**Step 5: Optimize layer caching and copies**
+\`\`\`dockerfile
+COPY package*.json ./
+RUN npm ci
+COPY . .
+\`\`\`
+Dependency manifests pehle copy karne se, source code change hone par dependency-install layer reuse ho sakti hai. Final stage mein unnecessary source files aur build tools copy na karein.
+
+**Step 6: Rebuild and compare**
+\`\`\`bash
+docker build -t my-backend:1.1 .
+docker image ls
+docker history my-backend:1.1
+\`\`\`
+Same conditions ke under before/after image sizes compare karein, aur final image ko test aur scan karein.
+
+### 4. Key Techniques Summary
+
+| Technique | Benefit |
+|---|---|
+| Lightweight supported base image | Smaller starting image |
+| Multi-stage build | Build tools ko final image se exclude karna |
+| \`.dockerignore\` | Unnecessary build-context files exclude karna |
+| \`npm ci --omit=dev\` in runtime stage | Development dependencies exclude karna |
+| Explicit \`COPY\` instructions | Sirf required runtime files include karna |
+| Layer inspection | Large layers identify karna |
+
+### 5. Important Cautions
+- Smaller image automatically more secure nahi hoti; base images update karein aur vulnerability scanning use karein.
+- Required runtime files ya native libraries remove na karein.
+- \`docker build --no-cache\` cached layers ko disable karta hai; updated base image check karne ke liye \`docker build --pull\` bhi use kiya ja sakta hai.
+- Image size kam karne se build time ya runtime performance automatically improve ho, yeh guaranteed nahi hai.
+
+### 6. Interview-Ready Answer
+“If a Docker image is too large, I first inspect its layers with \`docker history\`. Then I use a suitable lightweight base image, multi-stage builds, a \`.dockerignore\` file, and production-only dependencies. I copy only the required runtime files, rebuild the image, compare sizes, and test and scan the final image to ensure it remains functional and secure.”
+
+---
