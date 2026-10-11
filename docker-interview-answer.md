@@ -2035,3 +2035,103 @@ User runs: docker ps -a
 | Removed | Hidden | Hidden |
 
 **Interview-ready answer:** The `docker ps -a` command lists all existing Docker containers, including running and stopped containers. It is useful for checking a container's status and finding containers that are no longer running.
+
+
+---
+
+## Q20. How do you stop a container?
+
+### 1. English Definition
+
+You can stop a running Docker container using the `docker stop` command followed by the container name or ID. Docker normally sends a termination signal to the container's main process and waits briefly before forcefully stopping it if necessary.
+
+### 2. Hindi Definition
+
+Running Docker container ko stop karne ke liye `docker stop` command use karte hain. Iske baad container ka naam ya container ID dete hain.
+
+### 3. Hinglish Explanation
+
+Amit, maan lo aapka `my-nginx` naam ka container chal raha hai. Use stop karne ke liye:
+
+```bash
+docker stop my-nginx
+```
+
+Docker pehle container ke main process ko gracefully terminate hone ka signal deta hai. Agar process configured timeout ke andar stop nahi hota, toh Docker use forcefully stop kar sakta hai.
+
+**Important:** `docker stop` container ko stop karta hai, delete nahi. Stopped container ko baad mein `docker start` se dobara start kar sakte ho.
+
+### 4. Practical Example / Code
+
+Start a container:
+
+```bash
+docker run -d --name my-nginx nginx
+```
+
+Stop it by name:
+
+```bash
+docker stop my-nginx
+```
+
+You can also stop it by container ID:
+
+```bash
+docker ps
+docker stop <container_id>
+```
+
+Verify the result:
+
+```bash
+docker ps
+docker ps -a
+```
+
+The container should no longer appear in `docker ps`, but it should appear in `docker ps -a` with a stopped/exited status unless it has been removed.
+
+### 5. Architecture Diagram
+
+```text
+docker stop my-nginx
+          |
+          v
+     Docker CLI
+          |
+          v
+    Docker daemon
+          |
+          v
+ Send termination signal
+          |
+          v
+ Container process exits
+          |
+          v
+    Container stopped
+    (not deleted)
+```
+
+### 6. Practical Commands / Configuration
+
+| Command | Purpose |
+|---|---|
+| `docker stop my-nginx` | Stops a container by name |
+| `docker stop <container_id>` | Stops a container by ID |
+| `docker stop -t 30 my-nginx` | Waits up to 30 seconds before forceful termination if needed |
+| `docker ps` | Checks currently running containers |
+| `docker ps -a` | Checks all existing containers |
+| `docker start my-nginx` | Starts the stopped container again |
+| `docker kill my-nginx` | Forcefully stops a container |
+
+### 7. Summary Table
+
+| Command | What it does |
+|---|---|
+| `docker stop` | Gracefully stops a running container, with a timeout |
+| `docker kill` | Forcefully stops a container |
+| `docker start` | Starts an existing stopped container |
+| `docker rm` | Removes a container; normally it must be stopped first |
+
+**Interview-ready answer:** Use `docker stop CONTAINER_NAME` or `docker stop CONTAINER_ID` to stop a running container. Docker requests graceful termination first and may forcefully stop it if the timeout expires. Stopping a container does not delete it.
