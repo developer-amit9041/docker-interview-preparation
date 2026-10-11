@@ -4168,3 +4168,80 @@ Exec form generally provides more predictable signal handling. Shell form runs t
 ### Interview-ready answer
 
 “The `ENTRYPOINT` instruction configures the main executable that runs when a container starts. In exec form, arguments passed to `docker run` are appended to the entrypoint command, while `CMD` can provide default arguments. This is useful when a container is designed to run a particular application or tool.”
+
+
+---
+
+## Q43. What is the difference between `COPY` and `ADD`?
+
+### 1. English Definition
+
+Both `COPY` and `ADD` copy files or directories from the build context into a Docker image. `ADD` supports additional source handling, including automatic extraction of local tar archives and remote URL sources in supported cases. `COPY` is simpler and is generally preferred when only copying files is needed.
+
+### 2. Hindi Definition
+
+`COPY` aur `ADD` dono files ko Docker image ke andar copy karte hain. Lekin `ADD` kuch extra features bhi support karta hai, jaise local tar archive ko automatically extract karna.
+
+### 3. Hinglish Explanation
+
+Amit bhai, maan lo aapko apne MERN project ki `server.js` file container image mein copy karni hai. Iske liye `COPY` use karna best hai:
+
+```dockerfile
+COPY server.js /app/server.js
+```
+
+Agar aapko local tar archive ko copy karte waqt automatically extract karwana hai, toh suitable case mein `ADD` use kar sakte ho:
+
+```dockerfile
+ADD app-files.tar.gz /app/
+```
+
+**Rule of thumb:** Simple file copy ke liye `COPY` use karo. `ADD` tabhi use karo jab uski additional behavior ki actual zarurat ho.
+
+### 4. Practical Example: MERN Backend
+
+Recommended Dockerfile:
+
+```dockerfile
+FROM node:22-alpine
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci
+
+COPY . .
+CMD ["node", "server.js"]
+```
+
+Yahan `COPY` package files aur source code ko image mein copy karta hai. Dependencies install karna `RUN npm ci` ka kaam hai.
+
+Local tar archive example:
+
+```dockerfile
+FROM alpine:3.20
+WORKDIR /app
+ADD app-files.tar.gz /app/
+```
+
+Docker automatically extracts supported local tar archives into the destination directory.
+
+### 5. Summary Table
+
+| Feature | `COPY` | `ADD` |
+|---|---|---|
+| Local files/directories copy | Yes | Yes |
+| Automatically extracts local tar archives | No | Yes, for supported tar formats |
+| Remote URL source support | No | Yes, with specific semantics |
+| Simplicity and clarity | Preferred for ordinary copying | Use when extra behavior is needed |
+| Typical Node.js Dockerfile | Most common choice | Less commonly needed |
+
+### 6. Important Interview Points
+
+- `COPY` is usually preferred because its behavior is straightforward.
+- `ADD` does not automatically extract every compressed file format; automatic extraction applies to supported local tar archives.
+- For downloading files, a deliberate `RUN` command with a suitable tool may offer clearer control and verification than using a remote URL with `ADD`.
+- Both instructions copy from the build context unless using supported source options.
+
+### Interview-ready answer
+
+“Both `COPY` and `ADD` copy files into a Docker image. `ADD` has extra features, such as automatically extracting supported local tar archives and handling remote URL sources in supported cases. I generally use `COPY` for ordinary file copying because its behavior is simpler and more predictable.”
