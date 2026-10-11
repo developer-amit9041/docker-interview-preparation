@@ -7147,3 +7147,82 @@ The named volume `mongo-data` remains unless it is explicitly removed. A new com
 ### Interview-ready answer
 
 “We need Docker volumes to store important data independently of a container's writable layer. They help data survive container removal and recreation, support data sharing where appropriate, and let us update or replace application containers without losing persistent data. For example, I use a named volume to persist MongoDB data.”
+
+
+---
+
+## Q83. How can you preserve data when a container is deleted?
+
+### 1. English Definition
+
+Preserve container data by storing it outside the container's writable layer, typically in a Docker volume or a bind mount. The data can then remain available after the container is deleted, provided the volume or host files are retained.
+
+### 2. Hindi Definition
+
+Container delete hone ke baad data preserve karne ke liye data ko container ke writable layer ke bajay Docker volume ya bind mount mein store karna chahiye.
+
+### 3. Hinglish Explanation
+
+Maan lo MongoDB container mein users ka data saved hai. Agar aap data ko sirf container ke writable layer mein rakhte ho, toh container delete hone par woh data generally lost ho sakta hai.
+
+Agar aap named volume attach karte ho, toh database files container se alag storage mein rehti hain. Container delete karne ke baad bhi volume retained rahega aur aap use naye container ke saath dobara attach kar sakte ho.
+
+### 4. Method 1: Docker Named Volume (Recommended for persistent container data)
+
+**Create a volume:**
+
+```bash
+docker volume create mongo-data
+```
+
+**Run MongoDB with the volume mounted:**
+
+```bash
+docker run -d \
+  --name mongodb \
+  -v mongo-data:/data/db \
+  mongo:8
+```
+
+**Delete the container:**
+
+```bash
+docker rm -f mongodb
+```
+
+The named volume normally remains. Recreate a compatible container and attach the same volume to access the retained database files.
+
+### 5. Method 2: Bind Mount
+
+A bind mount stores data in a specific directory on the host machine.
+
+**Linux/macOS example:**
+
+```bash
+docker run -d \
+  --name mongodb \
+  --mount type=bind,source=/opt/mongo-data,target=/data/db \
+  mongo:8
+```
+
+The host directory `/opt/mongo-data` must exist and have suitable permissions. On Windows or other environments, use an appropriate host path and Docker Desktop file-sharing configuration.
+
+### 6. Volume vs Bind Mount
+
+| Feature | Named volume | Bind mount |
+|---|---|---|
+| Storage location | Managed by Docker | Specific host path |
+| Host path chosen directly | Usually no | Yes |
+| Data can survive container deletion | Yes, if retained | Yes, if host files are retained |
+| Common use | Database and persistent application data | Development files and host-managed data |
+
+### 7. Important Notes
+
+- Do not delete the volume or host directory if you need the data.
+- Container persistence is not a substitute for backups.
+- For databases, stop or back up the database consistently before moving or manipulating its data files.
+- `docker rm -v` may remove associated anonymous volumes, but does not remove named volumes in the usual case. Avoid relying on implicit cleanup behavior for important data.
+
+### Interview-ready answer
+
+“To preserve data after deleting a container, I store it in a Docker named volume or a bind mount instead of the container's writable layer. I can then remove and recreate the container and reattach the same storage. For example, I mount a named volume at MongoDB's `/data/db` directory. I also maintain backups because volumes alone do not protect against accidental deletion or data corruption.”
