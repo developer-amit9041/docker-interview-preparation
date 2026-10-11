@@ -4399,3 +4399,80 @@ docker run -d -p 127.0.0.1:5000:5000 mern-backend:1.0
 ### Interview-ready answer
 
 “The `EXPOSE` instruction documents the port on which a containerized application is expected to listen. It does not publish the port by itself. To make the application reachable through a host port, we typically use port mapping such as `docker run -p 5000:5000 image`.”
+
+
+---
+
+## Q46. What does the `ENV` instruction do?
+
+### 1. English Definition
+
+The `ENV` instruction sets environment variables in the image. These variables are available to subsequent Dockerfile instructions and, by default, to processes running in containers created from the image, unless overridden.
+
+### 2. Hindi Definition
+
+`ENV` instruction environment variables set karta hai, jinhe Dockerfile ki later instructions aur container ke andar application use kar sakti hai.
+
+### 3. Hinglish Explanation
+
+Amit bhai, maan lo aap apne Node.js backend mein `NODE_ENV=production` set karna chahte ho. Dockerfile mein likh sakte ho:
+
+```dockerfile
+ENV NODE_ENV=production
+```
+
+Ab container ke andar Node.js application `process.env.NODE_ENV` se is value ko read kar sakti hai.
+
+`ENV` ka use configuration values ke liye karo, lekin passwords, API secrets ya private keys ko Dockerfile mein hardcode mat karo—ye image metadata/layers mein reh sakte hain. Secrets ko runtime environment, secret manager, ya supported secrets mechanism se provide karo.
+
+### 4. Practical Example: MERN Backend
+
+```dockerfile
+FROM node:22-alpine
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV PORT=5000
+
+COPY package*.json ./
+RUN npm ci
+COPY . .
+
+EXPOSE 5000
+CMD ["node", "server.js"]
+```
+
+In `server.js`, your app can read the values:
+
+```javascript
+const port = process.env.PORT || 5000;
+console.log(process.env.NODE_ENV); // production
+app.listen(port);
+```
+
+Override an environment variable when running the container:
+
+```bash
+docker run -d --name mern-backend -p 5000:5000 -e NODE_ENV=development mern-backend:1.0
+```
+
+Runtime `-e NODE_ENV=development` overrides the image's default `NODE_ENV=production` for this container.
+
+### 5. Common Uses
+
+| Example | Purpose |
+|---|---|
+| `ENV NODE_ENV=production` | Set Node.js environment |
+| `ENV PORT=5000` | Set an application port variable |
+| `ENV PATH="/app/bin:$PATH"` | Update the executable search path |
+
+### 6. Important Points
+
+- `ENV` variables are available to later Dockerfile instructions and container processes by default.
+- Runtime values can be overridden with `docker run -e` or an environment file.
+- Do not use `ENV` to store secrets that should not be embedded in the image.
+- `ENV` differs from `ARG`, which is primarily for build-time variables and is not automatically available at runtime unless separately set.
+
+### Interview-ready answer
+
+“The `ENV` instruction sets environment variables in a Docker image. These values are available to later build instructions and to processes in containers created from the image, unless overridden at runtime. For example, `ENV NODE_ENV=production` sets the Node.js environment to production. Secrets should not be hardcoded using `ENV`.”
