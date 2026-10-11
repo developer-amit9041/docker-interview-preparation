@@ -8346,3 +8346,85 @@ Other drivers, such as overlay or macvlan, require their relevant configuration 
 ### Interview-ready answer
 
 “I create a Docker network using `docker network create <network-name>`, for example, `docker network create mern-network`. I then attach application containers to it using `--network mern-network`. On a user-defined bridge network, containers can communicate using their container names.”
+
+
+---
+
+## Q100. How can React and Node.js containers communicate on the same Docker network?
+
+### 1. English Definition
+
+React and Node.js containers can communicate through a shared user-defined Docker network, but the communication path depends on where the request originates. Server-side code in one container can use the other container's Docker DNS name. React code running in the user's browser cannot normally resolve Docker-only container names, so the browser needs a host-accessible API URL or a reverse proxy.
+
+### 2. Hindi Definition
+
+React aur Node.js containers ko same Docker network par connect kiya ja sakta hai. Lekin React ka code browser mein run hota hai, isliye browser normally Docker ke internal hostname jaise `backend` ko resolve nahi kar sakta. Browser ke liye host-accessible API URL ya reverse proxy use karna hota hai.
+
+### 3. Hinglish Explanation
+
+Maan lo:
+- React container: frontend
+- Node.js container: backend
+- Docker network: `mern-network`
+
+Dono containers ko same network par run karna useful hai, lekin **browser-to-backend** aur **container-to-container** communication alag hain:
+
+- Agar Node.js backend kisi doosre container se request kar raha hai, toh `http://backend:5000` use kar sakta hai on the shared user-defined network.
+- Agar React JavaScript browser mein chal rahi hai, toh `http://backend:5000` normally kaam nahi karega, kyunki `backend` hostname Docker network ke andar resolve hota hai, user's browser mein nahi.
+- Browser ke liye host-published URL, jaise `http://localhost:5000`, ya same-origin reverse proxy route, jaise `/api`, use karo.
+
+### 4. Practical Example: Publish the Backend Port
+
+**Step 1: Create a network**
+
+```bash
+docker network create mern-network
+```
+
+**Step 2: Run the Node.js backend**
+
+```bash
+docker run -d \
+  --name backend \
+  --network mern-network \
+  -p 5000:5000 \
+  my-backend-image
+```
+
+The Node.js app must listen on `0.0.0.0:5000` inside the container.
+
+**Step 3: Run the React frontend on the same network**
+
+```bash
+docker run -d \
+  --name frontend \
+  --network mern-network \
+  -p 3000:80 \
+  my-react-image
+```
+
+Assuming the frontend image serves the built React app using a web server on port 80, the browser can open `http://localhost:3000`.
+
+In browser-side React code, configure an API URL accessible to the browser, for example:
+
+```javascript
+const API_URL = "http://localhost:5000";
+fetch(`${API_URL}/api/users`);
+```
+
+This local example assumes the browser and published backend are on the same host. Configure CORS on the backend if the frontend and API use different origins.
+
+### 5. Production Option: Reverse Proxy
+
+In production, a common pattern is to serve React and proxy API requests through the same public origin. For example, browser code calls `/api/users`; the web server/reverse proxy forwards `/api` requests to the backend container at `http://backend:5000` over the Docker network. This avoids exposing the backend port separately and can avoid cross-origin browser requests.
+
+### 6. Important Points
+
+- Put the containers on the same user-defined network when they need direct container-to-container communication.
+- Docker hostnames such as `backend` resolve for containers on that network, not normally for the user's browser.
+- Publish the required frontend/API host ports, or configure a reverse proxy.
+- Ensure the backend listens on the right interface and port; configure CORS if using different browser origins.
+
+### Interview-ready answer
+
+“I connect the React and Node.js containers to the same user-defined Docker network. Docker-internal clients can reach the backend by its service/container name, such as `backend:5000`. However, React code runs in the browser, so it must call a browser-accessible API URL or use a reverse proxy that forwards requests to the backend over the Docker network.”
