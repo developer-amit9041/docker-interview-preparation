@@ -522,3 +522,116 @@ docker image rm my-node-app:1.0
 **Interview-ready summary:**
 
 > A Docker image is a read-only, layered template that packages an application and its required runtime dependencies. Docker uses the image to create one or more containers.
+
+
+---
+
+## Q6. What is the difference between a Docker image and a container?
+
+### 1. English Definition
+
+A Docker image is a read-only, layered template used to create containers. A Docker container is a runtime instance of an image, with an isolated process environment and a writable container layer.
+
+### 2. Hindi Definition
+
+Docker image ek read-only template hoti hai, jisse container create hota hai. Docker container us image ka runtime instance hota hai, jisme application run karti hai aur apni writable layer mein changes kar sakti hai.
+
+### 3. Hinglish Explanation
+
+Easy example se samjho:
+
+- **Image = blueprint / recipe**
+- **Container = us blueprint se bana hua running application environment**
+
+Jaise ek hi Docker image se aap development aur testing ke liye alag-alag containers bana sakte ho. Image khud template hoti hai; container ke andar application ka process run karta hai.
+
+Container ke writable layer mein kiye gaye changes image ko automatically modify nahi karte. Container remove karne par writable-layer data generally lost ho sakta hai, isliye persistent data ke liye volumes ya bind mounts use karte hain.
+
+### 4. Practical Example / Code
+
+Pull an image:
+
+```bash
+docker pull node:20
+```
+
+Create two containers from the same image:
+
+```bash
+docker run -d --name node-app-1 node:20
+docker run -d --name node-app-2 node:20
+```
+
+These commands create two containers from the same image. Since the default Node image command may exit when no process is kept running, use this version to keep both containers running for demonstration:
+
+```bash
+docker run -d --name node-app-1 node:20 sleep infinity
+docker run -d --name node-app-2 node:20 sleep infinity
+```
+
+Check containers and images:
+
+```bash
+docker ps
+docker images
+```
+
+### 5. Architecture Diagram
+
+```text
+              Docker Image
+            (read-only template)
+                    |
+           +--------+--------+
+           |                 |
+       docker run        docker run
+           |                 |
+           v                 v
+   +---------------+  +---------------+
+   |  Container 1  |  |  Container 2  |
+   | Writable layer|  | Writable layer|
+   | Process / App |  | Process / App |
+   +---------------+  +---------------+
+```
+
+### 6. Practical Command / Configuration
+
+**See local images:**
+
+```bash
+docker images
+```
+
+**See running containers:**
+
+```bash
+docker ps
+```
+
+**See all containers, including stopped ones:**
+
+```bash
+docker ps -a
+```
+
+**Inspect an image or container:**
+
+```bash
+docker image inspect node:20
+docker container inspect node-app-1
+```
+
+### 7. Summary Table
+
+| Feature | Docker Image | Docker Container |
+|---|---|---|
+| Meaning | Read-only template | Runtime instance of an image |
+| Purpose | Used to create containers | Runs the application process |
+| State | Image layers are immutable | Has a writable container layer |
+| Created by | Usually `docker build` or `docker pull` | `docker run` or `docker create` |
+| Instances | One image can create many containers | Each container is a separate instance |
+| Persistence | Image layers are reusable | Writable-layer data may be lost when removed; use volumes for persistent data |
+
+**Interview-ready summary:**
+
+> A Docker image is a read-only template, whereas a Docker container is a runtime instance created from that image. One image can be used to create multiple independent containers.
