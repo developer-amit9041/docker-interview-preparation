@@ -8117,3 +8117,73 @@ This test works only if `getent` is installed in the backend image. Minimal imag
 ### Interview-ready answer
 
 “Containers can access each other by hostname by joining the same user-defined Docker network. Docker's embedded DNS resolves a container name or network alias to its IP address. For example, a backend container can connect to MongoDB using `mongodb:27017` instead of a hard-coded IP address.”
+
+
+---
+
+## Q97. What is port mapping in Docker?
+
+### 1. English Definition
+
+Port mapping publishes a port on the Docker host and forwards traffic to a port inside a container. It is commonly configured with the `-p` or `--publish` option when starting a container.
+
+### 2. Hindi Definition
+
+Docker mein port mapping ka matlab hai host machine ke port ko container ke andar chal rahi application ke port se connect karna, taaki host ya external client us application ko access kar sake.
+
+### 3. Hinglish Explanation
+
+Maan lo Nginx container ke andar port `80` par chal raha hai. Agar aap host machine ke port `8080` se usko access karna chahte ho, toh port mapping set kar sakte ho:
+
+```bash
+docker run -d --name web -p 8080:80 nginx
+```
+
+Ismein:
+- `8080` = host port
+- `80` = container port
+
+Ab host machine ke browser mein `http://localhost:8080` open karne par Nginx access ho sakta hai, agar container running hai aur port available hai.
+
+### 4. Port Mapping Format
+
+```text
+-p HOST_PORT:CONTAINER_PORT
+```
+
+Example for a Node.js application listening on port 5000:
+
+```bash
+docker run -d --name backend -p 5000:5000 my-backend-image
+```
+
+Host port `5000` container port `5000` par forward hota hai.
+
+You can also map a different host port:
+
+```bash
+docker run -d --name backend -p 8080:5000 my-backend-image
+```
+
+Here, host port `8080` forwards to container port `5000`.
+
+### 5. Bind to a Specific Host Address
+
+By default, publishing a port without a host IP commonly makes it accessible on all host interfaces. To bind only to localhost:
+
+```bash
+docker run -d -p 127.0.0.1:8080:80 nginx
+```
+
+This restricts the published port to the host's loopback interface, subject to platform behavior.
+
+### 6. Important Points
+
+- Port mapping is mainly for access through the Docker host or external clients.
+- Containers on the same user-defined bridge network can generally communicate directly using container names and container ports without publishing ports.
+- The host port must be available.
+- Avoid publishing database ports publicly unless necessary and appropriately secured.
+
+### Interview-ready answer
+
+“Port mapping in Docker publishes a host port and forwards traffic to a port inside a container. I use `-p HOST_PORT:CONTAINER_PORT`, for example, `-p 8080:80`, to access an Nginx container on host port 8080 even though Nginx listens on port 80 inside the container.”
