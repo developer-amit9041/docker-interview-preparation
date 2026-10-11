@@ -8032,3 +8032,88 @@ For communication between containers on the same user-defined bridge network, yo
 ### Interview-ready answer
 
 “Containers communicate over a shared Docker network. On a user-defined bridge network, Docker DNS lets one container reach another using its container name, for example, a Node.js backend connecting to MongoDB at `mongodb:27017`. Port publishing with `-p` is generally needed for host or external access, not for container-to-container communication on that network.”
+
+
+---
+
+## Q96. How can Docker containers access each other by hostname?
+
+### 1. English Definition
+
+Containers can access each other by hostname when they are connected to the same user-defined Docker network. Docker provides embedded DNS on such networks, allowing a container to resolve another container's name or configured network alias to its IP address.
+
+### 2. Hindi Definition
+
+Docker containers ek doosre ko hostname se access kar sakte hain jab dono same user-defined Docker network par connected hon. Docker DNS container name ko uske network IP address mein resolve karta hai.
+
+### 3. Hinglish Explanation
+
+Maan lo aapke paas:
+- Backend container: `backend`
+- MongoDB container: `mongodb`
+
+Agar dono `mern-network` par hain, toh backend MongoDB ko IP address ke bajaye hostname `mongodb` se access kar sakta hai:
+
+```text
+mongodb://mongodb:27017/myapp
+```
+
+Iska fayda yeh hai ki container ka IP address change hone par application ko hard-coded IP update nahi karna padta, jab tak container name/network alias same rahe.
+
+### 4. Practical Example
+
+**Step 1: User-defined bridge network create karo**
+
+```bash
+docker network create mern-network
+```
+
+**Step 2: MongoDB ko network par run karo**
+
+```bash
+docker volume create mongo-data
+
+docker run -d \
+  --name mongodb \
+  --network mern-network \
+  -v mongo-data:/data/db \
+  mongo:8
+```
+
+**Step 3: Backend ko same network par run karo**
+
+```bash
+docker run -d \
+  --name backend \
+  --network mern-network \
+  -e MONGO_URI=mongodb://mongodb:27017/myapp \
+  my-backend-image
+```
+
+The backend can resolve `mongodb` through Docker DNS because both containers share the user-defined network.
+
+### 5. Verify Network and Connectivity
+
+```bash
+docker network inspect mern-network
+```
+
+This shows the containers connected to the network. To test DNS from the backend container, use a diagnostic tool available inside its image, for example:
+
+```bash
+docker exec backend getent hosts mongodb
+```
+
+This test works only if `getent` is installed in the backend image. Minimal images may not include it; use an appropriate DNS utility or a temporary diagnostic container attached to the same network.
+
+### 6. Important Points
+
+- Prefer a user-defined bridge network rather than relying on the default bridge's name-resolution behavior.
+- Containers must share a network on which the hostname or alias is resolvable.
+- Use the destination application's listening port, such as MongoDB's `27017`.
+- Hostname resolution does not guarantee that the service is healthy, reachable at that port, or correctly authenticated.
+- You generally do not need to publish the destination port with `-p` for container-to-container communication on the same network.
+
+### Interview-ready answer
+
+“Containers can access each other by hostname by joining the same user-defined Docker network. Docker's embedded DNS resolves a container name or network alias to its IP address. For example, a backend container can connect to MongoDB using `mongodb:27017` instead of a hard-coded IP address.”
