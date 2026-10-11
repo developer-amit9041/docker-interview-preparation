@@ -16001,3 +16001,71 @@ Use \`--no-cache\` when you specifically need to rule out stale build layers. Ke
 “If an application works locally but fails in Docker, I first check the container status and logs. Then I verify environment variables, installed dependencies, Dockerfile paths and startup command, port binding, networking, file permissions, and mounted files. For a MERN application, I specifically check that the backend uses the MongoDB service name instead of \`localhost\` when both run in separate Compose containers. I then rebuild and retest after identifying the root cause.”
 
 ---
+## Q174. Why might \`localhost\` not work as expected inside a Docker container?
+
+### 1. English Interview Definition
+Inside a Docker container, \`localhost\` (or \`127.0.0.1\`) refers to that same container's network namespace, not automatically to the Docker host or another container. To connect to another service, use a reachable hostname or IP address on the appropriate network.
+
+### 2. Hindi Definition
+Docker container ke andar \`localhost\` ka matlab usually wahi container hota hai. Iska matlab host machine ya doosra container nahi hota.
+
+### 3. Hinglish Explanation
+Maan lo aapka Node.js backend ek container mein aur MongoDB doosre container mein run ho raha hai. Agar backend mein ye connection string hai:
+
+\`\`\`js
+mongoose.connect("mongodb://localhost:27017/mydb");
+\`\`\`
+
+Toh Node.js container apne hi andar MongoDB dhoondhega. Agar us container mein MongoDB run nahi ho raha, toh connection fail hoga.
+
+Docker Compose mein MongoDB service ka naam \`mongodb\` hai, toh shared Compose network par backend ko aam taur par ye use karna chahiye:
+
+\`\`\`js
+mongoose.connect("mongodb://mongodb:27017/mydb");
+\`\`\`
+
+### 4. Common Cases
+
+| Where the destination runs | What hostname to consider |
+|---|---|
+| Same container | \`localhost\` or \`127.0.0.1\` |
+| Another Compose service | Its Compose service name, e.g. \`mongodb\` |
+| Docker host from Docker Desktop | Often \`host.docker.internal\` |
+| Docker host on Linux Engine | Configure host-gateway or an appropriate host address; availability depends on setup |
+
+The destination must also listen on a reachable interface, and the containers must have appropriate network connectivity.
+
+### 5. Practical Docker Compose Example
+
+\`\`\`yaml
+services:
+  backend:
+    build: ./backend
+    environment:
+      MONGO_URI: mongodb://mongodb:27017/mydb
+    depends_on:
+      - mongodb
+
+  mongodb:
+    image: mongo:7
+    volumes:
+      - mongo_data:/data/db
+
+volumes:
+  mongo_data:
+\`\`\`
+
+In this example, \`mongodb\` is the service name used for DNS-based discovery on the Compose network. \`depends_on\` controls startup ordering but does not, by itself, guarantee MongoDB is ready to accept connections; use a health check and appropriate readiness/retry logic when needed.
+
+### 6. How to Debug
+1. Confirm the destination service is running: \`docker compose ps\`.
+2. Check logs: \`docker compose logs backend mongodb\`.
+3. Verify the connection string and service name in the backend container's environment/configuration.
+4. Confirm both containers share a Docker network: \`docker network ls\` and \`docker network inspect <network-name>\`.
+5. Check that MongoDB listens on a reachable interface and port, and that no firewall or network policy blocks traffic.
+6. Test DNS/connectivity from the backend container using available tools; minimal images may not include utilities such as \`ping\` or \`nc\`.
+
+### 7. Interview-Ready Answer
+“Inside a Docker container, \`localhost\` points to that same container, not to the host or another container. If my Node.js container needs MongoDB running in a separate Compose service, I use the MongoDB service name, such as \`mongodb\`, on their shared Docker network. I then verify service health, DNS resolution, ports, and network connectivity.”
+
+---
