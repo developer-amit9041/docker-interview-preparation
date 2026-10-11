@@ -12893,3 +12893,151 @@ The backend can read the mounted file from \`/run/secrets/mongo_password\`. Add 
 "Docker secrets provide sensitive values such as database passwords, API keys, and certificates to authorized containers without hardcoding them into source code or images. Docker Swarm has built-in secrets management and mounts secrets as files, commonly under \`/run/secrets/\`. Docker Compose can also mount file-backed secrets, but their security depends on how the source files and host are protected. I restrict access, keep secrets out of Git and images, avoid logging them, and rotate them when necessary."
 
 ---
+## Q139. How do you manage passwords and secrets in Docker?
+
+### 1. English Interview Definition
+
+Passwords and secrets in Docker should be managed using dedicated secret-management mechanisms rather than hardcoding them in Dockerfiles, source code, or container images. Access should be restricted, secrets should be rotated periodically, and sensitive values must never be committed to Git or exposed in logs.
+
+### 2. Hindi Definition
+
+Docker mein passwords aur secrets ko securely manage karne ke liye unhe Dockerfile ya source code mein hardcode nahi karte. Hum Docker Swarm secrets, Docker Compose secrets, ya AWS Secrets Manager jaise tools use karte hain, aur sirf authorized services ko access dete hain.
+
+### 3. Hinglish Explanation
+
+Maan lo aapki MERN application MongoDB, Razorpay aur kisi third-party API se connect hoti hai. Aapke paas ye sensitive details ho sakti hain:
+
+- MongoDB username aur password
+- Razorpay secret key
+- JWT signing secret
+- Third-party API keys
+
+Agar ye credentials GitHub par push ho gaye ya Docker image mein save ho gaye, toh koi unauthorized person inka misuse kar sakta hai.
+
+**Correct approach:** Secrets ko application code se alag rakho, unka access restrict karo, aur production mein dedicated secret manager use karo.
+
+### 4. Method 1: Environment file for local development
+
+For a simple local setup, store configuration in a root \`.env\` file and pass only the required variables to the backend container.
+
+Example \`.env\`:
+
+\`\`\`text
+MONGO_URI=mongodb://mongodb:27017/farmlogic
+JWT_SECRET=replace-with-a-long-random-secret
+\`\`\`
+
+Example Docker Compose configuration:
+
+\`\`\`yaml
+services:
+  backend:
+    build: ./backend
+    env_file:
+      - .env
+    depends_on:
+      - mongodb
+
+  mongodb:
+    image: mongo:8
+\`\`\`
+
+Node.js can read the values with \`process.env.MONGO_URI\` and \`process.env.JWT_SECRET\`.
+
+**Important:**
+- Add \`.env\` to \`.gitignore\`.
+- Never put real credentials in sample files committed to Git; use placeholders in \`.env.example\`.
+- Restrict file permissions and do not share the file unnecessarily.
+- Environment variables can be exposed through container inspection or diagnostics to users with sufficient access, so this is not the strongest production secret-management option.
+
+### 5. Method 2: Docker Swarm secrets
+
+Docker Swarm provides a built-in mechanism for secrets. Create a secret and grant access only to the service that needs it.
+
+\`\`\`bash
+printf '%s' 'replace-with-a-strong-secret' > jwt_secret.txt
+docker secret create jwt_secret jwt_secret.txt
+rm jwt_secret.txt
+\`\`\`
+
+Attach the secret to a Swarm service:
+
+\`\`\`bash
+docker service create \
+  --name backend \
+  --secret jwt_secret \
+  my-backend:1.0
+\`\`\`
+
+The secret is typically available inside the service container as a file:
+
+\`\`\`text
+/run/secrets/jwt_secret
+\`\`\`
+
+Node.js can read it:
+
+\`\`\`javascript
+const fs = require('node:fs');
+
+const jwtSecret = fs
+  .readFileSync('/run/secrets/jwt_secret', 'utf8')
+  .trim();
+\`\`\`
+
+This is a Swarm-specific example. Protect the original secret file and the host, and avoid printing the value in logs.
+
+### 6. Method 3: Docker Compose secrets
+
+For a Compose project, a file-backed secret can be mounted into only the services that request it.
+
+\`\`\`yaml
+services:
+  backend:
+    build: ./backend
+    secrets:
+      - jwt_secret
+
+secrets:
+  jwt_secret:
+    file: ./secrets/jwt_secret.txt
+\`\`\`
+
+The application can read the secret from \`/run/secrets/jwt_secret\` in supported Compose implementations.
+
+**Security distinction:** File-backed Compose secrets do not automatically provide the same encrypted, centrally managed lifecycle as Docker Swarm secrets. The source file remains sensitive and must be protected. Verify support and behavior for your Compose version and deployment environment.
+
+### 7. Method 4: Use a managed secret manager in production
+
+For a production MERN application deployed on AWS, consider AWS Secrets Manager or another approved secret-management service.
+
+Typical workflow:
+
+1. Store database credentials and API secrets in the secret manager.
+2. Give the application or deployment workload a narrowly scoped IAM role.
+3. Retrieve secrets through a supported runtime integration or secure deployment process.
+4. Rotate credentials according to your security requirements.
+5. Audit access and prevent secrets from appearing in logs or build artifacts.
+
+Avoid putting production secrets directly in image build arguments: build arguments and image layers are not designed to be secret storage.
+
+### 8. Essential security practices
+
+| Practice | Reason |
+|---|---|
+| Never hardcode secrets in Dockerfiles | Prevents accidental inclusion in image layers |
+| Keep \`.env\` and secret files out of Git | Prevents repository leaks |
+| Use least-privilege access | Limits who or what can read each secret |
+| Rotate compromised or aging credentials | Reduces the risk from leaked credentials |
+| Do not log secret values | Prevents exposure in log systems |
+| Scan repositories and images | Helps detect accidentally committed or embedded secrets |
+| Restrict Docker daemon access | Docker daemon access can provide extensive host control |
+| Use managed secrets in production | Supports centralized access control and auditing |
+
+If a secret is accidentally committed or exposed, revoke or rotate it immediately. Deleting it from the latest source file alone does not remove it from Git history or existing images.
+
+### Interview-ready answer
+
+"I manage Docker passwords and secrets by keeping them out of Dockerfiles, source code, and images. For local development, I may use a protected, Git-ignored \`.env\` file. For Docker Swarm, I use Docker secrets and grant access only to the services that need them. In production, I prefer a managed secret manager such as AWS Secrets Manager with least-privilege access and auditing. I also rotate credentials, scan for leaks, and never log secret values."
+
+---
