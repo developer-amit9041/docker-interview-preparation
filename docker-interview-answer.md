@@ -2232,3 +2232,98 @@ docker start my-nginx
 | Check all containers | `docker ps -a` |
 
 **Interview-ready answer:** The `docker start` command starts an existing stopped container using its name or ID. Unlike `docker run`, it does not create a new container.
+
+
+---
+
+## Q22. How do you restart a container?
+
+### 1. English Definition
+
+The `docker restart` command stops and then starts an existing Docker container. You can specify the container by its name or ID.
+
+### 2. Hindi Definition
+
+Docker container ko restart karne ke liye `docker restart` command use karte hain. Yeh existing container ko pehle stop karta hai aur phir dobara start karta hai.
+
+### 3. Hinglish Explanation
+
+Amit, maan lo aapka `my-nginx` container running hai aur aap use restart karna chahte ho. Aapko alag se stop aur start commands chalane ki zaroorat nahi hai. Ek hi command use kar sakte ho:
+
+```bash
+docker restart my-nginx
+```
+
+Docker container ko stop karke dobara start karega. Container ka writable layer aur configured volumes normally preserve rehte hain, kyunki container delete nahi hota. Application restart ke dauran kuch time ke liye unavailable ho sakti hai.
+
+### 4. Practical Example / Code
+
+Create and run a container:
+
+```bash
+docker run -d --name my-nginx -p 8080:80 nginx
+```
+
+Restart the container:
+
+```bash
+docker restart my-nginx
+```
+
+Check its status:
+
+```bash
+docker ps
+```
+
+You can also restart it using its container ID:
+
+```bash
+docker restart <container_id>
+```
+
+To configure the wait time before Docker forcefully stops a container that does not stop gracefully:
+
+```bash
+docker restart -t 30 my-nginx
+```
+
+### 5. Architecture Diagram
+
+```text
+docker restart my-nginx
+          |
+          v
+    Docker daemon
+          |
+          v
+  Stop existing container
+          |
+          v
+  Start the same container
+          |
+          v
+    Container running
+```
+
+### 6. Practical Commands / Configuration
+
+| Command | Purpose |
+|---|---|
+| `docker restart my-nginx` | Restarts a container by name |
+| `docker restart <container_id>` | Restarts a container by ID |
+| `docker restart -t 30 my-nginx` | Uses a 30-second stop timeout before forceful termination if needed |
+| `docker stop my-nginx` | Stops the container |
+| `docker start my-nginx` | Starts an existing stopped container |
+| `docker ps` | Checks currently running containers |
+
+### 7. Summary Table
+
+| Command | Action |
+|---|---|
+| `docker stop` | Stops a container |
+| `docker start` | Starts an existing stopped container |
+| `docker restart` | Stops and starts the same container |
+| `docker run` | Creates and starts a new container |
+
+**Interview-ready answer:** Use `docker restart CONTAINER_NAME` or `docker restart CONTAINER_ID` to restart a container. Docker stops the existing container and starts it again without creating a new container.
