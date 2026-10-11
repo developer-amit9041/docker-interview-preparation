@@ -9110,3 +9110,74 @@ Here, the host's `./backend` directory is mounted at `/app` inside the container
 ### Interview-ready answer
 
 “In Docker Compose, `volumes` defines storage mounts for services. Named volumes are commonly used to persist data such as MongoDB files independently of a container, while bind mounts are useful for sharing host files or source code with a container. This helps prevent data loss when containers are recreated.”
+
+
+---
+
+## Q110. What does `networks` mean in Docker Compose?
+
+### 1. English Definition
+
+In Docker Compose, `networks` configures the networks that services use to communicate with one another and, when configured, with other networks. Compose creates a default project network if no custom network is specified.
+
+### 2. Hindi Definition
+
+Docker Compose mein `networks` ka use containers ke beech communication configure karne ke liye hota hai, taaki backend, database aur doosri services ek-doosre se connect kar sakein.
+
+### 3. Hinglish Explanation
+
+Maan lo aapke project mein Node.js backend aur MongoDB hain. Dono ko same Compose network par rakhne se backend MongoDB service ko uske service name `mongodb` se access kar sakta hai. Is communication ke liye MongoDB ka port host machine par publish karna zaroori nahi hota.
+
+### 4. Practical Example
+
+```yaml
+services:
+  backend:
+    image: my-backend-image
+    ports:
+      - "5000:5000"
+    networks:
+      - app-network
+    environment:
+      MONGO_URI: mongodb://mongodb:27017/myapp
+
+  mongodb:
+    image: mongo:8
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  mongo-data:
+```
+
+Start the services:
+
+```bash
+docker compose up -d
+```
+
+The backend connects to MongoDB using hostname `mongodb` and port `27017` on the Compose network.
+
+### 5. Why Use Networks?
+
+- **Service communication:** Containers on a shared network can communicate.
+- **Service-name DNS:** Compose networks allow services to be discovered by service name.
+- **Isolation:** Separate networks can restrict which services can communicate directly.
+- **Less unnecessary exposure:** A database can be reachable by the backend without publishing its port to the host.
+
+### 6. Important Points
+
+- Compose creates a default project network if you do not declare custom networks.
+- Services on the same network can generally communicate using service names and container ports.
+- `ports` publishes a port to the host; `networks` controls container connectivity. They serve different purposes.
+- A network does not automatically make a service ready; applications still need to handle connection failures and startup timing.
+
+### Interview-ready answer
+
+“In Docker Compose, `networks` defines how services connect and communicate. Services attached to the same network can typically reach one another using service names. For example, a Node.js backend can connect to MongoDB using `mongodb:27017` without publishing MongoDB's port to the host. Networks also help isolate groups of services.”
