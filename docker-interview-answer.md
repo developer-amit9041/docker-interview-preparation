@@ -10644,3 +10644,147 @@ Do not copy production secrets into the image. Provide runtime configuration usi
 
 “To Dockerize a Node.js/Express application, I start with a Node.js base image, set a working directory, copy the package manifests, install dependencies, and copy the source code. I define the startup command with CMD, expose the application's port, and configure the server to listen on 0.0.0.0. I also use a .dockerignore file and keep secrets outside the image.”
 
+---
+
+## Q124. How do you run MongoDB in a Docker container?
+
+### 1. English Definition
+
+You can run MongoDB in a Docker container by starting the official MongoDB image, publishing its database port if host access is required, and mounting a persistent volume to retain database files when the container is removed or recreated.
+
+### 2. Hindi Definition
+
+MongoDB ko Docker container mein run karne ke liye official MongoDB image use karte hain, zaroorat ho toh database port publish karte hain, aur data ko preserve karne ke liye persistent volume mount karte hain.
+
+### 3. Hinglish Explanation
+
+Bhai, Docker ki help se aapko MongoDB ko manually install karne ki zaroorat nahi hoti. Official MongoDB image download karke container start kar sakte ho.
+
+- Image: MongoDB ka packaged template.
+- Container: Running MongoDB instance.
+- Port 27017: MongoDB ka default port.
+- Named volume: Database files ko container ke lifecycle se alag persist karta hai.
+
+### 4. Practical Commands
+
+Pull the official image:
+
+```bash
+docker pull mongo:8
+```
+
+Run MongoDB with a named volume:
+
+```bash
+docker run -d \
+  --name mongodb \
+  -p 27017:27017 \
+  -v mongo-data:/data/db \
+  mongo:8
+```
+
+Check the container:
+
+```bash
+docker ps
+docker logs mongodb
+```
+
+Connect using MongoDB Shell if `mongosh` is installed on your host:
+
+```bash
+mongosh "mongodb://localhost:27017"
+```
+
+The named volume `mongo-data` retains database files when the container is removed, as long as the volume itself is not deleted.
+
+### 5. Add Authentication
+
+For a local development example, you can configure an initial MongoDB root user using environment variables:
+
+```bash
+docker run -d \
+  --name mongodb-secure \
+  -p 127.0.0.1:27017:27017 \
+  -e MONGO_INITDB_ROOT_USERNAME=admin \
+  -e MONGO_INITDB_ROOT_PASSWORD='replace_with_a_strong_password' \
+  -v mongo-secure-data:/data/db \
+  mongo:8
+```
+
+Connect with authentication:
+
+```bash
+mongosh "mongodb://admin:replace_with_a_strong_password@localhost:27017/?authSource=admin"
+```
+
+Replace the example password with a strong secret. Avoid putting real passwords in shell history or committing them to Git. The official image's initialization variables apply when initializing a fresh data directory; they do not automatically reset credentials in an already-initialized database. For production, use a secret manager and create a least-privilege application database user.
+
+### 6. Architecture Diagram
+
+```text
+Host machine
+     |
+     | port 27017 (if published)
+     v
+MongoDB container
+     |
+     | writes database files
+     v
+/data/db
+     |
+     v
+Named Docker volume
+(mongo-data)
+```
+
+### 7. Run MongoDB with Docker Compose
+
+Create `compose.yaml`:
+
+```yaml
+services:
+  mongodb:
+    image: mongo:8
+    ports:
+      - "127.0.0.1:27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+
+volumes:
+  mongo-data:
+```
+
+Create a local `.env` file in the same directory:
+
+```env
+MONGO_ROOT_PASSWORD=replace_with_a_strong_password
+```
+
+Start the database:
+
+```bash
+docker compose up -d
+docker compose logs -f mongodb
+```
+
+Add `.env` to `.gitignore`. This example binds the published port to localhost, so it is not exposed on all host network interfaces. Containers on the same Compose network can connect using the hostname `mongodb` and port `27017`.
+
+### 8. Summary Table
+
+| Item | Purpose |
+|---|---|
+| `mongo:8` | Official MongoDB image |
+| `docker run -d` | Runs the container in detached mode |
+| `-p 27017:27017` | Publishes the database port to the host |
+| `-v mongo-data:/data/db` | Persists database files |
+| `docker logs mongodb` | Shows container logs |
+| `docker compose up -d` | Starts the Compose service in the background |
+
+### Interview-ready answer
+
+“I run MongoDB using the official MongoDB Docker image. I publish port 27017 only when host access is needed, and mount a named volume at /data/db so database files persist when the container is recreated. For secured setups, I configure authentication, keep credentials out of source control, and restrict network access. With Docker Compose, I can manage the database and its volume in a YAML configuration.”
+
