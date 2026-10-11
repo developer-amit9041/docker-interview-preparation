@@ -13780,3 +13780,87 @@ Multi-stage builds do not automatically guarantee a secure image; base images, d
 "A multi-stage Docker build uses multiple \`FROM\` instructions to separate building an application from running it. For example, I build a React app in a Node.js stage and copy only the generated \`dist\` files into an Nginx stage. This keeps build tools and development dependencies out of the final image, usually reducing image size and improving the production security posture."
 
 ---
+## Q147. Why do we use multi-stage builds?
+
+### 1. English Interview Definition
+
+We use multi-stage Docker builds to separate the application build process from its runtime environment. This helps reduce the final image size, exclude unnecessary build tools and development dependencies, improve the security posture, and make production deployments more efficient.
+
+### 2. Hindi Definition
+
+Multi-stage builds ka use application ko build karne aur production mein run karne ke process ko alag rakhne ke liye hota hai. Isse final Docker image ka size kam ho sakta hai, unnecessary tools remove rehte hain aur deployment efficient banta hai.
+
+### 3. Hinglish Explanation
+
+Maan lo aap React application bana rahe ho.
+
+React ko build karne ke liye Node.js, npm packages aur build tools chahiye. Lekin production mein agar Nginx static files serve kar raha hai, toh usse Node.js build tools ki zaroorat nahi hoti.
+
+Isliye hum do stages use karte hain:
+
+- **Build stage:** Application compile/build hoti hai.
+- **Runtime stage:** Sirf required output production image mein copy hota hai.
+
+Iska main benefit hai ki final image mein wahi files aur tools hote hain jo application ko run karne ke liye required hain.
+
+### 4. Main reasons for using multi-stage builds
+
+1. **Smaller images:** Build tools and intermediate artifacts are not copied into the final image unless needed.
+2. **Improved security posture:** Fewer unnecessary packages and tools are shipped in production.
+3. **Faster transfers:** Smaller images can be pushed to registries and pulled to servers faster.
+4. **Clear separation:** Build-time dependencies are kept separate from runtime dependencies.
+5. **Cleaner deployment:** The final image contains only the application artifacts and runtime components it needs.
+
+Multi-stage builds do not automatically make an image secure or small; the result depends on what each stage installs and copies.
+
+### 5. Practical example: React + Nginx
+
+\`\`\`dockerfile
+# Stage 1: Build React
+FROM node:22-alpine AS build
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+# Stage 2: Production runtime
+FROM nginx:alpine
+COPY --from=build /app/dist /usr/share/nginx/html
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
+\`\`\`
+
+**Explanation:**
+
+- Stage 1 uses Node.js and npm to build the React application.
+- \`npm run build\` creates production assets in \`dist\` for a typical Vite project.
+- Stage 2 starts from a fresh Nginx image.
+- \`COPY --from=build\` copies only the generated static files.
+- The final image does not contain the Node.js build stage's source tree or dependencies unless explicitly copied.
+
+For Create React App, the output directory is typically \`build\`, so adjust the copy path accordingly.
+
+### 6. Build and run
+
+\`\`\`bash
+docker build -t react-production .
+docker run --rm -p 8080:80 react-production
+\`\`\`
+
+Open \`http://localhost:8080\` to test the application.
+
+### 7. Single-stage vs multi-stage builds
+
+| Single-stage build | Multi-stage build |
+|---|---|
+| Build and runtime can share the same image | Build and runtime use separate stages |
+| Build tools may remain in the final image | Final image can exclude unnecessary build tools |
+| May create a larger runtime image | Often produces a smaller runtime image |
+| Simpler for some applications | Useful for compiled apps and production frontends |
+
+### Interview-ready answer
+
+"We use multi-stage builds to separate building an application from running it. For example, I build a React app using Node.js and then copy only the compiled static files into an Nginx image. This keeps build tools and development dependencies out of the final image, often reducing image size, improving transfer times, and reducing the production attack surface."
+
+---
