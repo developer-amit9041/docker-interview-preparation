@@ -14663,3 +14663,81 @@ This Deployment asks Kubernetes to maintain three backend Pod replicas. A comple
 “Docker Compose defines and runs multi-container applications using a Compose YAML file, and it is commonly used for local development or simpler single-host deployments. Kubernetes is a full container orchestration platform that manages workloads across a cluster and supports desired-state reconciliation, rolling updates, service discovery, and autoscaling. Compose is simpler; Kubernetes is more powerful but operationally more complex.”
 
 ---
+## Q157. What is Docker orchestration?
+
+### 1. English Interview Definition
+Docker orchestration is the automated deployment, scheduling, scaling, networking, and lifecycle management of containerized applications across one or more hosts. Orchestration tools help maintain the desired number of replicas, distribute workloads, and recover from certain container or node failures.
+
+### 2. Hindi Definition
+Docker orchestration ka matlab hai multiple containers ko automatically deploy, manage, scale aur monitor karna, taaki application ko manually har container manage na karna pade.
+
+### 3. Hinglish Explanation
+Maan lo aapki MERN application mein Node.js backend ki 3 replicas chalani hain. Orchestration tool desired replica count define karne, containers ko available nodes par schedule karne, service discovery aur traffic distribution manage karne mein help karta hai. Agar koi task fail ho jaye, toh tool desired state restore karne ki koshish kar sakta hai.
+
+### 4. What Does Orchestration Manage?
+- **Deployment:** Application containers ko run karna.
+- **Scheduling:** Decide karna ki workloads kis host/node par chalenge.
+- **Scaling:** Replicas increase ya decrease karna.
+- **Networking and service discovery:** Services ko ek doosre se communicate karwana.
+- **Load balancing:** Requests ko available service instances mein distribute karna.
+- **Self-healing:** Failed tasks ko restart ya replace karne ki koshish karna.
+- **Rolling updates:** Application versions ko controlled way mein update karna.
+- **Desired state:** Configured replica count aur service state ko maintain karne ki koshish karna.
+
+### 5. Simple Architecture
+
+\`\`\`text
+              Orchestration Manager
+             (desired state / scheduling)
+                       |
+             +---------+---------+
+             |                   |
+         Worker Node 1       Worker Node 2
+         +-----------+       +-----------+
+         | Backend   |       | Backend   |
+         | replica 1 |       | replica 3 |
+         | Backend   |       +-----------+
+         | replica 2 |
+         +-----------+
+\`\`\`
+
+This is a simplified illustration. Actual placement depends on available resources, scheduling rules, and the orchestration platform.
+
+### 6. Docker Swarm Example
+
+Initialize Swarm:
+\`\`\`bash
+docker swarm init
+\`\`\`
+
+Create a service with three replicas:
+\`\`\`bash
+docker service create \
+  --name backend \
+  --replicas 3 \
+  --publish published=3000,target=3000 \
+  my-backend:1.0
+\`\`\`
+
+Check service and tasks:
+\`\`\`bash
+docker service ls
+docker service ps backend
+\`\`\`
+
+Scale to five replicas:
+\`\`\`bash
+docker service scale backend=5
+\`\`\`
+
+Here, Swarm manages the service's desired replica count across the cluster. The image must be accessible to the nodes that run the tasks.
+
+### 7. Common Orchestration Tools
+- **Docker Swarm:** Docker's native orchestration solution; generally simpler to operate.
+- **Kubernetes:** A widely used orchestration platform with extensive workload management and ecosystem support.
+- **Managed services:** Platforms such as Amazon ECS and Amazon EKS provide managed container orchestration options.
+
+### 8. Interview-Ready Answer
+“Docker orchestration is the automated management of containers across one or more hosts. It handles deployment, scheduling, scaling, service discovery, load balancing, and recovery toward a desired state. Docker Swarm and Kubernetes are examples of orchestration platforms.”
+
+---
