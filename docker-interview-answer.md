@@ -4009,3 +4009,75 @@ docker run -> CMD/ENTRYPOINT starts the app
 ### Interview-ready answer
 
 “The `RUN` instruction executes commands during Docker image building, and the resulting filesystem changes are stored in an image layer. It is commonly used to install dependencies or system packages. Unlike `CMD`, `RUN` does not normally execute each time a container starts.”
+
+
+---
+
+## Q41. What does the `CMD` instruction do?
+
+### 1. English Definition
+
+The `CMD` instruction specifies the default command or arguments to run when a container starts from a Docker image. It can be overridden by arguments supplied to `docker run`, depending on how it is written and used with `ENTRYPOINT`.
+
+### 2. Hindi Definition
+
+`CMD` instruction batata hai ki Docker image se container start hone par default mein kaunsi command execute honi chahiye.
+
+### 3. Hinglish Explanation
+
+Amit bhai, maan lo aapke paas Node.js backend hai aur aap chahte ho ki container start hote hi `server.js` run ho. Dockerfile mein likho:
+
+```dockerfile
+CMD ["node", "server.js"]
+```
+
+Jab aap `docker run mern-backend:1.0` chalate ho, toh default command `node server.js` execute hoti hai.
+
+Agar aap command override karna chaho, toh image name ke baad doosri command de sakte ho, jaise `docker run mern-backend:1.0 node --version` (ye example default command ko replace karta hai, jab image mein overriding `ENTRYPOINT` na ho).
+
+### 4. Practical Example
+
+```dockerfile
+FROM node:22-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+CMD ["node", "server.js"]
+```
+
+Build and run:
+
+```bash
+docker build -t mern-backend:1.0 .
+docker run --name mern-backend mern-backend:1.0
+```
+
+The example assumes `server.js` exists and the project has a valid `package-lock.json`.
+
+### 5. CMD Forms
+
+**Exec form (recommended for most app commands):**
+
+```dockerfile
+CMD ["node", "server.js"]
+```
+
+**Shell form:**
+
+```dockerfile
+CMD node server.js
+```
+
+Exec form avoids an extra shell process and generally makes signal handling more predictable. For Node.js containers, it is often the preferred form.
+
+### 6. CMD vs RUN
+
+| Instruction | When does it run? | Common use |
+|---|---|---|
+| `RUN` | During image build | Install dependencies, create files |
+| `CMD` | When container starts | Start the application by default |
+
+### Interview-ready answer
+
+“The `CMD` instruction defines the default command or arguments executed when a container starts. For example, `CMD ["node", "server.js"]` starts a Node.js server. The command can generally be overridden by arguments passed to `docker run`, unless an `ENTRYPOINT` changes how those arguments are handled.”
