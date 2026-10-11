@@ -5024,3 +5024,55 @@ Ek file `.gitignore` mein hone se woh automatically Docker build context se excl
 ### Interview-ready answer
 
 “A `.dockerignore` file tells Docker which files and directories to exclude from the build context. It helps reduce unnecessary data transfer, improve build efficiency, and avoid accidentally including files such as local dependencies, Git metadata, logs, or environment files. It is separate from `.gitignore`.”
+
+
+---
+
+## Q54. How do you write comments in a Dockerfile?
+
+### 1. English Definition
+
+In a Dockerfile, comments are written using the `#` character. Docker ignores comment lines during the build, so they can explain the purpose of instructions without changing the image build behavior.
+
+### 2. Hindi Definition
+
+Dockerfile mein comment likhne ke liye line ke start mein `#` use karte hain. Comments instructions ko samjhane ke kaam aate hain aur normal comment lines image build ke dauran execute nahi hoti.
+
+### 3. Hinglish Explanation
+
+Maan lo Dockerfile mein `WORKDIR`, `COPY` aur `RUN` likha hai. Team ke kisi developer ko samajhna ho ki koi instruction kyun use ki gayi hai, toh aap uske upar comment likh sakte ho.
+
+### 4. Practical Example
+
+```dockerfile
+# Use the official Node.js Alpine image
+FROM node:22-alpine
+
+# Set the working directory inside the container
+WORKDIR /app
+
+# Copy dependency manifests first for better cache reuse
+COPY package.json package-lock.json ./
+
+# Install dependencies from the lockfile
+RUN npm ci
+
+# Copy the application source code
+COPY . .
+
+# Start the application
+CMD ["node", "server.js"]
+```
+
+Yahan har `#` line ek comment hai. Ye instructions ka purpose explain karti hai, lekin khud shell command ki tarah run nahi hoti.
+
+### 5. Important Points
+
+- Comment ke liye `#` use karo.
+- Comments ko clear aur useful rakho; obvious instructions ke liye unnecessary comments mat likho.
+- Comment ko apni line par likhna sabse clear practice hai.
+- Dockerfile mein `RUN` ke andar shell command ke comments ka behavior shell par depend kar sakta hai; Dockerfile instruction comments aur shell-script comments ko alag samjho.
+
+### Interview-ready answer
+
+“In a Dockerfile, comments are written using the `#` character, usually at the beginning of a line. They document the purpose of instructions and are ignored as Dockerfile comment lines during the build.”
