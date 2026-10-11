@@ -15055,3 +15055,84 @@ Swarm update behavior also depends on the service's update and failure settings.
 “A rolling update gradually replaces old application instances with a new version in batches instead of stopping all instances at once. It helps reduce downtime and lets us monitor the rollout. In Kubernetes, we configure a Deployment's rolling update strategy; in Docker Swarm, we can control update parallelism and delay with \`docker service update\`. Readiness checks, capacity, and backward compatibility are essential.”
 
 ---
+## Q162. Why are container health checks important?
+
+### 1. English Interview Definition
+Container health checks determine whether an application inside a running container is functioning correctly, not merely whether its process exists. They help detect unresponsive applications and allow Docker or an orchestrator to expose health status and, where configured, take appropriate recovery or traffic-routing actions.
+
+### 2. Hindi Definition
+Container health checks se pata chalta hai ki container ke andar application sahi tarah se kaam kar rahi hai ya nahi. Sirf container ka running hona is baat ki guarantee nahi hai ki application healthy bhi hai.
+
+### 3. Hinglish Explanation
+Maan lo Node.js container ka process chal raha hai, lekin database connection hang ho gaya ya \`/health\` API response nahi de rahi. \`docker ps\` container ko running dikha sakta hai, par health check application ko unhealthy mark kar sakta hai.
+
+Health checks se monitoring aur orchestration systems ko problem identify karne mein help milti hai. Dhyan rahe: Docker ka \`HEALTHCHECK\` unhealthy status report karta hai; Docker Engine apne aap har unhealthy container ko automatically restart nahi karta. Restart/replacement behavior platform aur configuration par depend karta hai.
+
+### 4. Why Are Health Checks Important?
+- **Detect application failures:** Process running ho sakta hai, lekin application respond na kar rahi ho.
+- **Improve traffic routing:** Orchestrators or load-balancing integrations can avoid sending traffic to instances that are not ready.
+- **Support recovery:** Orchestration platforms can react to failed health/readiness checks according to their configuration.
+- **Safer deployments:** New instances ko traffic dene se pehle ready hone ka wait kiya ja sakta hai.
+- **Faster troubleshooting:** Container ka health status aur health-check logs inspect kiye ja sakte hain.
+
+### 5. Dockerfile Health Check Example
+
+For a Node.js application that exposes a lightweight \`/health\` endpoint on port 3000:
+\`\`\`dockerfile
+FROM node:22-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --omit=dev
+COPY . .
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \\
+  CMD ["node", "-e", "fetch('http://127.0.0.1:3000/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+
+EXPOSE 3000
+CMD ["node", "server.js"]
+\`\`\`
+
+This example assumes Node.js 22, a server listening on port 3000, and a \`/health\` endpoint that returns a successful HTTP status when the application is ready to serve requests. Adapt the endpoint and timing values to your app.
+
+Health-check exit codes:
+- \`0\`: healthy
+- \`1\`: unhealthy
+- \`2\`: reserved; do not use for normal health-check results
+
+### 6. Check Container Health
+
+\`\`\`bash
+docker ps
+docker inspect --format '{{.State.Health.Status}}' backend
+docker inspect --format '{{json .State.Health.Log}}' backend
+\`\`\`
+
+The health status is available only if a health check is defined for that container. A container without one generally has no health status.
+
+### 7. Docker Compose Example
+
+\`\`\`yaml
+services:
+  backend:
+    build: .
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+\`\`\`
+
+Compose can also use \`depends_on\` with \`condition: service_healthy\` to wait for a dependency's health check before starting a dependent service, where supported. This startup ordering does not replace application-level retry logic for dependencies that fail later.
+
+### 8. Health Check vs. Restart Policy
+- **Health check:** Reports whether the application is healthy.
+- **Restart policy:** Controls restarts after container exit, according to the configured policy.
+- **Orchestrator:** May react to health or readiness signals by restarting, replacing, or removing an instance from service, depending on the platform.
+
+### 9. Interview-Ready Answer
+“Container health checks are important because a running container does not always mean its application is working correctly. Health checks detect unresponsive or failing applications, improve monitoring, and help deployment or orchestration systems make safer traffic and recovery decisions. In Docker, we can define a \`HEALTHCHECK\` in the Dockerfile and inspect the status with \`docker inspect\`.”
+
+---
