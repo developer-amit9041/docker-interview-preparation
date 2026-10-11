@@ -6335,3 +6335,78 @@ docker rm my-app
 ### Interview-ready answer
 
 “The Docker container lifecycle describes the stages a container goes through, including created, running, paused, stopped, and removed. I use commands such as `docker create`, `docker start`, `docker stop`, `docker restart`, and `docker rm` to manage these stages. The `docker run` command creates and starts a container.”
+
+
+---
+
+## Q71. What happens to data when a container is restarted?
+
+### 1. English Definition
+
+When a Docker container is restarted, its writable container-layer data is generally preserved because the same container is stopped and started again. Data stored in mounted volumes or bind mounts also persists independently of the container's running state. Data in a container's writable layer is lost when the container is removed, unless it was saved elsewhere.
+
+### 2. Hindi Definition
+
+Jab hum Docker container ko restart karte hain, toh container ke writable layer mein saved data normally delete nahi hota. Volumes aur bind mounts mein saved data bhi persist karta hai. Lekin container ko remove karne par writable-layer ka data generally delete ho jata hai.
+
+### 3. Hinglish Explanation
+
+Maan lo aapke Node.js container mein application ek file create karti hai:
+
+```text
+/app/output.txt
+```
+
+- **Restart:** Container stop hokar phir start hota hai. Same container ki writable layer mein file generally bani rahegi.
+- **Remove and recreate:** Purana container remove karke naya container banaya, toh purane container ki writable-layer wali file naye container mein automatically nahi milegi.
+- **Volume / bind mount:** Agar file mounted volume ya host directory mein save hui hai, toh container remove aur recreate karne ke baad bhi data persist kar sakta hai, jab tak storage ko separately delete na kiya jaye.
+
+**Important:** Application process ki in-memory state (jaise variables aur RAM mein stored data) restart ke baad reset ho jati hai. Container filesystem data aur process memory alag cheezein hain.
+
+### 4. Practical Example
+
+**Create and start a container:**
+
+```bash
+docker run -dit --name data-demo alpine sh
+```
+
+**Create a file inside the container:**
+
+```bash
+docker exec data-demo sh -c 'echo "Hello Docker" > /data.txt'
+docker exec data-demo cat /data.txt
+```
+
+**Restart and check the file:**
+
+```bash
+docker restart data-demo
+docker exec data-demo cat /data.txt
+```
+
+The file should still contain `Hello Docker`, because the same container was restarted.
+
+**Remove the container and create a new one:**
+
+```bash
+docker rm -f data-demo
+docker run -dit --name data-demo alpine sh
+docker exec data-demo ls -l /data.txt
+```
+
+The file will not exist in the newly created container unless it was stored in persistent storage or recreated by the application.
+
+### 5. Data Persistence Summary
+
+| Action / Storage | Does data persist? |
+|---|---|
+| Restart the same container: writable layer | Yes, generally |
+| Restart the same container: volume or bind mount | Yes |
+| Remove container: writable layer | No, generally |
+| Remove and recreate container: named volume | Yes, if the volume is retained and reattached |
+| Restart: process memory / in-memory variables | No |
+
+### Interview-ready answer
+
+“When a Docker container is restarted, data in its writable layer generally remains because the same container is reused. However, process memory is reset. If the container is removed and recreated, writable-layer data is lost, so I use Docker volumes or bind mounts for data that must persist independently of the container.”
