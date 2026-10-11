@@ -15394,3 +15394,76 @@ docker logs --tail 100 backend
 “We configure automatic restarts with Docker's \`--restart\` option, for example \`docker run -d --restart unless-stopped my-backend:1.0\`. Common policies include \`no\`, \`on-failure\`, \`always\`, and \`unless-stopped\`. In Docker Compose, we set \`restart: unless-stopped\`. We also check logs and exit codes to fix the underlying cause of repeated crashes.”
 
 ---
+## Q166. What are Docker restart policies?
+
+### 1. English Interview Definition
+Docker restart policies determine whether and under what conditions Docker automatically restarts a container after it exits. The main policies are \`no\`, \`on-failure\`, \`always\`, and \`unless-stopped\`.
+
+### 2. Hindi Definition
+Docker restart policies decide karti hain ki container band ya crash hone par Docker use automatically dobara start karega ya nahi, aur kin conditions mein karega.
+
+### 3. Hinglish Explanation
+Maan lo aapka Node.js backend container crash ho jata hai. Agar restart policy configured hai, toh Docker policy ke according container ko restart kar sakta hai. Agar policy \`no\` hai, toh Docker automatically restart nahi karega.
+
+### 4. Types of Docker Restart Policies
+
+| Policy | Behaviour |
+|---|---|
+| \`no\` | Container exit hone par automatically restart nahi hota. This is the default. |
+| \`on-failure\` | Non-zero exit code par restart hota hai. Optional retry limit specify kar sakte hain. |
+| \`always\` | Container exit hone par restart hota hai, including after Docker daemon restarts. If manually stopped, it is not restarted until the daemon restarts or the container is manually started. |
+| \`unless-stopped\` | \`always\` jaisa, lekin agar container manually stop kiya gaya tha, toh Docker daemon restart hone ke baad bhi woh stopped rehta hai jab tak manually start na kiya jaye. |
+
+### 5. Practical Commands
+
+**Never automatically restart:**
+\`\`\`bash
+docker run -d --name backend --restart=no my-backend:1.0
+\`\`\`
+
+**Restart only after a failure, maximum 5 retries:**
+\`\`\`bash
+docker run -d --name backend --restart=on-failure:5 my-backend:1.0
+\`\`\`
+
+**Always restart:**
+\`\`\`bash
+docker run -d --name backend --restart=always my-backend:1.0
+\`\`\`
+
+**Restart unless manually stopped:**
+\`\`\`bash
+docker run -d --name backend --restart=unless-stopped my-backend:1.0
+\`\`\`
+
+### 6. Update an Existing Container's Policy
+\`\`\`bash
+docker update --restart=unless-stopped backend
+\`\`\`
+
+Inspect the configured policy:
+\`\`\`bash
+docker inspect backend --format '{{.HostConfig.RestartPolicy.Name}}'
+\`\`\`
+
+### 7. Docker Compose Example
+\`\`\`yaml
+services:
+  backend:
+    image: my-backend:1.0
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+\`\`\`
+In ordinary Docker Compose, use the service-level \`restart\` policy. Swarm services have their own restart behaviour configured through service/task policies; do not assume Compose's setting and Swarm's service configuration are identical.
+
+### 8. Important Interview Points
+- Restart policies apply to container exit/restart behaviour; they do not fix the underlying application bug.
+- \`on-failure\` responds to a non-zero exit status and can include a retry limit.
+- A restart policy is not the same as a health check. A container can be running but unhealthy; a Docker health check alone does not automatically restart an unhealthy container under ordinary standalone Docker restart-policy behaviour.
+- For production, combine suitable restart behaviour with logs, health checks, resource limits, and monitoring.
+
+### 9. Interview-Ready Answer
+“Docker restart policies control whether a container restarts after it exits. The four main policies are \`no\`, \`on-failure\`, \`always\`, and \`unless-stopped\`. We configure one using \`docker run --restart=unless-stopped ...\` or the \`restart\` field in a Compose service. The right policy depends on how the application should behave after failures and manual stops.”
+
+---
