@@ -2135,3 +2135,100 @@ docker stop my-nginx
 | `docker rm` | Removes a container; normally it must be stopped first |
 
 **Interview-ready answer:** Use `docker stop CONTAINER_NAME` or `docker stop CONTAINER_ID` to stop a running container. Docker requests graceful termination first and may forcefully stop it if the timeout expires. Stopping a container does not delete it.
+
+
+---
+
+## Q21. How do you start a container?
+
+### 1. English Definition
+
+The `docker start` command starts an existing stopped Docker container. You provide the container name or ID. To create and start a new container from an image, use `docker run` instead.
+
+### 2. Hindi Definition
+
+Pehle se created aur stopped Docker container ko dobara start karne ke liye `docker start` command use karte hain. Is command mein container ka naam ya ID dete hain.
+
+### 3. Hinglish Explanation
+
+Amit, yahan do commands ka difference samajhna important hai:
+
+- `docker start my-nginx`: pehle se bana hua stopped container dobara start karta hai.
+- `docker run nginx`: image se naya container create karke start karta hai.
+
+Agar container ko `docker stop` se stop kiya tha, toh use wapas start karne ke liye `docker start` use kar sakte ho. Container remove ho chuka hai, toh usi container ko start nahi kar sakte; naya container create karna hoga.
+
+### 4. Practical Example / Code
+
+Create and start a container:
+
+```bash
+docker run -d --name my-nginx nginx
+```
+
+Stop the container:
+
+```bash
+docker stop my-nginx
+```
+
+Start the same container again:
+
+```bash
+docker start my-nginx
+```
+
+Verify that it is running:
+
+```bash
+docker ps
+```
+
+You can also use the container ID:
+
+```bash
+docker start <container_id>
+```
+
+### 5. Architecture Diagram
+
+```text
+docker start my-nginx
+          |
+          v
+     Docker CLI
+          |
+          v
+    Docker daemon
+          |
+          v
+ Find existing container
+          |
+          v
+ Start its configured process
+          |
+          v
+   Container running
+```
+
+### 6. Practical Commands / Configuration
+
+| Command | Purpose |
+|---|---|
+| `docker start my-nginx` | Starts an existing stopped container |
+| `docker start <container_id>` | Starts a container by ID |
+| `docker start -a my-nginx` | Starts the container and attaches to its output |
+| `docker ps` | Lists running containers |
+| `docker ps -a` | Lists all existing containers |
+| `docker run -d --name my-nginx nginx` | Creates and starts a new container |
+
+### 7. Summary Table
+
+| Situation | Command |
+|---|---|
+| Start an existing stopped container | `docker start my-nginx` |
+| Create and start a new container | `docker run -d --name my-nginx nginx` |
+| Check running containers | `docker ps` |
+| Check all containers | `docker ps -a` |
+
+**Interview-ready answer:** The `docker start` command starts an existing stopped container using its name or ID. Unlike `docker run`, it does not create a new container.
