@@ -9767,3 +9767,75 @@ Images are not removed by default. The optional `--rmi` flag can remove service 
 ### Interview-ready answer
 
 “`docker compose down` stops and removes the containers and the Compose-created project network. It retains named volumes by default, so database data can persist. Adding `-v` removes Compose-managed named volumes as well, which can delete persisted database data.”
+
+
+---
+
+## Q117. What does `docker compose build` do?
+
+### 1. English Definition
+
+`docker compose build` builds or rebuilds the service images for services that have a `build` configuration in the Compose file, using their specified build context and Dockerfile. It builds images but does not, by itself, start the containers.
+
+### 2. Hindi Definition
+
+`docker compose build` Compose file mein `build` configuration wali services ki Docker images build ya rebuild karta hai. Ye command apne aap containers start nahi karta.
+
+### 3. Hinglish Explanation
+
+Maan lo aapke MERN project mein React aur Node.js ke apne Dockerfiles hain. Jab aap source code ya Dockerfile change karte ho, toh updated application image banane ke liye `docker compose build` use kar sakte ho.
+
+### 4. Practical Example
+
+Compose file:
+
+```yaml
+services:
+  frontend:
+    build: ./frontend
+
+  backend:
+    build: ./backend
+```
+
+Build the images:
+
+```bash
+docker compose build
+```
+
+Build one service only:
+
+```bash
+docker compose build backend
+```
+
+Build without using the build cache:
+
+```bash
+docker compose build --no-cache
+```
+
+Then create or recreate and start the services:
+
+```bash
+docker compose up -d
+```
+
+Or build and start in one command:
+
+```bash
+docker compose up --build -d
+```
+
+### 5. Important Points
+
+- A service generally needs a `build:` configuration for Compose to build its image.
+- A service configured only with `image:` typically uses that image; Compose does not build it unless build configuration is also supplied.
+- `docker compose build` does not start containers.
+- `docker compose up --build` builds required images before starting/updating services.
+- Build cache is used by default; `--no-cache` disables the cache for the build.
+
+### Interview-ready answer
+
+“`docker compose build` builds or rebuilds images for services configured with `build` in the Compose file. It is useful after changing application code or a Dockerfile. It does not start containers; I can run `docker compose up -d` afterward, or use `docker compose up --build -d` to build and start the services together.”
