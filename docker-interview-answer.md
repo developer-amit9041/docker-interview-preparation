@@ -14561,3 +14561,105 @@ Kubernetes is not automatically the best choice for every application: operation
 “Docker Swarm and Kubernetes both orchestrate containers across multiple machines. Swarm is generally easier to set up and manage for simpler clustered deployments. Kubernetes has a richer ecosystem and more advanced workload management, scaling, configuration, and extensibility, but it has a steeper learning and operational curve. The choice depends on application complexity, operational needs, and team expertise.”
 
 ---
+## Q156. What is the difference between Docker Compose and Kubernetes?
+
+### 1. English Interview Definition
+Docker Compose is a tool for defining and running multi-container applications, commonly on a single Docker host. Kubernetes is a container orchestration platform that manages containerized workloads across a cluster, with features such as desired-state management, scheduling, service discovery, rollouts, and autoscaling.
+
+### 2. Hindi Definition
+Docker Compose ka use ek application ke multiple containers—jaise React, Node.js aur MongoDB—ko ek configuration file se run karne ke liye hota hai. Kubernetes multiple machines ke cluster par application workloads ko deploy aur manage karta hai.
+
+### 3. Hinglish Explanation
+Maan lo aapki MERN application mein frontend, backend aur MongoDB hain.
+- **Docker Compose:** Ek \`compose.yaml\` file mein services define karke aam taur par ek machine par sabko saath run kar sakte ho.
+- **Kubernetes:** Pods, Deployments aur Services jaise resources se workloads ko cluster mein schedule aur manage karte ho. Ye replicas maintain karne, rolling updates aur configured autoscaling mein help karta hai.
+
+Compose can also be used in more advanced workflows, and Kubernetes can run on a single-node development cluster. The key distinction is their primary purpose and orchestration scope, not an absolute single-machine versus multiple-machine rule.
+
+### 4. Main Differences
+
+| Feature | Docker Compose | Kubernetes |
+|---|---|---|
+| Primary purpose | Define and run multi-container applications | Orchestrate containerized workloads |
+| Typical environment | Local development or simpler single-host deployments | Clustered environments, including production |
+| Configuration | \`compose.yaml\` | YAML manifests for Deployments, Services, Pods, etc. |
+| Workload unit | Service/container | Pod, managed by workload controllers |
+| Scaling | Can scale services, subject to configuration and application constraints | Replica management and autoscaling options |
+| Self-healing | Docker restarts can be configured, but Compose has a narrower orchestration scope | Controllers work to restore desired workload state |
+| Networking | Docker networks and service-name discovery | Cluster networking, Services, and often Ingress/Gateway |
+| Rolling updates | Not a full Kubernetes-style deployment controller | Deployment rollout and rollback capabilities |
+| Complexity | Easier to learn and operate | More components and operational overhead |
+| Common commands | \`docker compose up -d\` | \`kubectl apply -f ...\` |
+
+### 5. Docker Compose Example
+
+Create \`compose.yaml\`:
+\`\`\`yaml
+services:
+  backend:
+    image: my-backend:1.0
+    ports:
+      - "3000:3000"
+    depends_on:
+      - mongodb
+
+  mongodb:
+    image: mongo:7
+    volumes:
+      - mongo_data:/data/db
+
+volumes:
+  mongo_data:
+\`\`\`
+
+Run the application:
+\`\`\`bash
+docker compose up -d
+docker compose ps
+docker compose logs -f
+docker compose down
+\`\`\`
+This starts the backend and MongoDB services on the Compose host. The backend should connect to MongoDB using the Compose service name, such as \`mongodb\`, rather than \`localhost\`.
+
+### 6. Kubernetes Example
+
+A simplified Deployment manifest:
+\`\`\`yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+        - name: backend
+          image: my-backend:1.0
+          ports:
+            - containerPort: 3000
+\`\`\`
+
+Apply and inspect:
+\`\`\`bash
+kubectl apply -f deployment.yaml
+kubectl get deployments
+kubectl get pods
+\`\`\`
+This Deployment asks Kubernetes to maintain three backend Pod replicas. A complete reachable application may also need a Service, configuration, secrets, and an appropriate image registry.
+
+### 7. Which Should You Choose?
+- Choose **Docker Compose** for local MERN development, integration testing, or a straightforward multi-container setup on one host.
+- Choose **Kubernetes** when you need cluster scheduling, controlled rollouts, advanced workload management, and configured autoscaling.
+- For production, choose based on availability requirements, team skills, security, cost, and operational complexity—not simply because Kubernetes has more features.
+
+### 8. Interview-Ready Answer
+“Docker Compose defines and runs multi-container applications using a Compose YAML file, and it is commonly used for local development or simpler single-host deployments. Kubernetes is a full container orchestration platform that manages workloads across a cluster and supports desired-state reconciliation, rolling updates, service discovery, and autoscaling. Compose is simpler; Kubernetes is more powerful but operationally more complex.”
+
+---
