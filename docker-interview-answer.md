@@ -6223,3 +6223,115 @@ Use `-f` only when you're sure you want to proceed. To combine broader cleanup w
 ### Interview-ready answer
 
 “Docker image pruning removes unused images to reclaim disk space. The command `docker image prune` removes dangling images by default, while `docker image prune -a` removes all images not used by existing containers. I inspect what is present and choose the cleanup scope carefully before running it.”
+
+
+---
+
+## Q70. What is the container lifecycle?
+
+### 1. English Definition
+
+The Docker container lifecycle is the sequence of states a container passes through, from creation and execution to stopping and removal. Common operations include create, start, run, pause, unpause, stop, restart, kill, and remove.
+
+### 2. Hindi Definition
+
+Container lifecycle ka matlab hai Docker container ke banne se lekar run hone, stop hone aur finally delete hone tak ke different stages.
+
+### 3. Hinglish Explanation
+
+Container ka lifecycle samajhne ke liye ek Node.js application ka example lete hain:
+
+1. **Create:** Image se container create hota hai, lekin app abhi start nahi hoti.
+2. **Start:** Container start hota hai aur uska configured main process run karna shuru karta hai.
+3. **Running:** Application container ke andar chal rahi hoti hai.
+4. **Pause / Unpause (optional):** Container ke processes temporarily freeze aur phir resume kiye ja sakte hain.
+5. **Stop:** Main process ko gracefully terminate karne ki koshish hoti hai; timeout ke baad Docker forcefully kill kar sakta hai.
+6. **Restart (optional):** Stopped container ko phir se start kiya ja sakta hai.
+7. **Remove:** Container ko delete kiya jata hai. Running container ko remove karne ke liye aam taur par pehle stop karna padta hai, ya force removal use karna padta hai.
+
+**Important:** `docker run` ek hi command mein container create aur start karta hai. Lifecycle strictly linear nahi hai: container stop hone ke baad restart ho sakta hai.
+
+### 4. Lifecycle Diagram
+
+```text
+Docker Image
+    |
+    v
+  Create
+    |
+    v
+  Created
+    |
+   Start
+    v
+  Running <---- Restart / Start ---- Stopped
+    |                                  ^
+    |                                  |
+    +---------- Stop / Kill ------------+
+    |
+    +-- Pause --> Paused --> Unpause --> Running
+
+Stopped / Created container
+    |
+   Remove
+    v
+  Deleted
+```
+
+### 5. Practical Commands
+
+**Create without starting:**
+
+```bash
+docker create --name my-app my-node-app:1.0
+```
+
+**Start the created container:**
+
+```bash
+docker start my-app
+```
+
+**Create and start in one command:**
+
+```bash
+docker run -d --name my-app -p 3000:3000 my-node-app:1.0
+```
+
+**Check container states:**
+
+```bash
+docker ps
+docker ps -a
+```
+
+**Stop, restart, pause, and resume:**
+
+```bash
+docker stop my-app
+docker restart my-app
+docker pause my-app
+docker unpause my-app
+```
+
+**Remove after stopping:**
+
+```bash
+docker stop my-app
+docker rm my-app
+```
+
+### 6. Common Container States
+
+| State | Meaning |
+|---|---|
+| Created | Container created but not started |
+| Running | Main process is running |
+| Paused | Container processes are paused |
+| Restarting | Container is in a restart transition |
+| Exited | Main process has stopped |
+| Dead | Container is in a failed cleanup state |
+
+### Interview-ready answer
+
+“The Docker container lifecycle describes the stages a container goes through, including created, running, paused, stopped, and removed. I use commands such as `docker create`, `docker start`, `docker stop`, `docker restart`, and `docker rm` to manage these stages. The `docker run` command creates and starts a container.”
