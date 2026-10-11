@@ -3859,3 +3859,76 @@ Build instructions such as `RUN` execute while building the image. `CMD` defines
 ### 7. Interview-ready answer
 
 “A Dockerfile consists of line-by-line instructions that define how to build a Docker image. A basic Node.js Dockerfile commonly uses `FROM`, `WORKDIR`, `COPY`, `RUN`, `EXPOSE`, and `CMD`. Docker executes build instructions to create the image, while `CMD` specifies the default command when a container starts.”
+
+
+---
+
+## Q39. What does the `FROM` instruction do?
+
+### 1. English Definition
+
+The `FROM` instruction specifies the base image for a Docker build. It is usually the first instruction in a Dockerfile and provides the starting filesystem and environment on which the remaining image layers are built.
+
+### 2. Hindi Definition
+
+`FROM` instruction batata hai ki Docker image banane ke liye kis base image se shuru karna hai, jaise Node.js, Python, ya Alpine Linux ki image.
+
+### 3. Hinglish Explanation
+
+Amit bhai, maan lo aap MERN backend ki image banana chahte ho. Aapko Node.js runtime chahiye taaki `server.js` run ho sake. Isliye Dockerfile mein likhte ho:
+
+```dockerfile
+FROM node:22-alpine
+```
+
+Iska matlab hai ki aapki image, `node:22-alpine` base image se start hogi. Uske baad `WORKDIR`, `COPY`, `RUN` aur baaki instructions se aap apni application ka environment prepare karoge.
+
+### 4. Practical Examples
+
+**Node.js application:**
+
+```dockerfile
+FROM node:22-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+CMD ["node", "server.js"]
+```
+
+**Python application:**
+
+```dockerfile
+FROM python:3.12-slim
+WORKDIR /app
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . .
+CMD ["python", "app.py"]
+```
+
+### 5. How It Works
+
+```text
+FROM node:22-alpine
+        |
+        v
+Base image selected
+        |
+        v
+WORKDIR / COPY / RUN
+        |
+        v
+Application Docker image built
+```
+
+### 6. Important Points
+
+- `FROM` is generally the first instruction in a Dockerfile.
+- A Dockerfile can use more than one `FROM` instruction for multi-stage builds.
+- You can use `FROM scratch` to start from an empty base for suitable images.
+- Choose an appropriate, trusted base image and pin versions (or digests where appropriate) for more predictable builds.
+
+### Interview-ready answer
+
+“The `FROM` instruction specifies the base image used to build a Docker image. It provides the starting filesystem and environment for subsequent instructions. For example, `FROM node:22-alpine` starts a Node.js application image using the Node.js 22 Alpine-based image.”
