@@ -9934,3 +9934,149 @@ Containers running again
 
 “`docker compose restart` stops and starts existing containers for the specified Compose services. It does not rebuild images or recreate containers. I use it when I need to restart an application without changing its container configuration.”
 
+---
+
+## Q119. How do you manage environment variables in Docker Compose?
+
+### 1. English Definition
+
+Environment variables in Docker Compose are used to pass configuration values, such as database URLs, API ports, and credentials, to containers without hardcoding them into application code or Docker images.
+
+### 2. Hindi Definition
+
+Docker Compose mein environment variables ka use application ki configuration, jaise database connection string, port number aur credentials, containers ko provide karne ke liye kiya jata hai. Isse configuration ko code se alag rakha ja sakta hai.
+
+### 3. Hinglish Explanation
+
+Maan lo aap MERN project bana rahe ho aur Node.js backend ko MongoDB se connect karna hai. Database URL ko code mein hardcode karne ke bajay environment variable mein rakh sakte ho.
+
+- `.env` file mein configuration values rakh sakte hain.
+- `compose.yaml` mein variables ko container tak pass kar sakte hain.
+- Node.js mein `process.env` se unhe access kar sakte hain.
+- Passwords aur secrets ko GitHub par commit nahi karna chahiye.
+
+### 4. Practical Example — MERN Stack
+
+Create a root `.env` file:
+
+```env
+PORT=5000
+MONGO_URI=mongodb://mongodb:27017/farmlogic
+```
+
+Compose configuration:
+
+```yaml
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "5000:5000"
+    environment:
+      PORT: ${PORT}
+      MONGO_URI: ${MONGO_URI}
+
+  mongodb:
+    image: mongo:8
+    volumes:
+      - mongo-data:/data/db
+
+volumes:
+  mongo-data:
+```
+
+Here, `mongodb` is the Compose service name, which the backend can resolve on the Compose network.
+
+Access the variables in Node.js:
+
+```js
+const PORT = process.env.PORT || 5000;
+const MONGO_URI = process.env.MONGO_URI;
+```
+
+Compose resolves `${PORT}` and `${MONGO_URI}` for configuration interpolation, then the `environment` section sets the resulting values in the backend container.
+
+### 5. Architecture Diagram
+
+```text
+.env file
+(PORT, MONGO_URI)
+       |
+       v
+Docker Compose
+(resolve {VARIABLE} interpolation)
+       |
+       v
+Node.js backend container
+(process.env.PORT, process.env.MONGO_URI)
+       |
+       v
+MongoDB container
+```
+
+### 6. Other Ways to Configure Environment Variables
+
+**Directly in `compose.yaml`:**
+
+```yaml
+services:
+  backend:
+    environment:
+      PORT: "5000"
+      NODE_ENV: production
+```
+
+**Using `env_file`:**
+
+```yaml
+services:
+  backend:
+    env_file:
+      - ./backend.env
+```
+
+**Using shell variables:**
+
+```bash
+export PORT=5000
+docker compose up -d
+```
+
+**Override a variable for a one-off container:**
+
+```bash
+docker compose run -e PORT=5001 backend
+```
+
+Note: A root `.env` file is commonly used for Compose interpolation. The `env_file` option explicitly injects variables from a file into the container environment.
+
+### 7. Security Best Practices
+
+- Add local `.env` and secret files to `.gitignore`.
+- Never commit real passwords, API keys, or production credentials.
+- Commit an `.env.example` file with placeholder values if helpful.
+- Use Docker secrets or an appropriate secret manager for sensitive production values.
+- Environment variables are not automatically encrypted and may be visible to users with access to inspect the container.
+
+Example `.gitignore`:
+
+```gitignore
+.env
+backend.env
+```
+
+### 8. Summary Table
+
+| Method | Purpose |
+|---|---|
+| `.env` | Compose variable interpolation |
+| `environment` | Set variables in a container |
+| `env_file` | Inject variables from a file into a container |
+| Shell variables | Provide configuration from the current shell |
+| `docker compose run -e` | Override a variable for a one-off container |
+| Docker secrets | Manage sensitive values in supported configurations |
+
+### Interview-ready answer
+
+“Docker Compose lets us manage environment variables using `.env` files, the `environment` and `env_file` options, and shell variables. Compose can resolve variables in the configuration and pass them to containers, where a Node.js application accesses them through `process.env`. I keep sensitive values out of Git and use a proper secret-management solution in production.”
+
