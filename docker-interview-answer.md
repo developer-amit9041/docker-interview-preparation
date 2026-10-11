@@ -11602,3 +11602,101 @@ docker compose up -d --build backend
 
 ---
 
+## Q131. Why are the frontend and backend usually placed in separate containers?
+
+### 1. English Definition
+
+Frontend and backend are usually placed in separate containers because they have different responsibilities, runtime requirements, dependencies, scaling needs, and deployment lifecycles. Separating them improves isolation, maintainability, independent deployment, and scaling.
+
+### 2. Hindi Definition
+
+Frontend aur backend ko usually alag containers mein isliye rakhte hain kyunki dono ka kaam, dependencies aur deployment requirements alag hoti hain. Isse dono ko independently update, scale aur manage karna easy hota hai.
+
+### 3. Hinglish Explanation
+
+Bhai, MERN application mein React frontend user interface dikhata hai, jabki Node.js/Express backend API requests process karta hai aur database se communicate karta hai.
+
+Dono ko separate containers mein rakhne se:
+- Frontend ko update karne ke liye backend image rebuild karna zaroori nahi hota, jab tak dono ki configuration ya shared build process change na ho.
+- Frontend aur backend ko alag-alag scale kar sakte ho.
+- Dono ki dependencies aur runtime environments isolate rehti hain.
+- Logs, health checks, resource limits aur deployments ko independently manage kar sakte ho.
+- Network rules se services ke beech access control karna easier hota hai.
+
+### 4. Architecture Diagram
+
+\`\`\`text
+                 User's Browser
+                       |
+                       v
+              Frontend Container
+             React files served by Nginx
+                       |
+                  /api requests
+                       |
+                       v
+               Backend Container
+              Node.js + Express API
+                       |
+                       v
+               MongoDB Container
+                       |
+                       v
+                Persistent Volume
+\`\`\`
+
+Docker Compose network par backend MongoDB ko service name se access kar sakta hai, jaise \`mongodb:27017\`. Browser-side React code ko Docker ke internal service names directly use nahi karne chahiye; Nginx reverse proxy ya public API URL use karo.
+
+### 5. Practical Docker Compose Example
+
+\`\`\`yaml
+services:
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+  backend:
+    build: ./backend
+    environment:
+      PORT: "5000"
+      MONGO_URI: mongodb://mongodb:27017/myapp
+    ports:
+      - "5000:5000"
+    depends_on:
+      - mongodb
+
+  mongodb:
+    image: mongo:8
+    volumes:
+      - mongo-data:/data/db
+
+volumes:
+  mongo-data:
+\`\`\`
+
+Here each service has its own container, but Compose connects the services through a network. For a production deployment, you might expose only the frontend publicly and keep backend and database access restricted.
+
+### 6. Main Advantages
+
+| Advantage | Explanation |
+|---|---|
+| Independent deployment | Frontend and backend can be released separately |
+| Independent scaling | Scale API replicas without scaling the frontend, or vice versa |
+| Dependency isolation | Frontend web server and backend Node.js dependencies stay separate |
+| Fault isolation | A failure in one service does not automatically stop the other containers, though the overall app may be affected |
+| Security boundaries | Network access and exposed ports can be controlled per service |
+| Easier maintenance | Logs, resource limits, health checks, and updates can be managed per service |
+
+### 7. Is It Mandatory?
+
+No. For a very small demo or a tightly coupled legacy application, running multiple processes in one container may be possible. However, the common Docker best practice is one main service/process per container, with separate containers for independently managed components.
+
+### Interview-ready answer
+
+“We usually place the frontend and backend in separate containers because they have different responsibilities, dependencies, scaling requirements, and release cycles. This lets us deploy and scale each service independently, isolate failures and dependencies, and manage logs, resources, and network access separately. In a MERN application, React can be served by Nginx in the frontend container, while Node.js/Express runs in the backend container and connects to MongoDB over the Docker network.”
+
+---
+
