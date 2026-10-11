@@ -9712,3 +9712,58 @@ The `-d` flag changes how Compose attaches to the services; it does not mean the
 ### Interview-ready answer
 
 “Both commands start the services defined in the Compose file. `docker compose up` runs in the foreground and streams logs to the terminal, which is useful for development and debugging. `docker compose up -d` runs in detached mode, so the command returns and the services continue running in the background.”
+
+
+---
+
+## Q116. What does `docker compose down` do?
+
+### 1. English Definition
+
+`docker compose down` stops and removes the containers and the default project network created for a Compose application. By default, it keeps named volumes and external networks, so persistent data is not removed automatically.
+
+### 2. Hindi Definition
+
+`docker compose down` Compose application ke containers ko stop karke remove karta hai aur project network ko remove karta hai. Default behavior mein named volumes remove nahi hote, isliye database data generally retained rehta hai.
+
+### 3. Hinglish Explanation
+
+Maan lo aapki application mein React, Node.js aur MongoDB services hain. Jab aap `docker compose down` chalate ho, toh Compose un services ke containers stop aur remove karta hai aur Compose-created default network ko remove karta hai. Named volume default se retain hota hai.
+
+### 4. Practical Example
+
+Stop and remove the Compose application's containers and network:
+
+```bash
+docker compose down
+```
+
+Check remaining containers:
+
+```bash
+docker compose ps -a
+```
+
+If you intentionally want to remove Compose-managed named volumes too:
+
+```bash
+docker compose down -v
+```
+
+**Warning:** `-v` can delete database data stored in Compose-managed named volumes. Use it only when you are sure the data is no longer needed.
+
+### 5. What Gets Removed?
+
+| Resource | `docker compose down` | `docker compose down -v` |
+|---|---|---|
+| Compose service containers | Removed | Removed |
+| Compose default project network | Removed | Removed |
+| Compose-managed named volumes | Retained by default | Removed |
+| External networks | Retained | Retained |
+| External volumes | Retained | Retained |
+
+Images are not removed by default. The optional `--rmi` flag can remove service images according to its setting.
+
+### Interview-ready answer
+
+“`docker compose down` stops and removes the containers and the Compose-created project network. It retains named volumes by default, so database data can persist. Adding `-v` removes Compose-managed named volumes as well, which can delete persisted database data.”
