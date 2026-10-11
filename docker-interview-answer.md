@@ -5524,3 +5524,86 @@ Compare the image size before and after each change. `docker history` helps iden
 ### Interview-ready answer
 
 “To reduce Docker image size, I use a suitable minimal base image, exclude unnecessary files with `.dockerignore`, install only production dependencies, and use multi-stage builds to keep build tools out of the final image. I also remove temporary data in the same layer where it is created and inspect image history to find large layers.”
+
+
+---
+
+## Q60. What is Docker image caching?
+
+### 1. English Definition
+
+Docker build caching is a mechanism that reuses the results of previous build steps when their instructions and relevant inputs have not changed. It avoids repeating unnecessary work and can significantly speed up subsequent image builds.
+
+### 2. Hindi Definition
+
+Docker image caching ek mechanism hai jisme Docker pehle se build kiye gaye steps ke results ko reuse karta hai, jab unki instructions aur required inputs change nahi hue hote. Isse baar-baar image build karne mein kam time lag sakta hai.
+
+### 3. Hinglish Explanation
+
+Maan lo aapke Node.js project mein dependencies install karne mein 2 minutes lagte hain. Aap Docker image build karte ho, phir sirf `server.js` ka code change karte ho.
+
+Agar dependency files same hain aur dependency-install step ka cache valid hai, toh Docker `npm ci` ko dobara run karne ke bajay cached result reuse kar sakta hai. Isse build faster hota hai.
+
+Cache reuse guaranteed nahi hota: instruction, copied files, build arguments ya other inputs change hone par cache invalidate ho sakta hai. Dockerfile ke kisi step ka cache miss hone se uske baad ke dependent steps bhi rebuild ho sakte hain.
+
+### 4. Practical Example
+
+**Less cache-friendly Dockerfile:**
+
+```dockerfile
+FROM node:22-alpine
+WORKDIR /app
+COPY . .
+RUN npm ci
+CMD ["node", "server.js"]
+```
+
+Yahan source files mein koi bhi change `COPY . .` ko invalidate kar sakta hai, jiski wajah se uske baad wala `RUN npm ci` bhi dobara execute ho sakta hai.
+
+**More cache-friendly Dockerfile:**
+
+```dockerfile
+FROM node:22-alpine
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN npm ci
+
+COPY . .
+CMD ["node", "server.js"]
+```
+
+Ab agar sirf application source code change hota hai aur dependency manifests same rehte hain, toh Docker dependency-install layer ka cache reuse kar sakta hai.
+
+### 5. Useful Commands
+
+Build the image:
+
+```bash
+docker build -t my-node-app .
+```
+
+Build again to see which steps can use cache:
+
+```bash
+docker build -t my-node-app .
+```
+
+Build without using the existing build cache:
+
+```bash
+docker build --no-cache -t my-node-app .
+```
+
+`--no-cache` build steps ke cached results ko reuse nahi karta. Base image ko automatically latest version mein update karna is command ka purpose nahi hai; base image update karni ho toh image ko pull/update karne aur build configuration ko accordingly handle karna hota hai.
+
+### 6. Key Benefits
+
+- Faster repeated builds.
+- Less repeated dependency installation and other build work.
+- More efficient development and CI/CD pipelines.
+- Better build performance when Dockerfile instructions are ordered to maximize cache reuse.
+
+### Interview-ready answer
+
+“Docker build caching reuses the results of previous build steps when the instructions and their relevant inputs remain unchanged. It reduces repeated work and speeds up image builds. For Node.js projects, I copy package manifests and install dependencies before copying frequently changing source files so the dependency layer can often be reused.”
