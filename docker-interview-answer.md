@@ -1374,3 +1374,111 @@ docker ps
 **Interview-ready summary:**
 
 > Docker makes application delivery more consistent and portable by packaging code and dependencies into images. It supports lightweight isolation, faster deployments, efficient resource usage, scaling, and repeatable CI/CD workflows.
+
+
+---
+
+## Q14. What is containerization?
+
+### 1. English Definition
+
+Containerization is a method of packaging an application and its required dependencies into an isolated container so it can run consistently across compatible environments.
+
+### 2. Hindi Definition
+
+Containerization ek process hai jisme application aur uski required dependencies ko container mein package kiya jata hai, taaki application different compatible environments mein consistently run kar sake.
+
+### 3. Hinglish Explanation
+
+Maan lo aapki MERN application local machine par sahi chal rahi hai, lekin testing ya production server par dependency versions ki wajah se issue aa raha hai.
+
+Containerization mein aap application code, runtime aur required dependencies ko image mein package karte ho. Phir us image se container create karke application run kar sakte ho.
+
+**Simple difference:**
+- **Containerization:** Application ko container mein package aur isolate karne ka approach.
+- **Docker:** Containerization ke liye commonly used platform/tooling.
+- **Container:** Packaged application ko run karne wala isolated environment.
+
+Linux containers aam taur par host OS kernel share karte hain, isliye ye full virtual machines se generally lightweight hote hain.
+
+### 4. Practical Example / Code
+
+A Node.js application's Dockerfile can package its runtime and dependencies:
+
+```dockerfile
+FROM node:20
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+EXPOSE 5000
+CMD ["npm", "start"]
+```
+
+Build an image and run a container:
+
+```bash
+docker build -t my-node-app:1.0 .
+docker run -d --name my-app -p 5000:5000 my-node-app:1.0
+```
+
+Assumption: The project has a valid `package.json` with a `start` script, and the app listens on port 5000.
+
+### 5. Architecture Diagram
+
+```text
+      Application Code
+             +
+      Runtime / Libraries
+             |
+             v
+       Dockerfile
+             |
+        docker build
+             |
+             v
+        Docker Image
+             |
+         docker run
+             |
+             v
+     Isolated Container
+       Running App
+             |
+       Compatible Host OS
+```
+
+### 6. Practical Command / Configuration
+
+**Build the packaged image:**
+
+```bash
+docker build -t my-node-app:1.0 .
+```
+
+**Run the container:**
+
+```bash
+docker run -d --name my-app -p 5000:5000 my-node-app:1.0
+```
+
+**Check the running container:**
+
+```bash
+docker ps
+```
+
+### 7. Summary Table
+
+| Term | Meaning |
+|---|---|
+| Containerization | Packaging and isolating an application with its dependencies |
+| Docker | A platform used to build and run containers |
+| Docker image | Packaged, reusable template |
+| Docker container | Runtime instance of an image |
+| Main benefit | Consistent application delivery across compatible environments |
+| Kernel | Linux containers generally share the host kernel |
+
+**Interview-ready summary:**
+
+> Containerization is the process of packaging an application and its dependencies into an isolated container so it can run consistently across compatible environments, improving portability and deployment reliability.
