@@ -14410,3 +14410,91 @@ This is an illustrative pattern. Adjust the output and entry-point paths for you
 “A development Dockerfile prioritizes fast feedback, hot reloading, debugging, and developer tools. A production Dockerfile prioritizes security, reliability, and efficiency by using a tested build, a minimal runtime image, production dependencies, and a non-root user. We commonly separate these workflows with \`Dockerfile.dev\` and a production \`Dockerfile\`, while keeping secrets outside the image.”
 
 ---
+## Q154. What is Docker Swarm?
+
+### 1. English Interview Definition
+Docker Swarm is Docker's native container orchestration solution. It groups multiple Docker Engine hosts into a cluster and lets users deploy and manage services across that cluster, including replica scaling, service discovery, load balancing, and rescheduling tasks when a node fails.
+
+### 2. Hindi Definition
+Docker Swarm Docker ka built-in orchestration tool hai, jo multiple Docker machines ko ek cluster mein jodkar containers ko deploy, scale aur manage karne mein help karta hai.
+
+### 3. Hinglish Explanation
+Maan lo aapki MERN application ko ek server par run karna enough nahi hai. Aap backend ke 3 replicas multiple servers par run karna chahte ho. Docker Swarm cluster ke nodes par tasks distribute kar sakta hai, service ko desired replica count par maintain karne ki koshish karta hai, aur Swarm routing mesh ke through published ports par load balancing provide kar sakta hai.
+
+### 4. Main Components
+- **Node:** Cluster ka ek Docker host. Node manager ya worker ho sakta hai.
+- **Manager node:** Cluster state maintain karta hai, scheduling decisions leta hai, aur services manage karta hai. Manager nodes cluster ke control plane ka hissa hote hain.
+- **Worker node:** Manager se assigned tasks run karta hai.
+- **Service:** Desired state define karti hai, jaise image, replicas, ports aur resource settings.
+- **Task:** Service ka scheduled unit of work, usually a container.
+
+### 5. Simple Architecture
+
+\`\`\`text
+                 Docker Swarm Cluster
+              ┌────────────────────────┐
+              │     Manager Node       │
+              │ Cluster state /        │
+              │ scheduling / services  │
+              └───────────┬────────────┘
+                          │
+                ┌─────────┴─────────┐
+                ▼                   ▼
+        ┌──────────────┐    ┌──────────────┐
+        │ Worker Node 1│    │ Worker Node 2│
+        │ Backend task │    │ Backend task │
+        │ Backend task │    │ Backend task │
+        └──────────────┘    └──────────────┘
+\`\`\`
+
+This is a simplified illustration; a Swarm can have multiple manager and worker nodes.
+
+### 6. Practical Commands
+
+**Initialize a Swarm on the first host:**
+\`\`\`bash
+docker swarm init
+\`\`\`
+
+**Get the command for joining worker nodes:**
+\`\`\`bash
+docker swarm join-token worker
+\`\`\`
+Run the generated join command on each worker host. Keep the join token private.
+
+**Deploy a replicated service:**
+\`\`\`bash
+docker service create \
+  --name backend \
+  --replicas 3 \
+  --publish published=3000,target=3000 \
+  my-backend:1.0
+\`\`\`
+
+**List services and running tasks:**
+\`\`\`bash
+docker service ls
+docker service ps backend
+\`\`\`
+
+**Scale the service to five replicas:**
+\`\`\`bash
+docker service scale backend=5
+\`\`\`
+
+**Remove the service:**
+\`\`\`bash
+docker service rm backend
+\`\`\`
+
+The image must be accessible to the nodes that need to run it, typically through a registry. Published ports, networking, and host firewall rules must also be configured appropriately.
+
+### 7. Docker Swarm vs. Docker Compose
+- **Docker Compose** primarily defines and runs a multi-container application, commonly on one Docker host.
+- **Docker Swarm** orchestrates services across a cluster of Docker hosts and supports replicas, scheduling, and cluster-level management.
+- Compose files can be used with \`docker stack deploy\` for Swarm deployments, but not every Compose feature is supported identically in Swarm.
+
+### 8. Interview-Ready Answer
+“Docker Swarm is Docker's native container orchestration tool. It combines multiple Docker hosts into a cluster of manager and worker nodes and manages services across them. It supports replica scaling, scheduling, service discovery, load balancing, and rescheduling tasks to maintain the desired state.”
+
+---
