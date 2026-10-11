@@ -4620,3 +4620,74 @@ Neither `ARG` nor `ENV` should be used to embed sensitive secrets in an image. B
 ### Interview-ready answer
 
 “`ARG` is for build-time variables and can be overridden with `docker build --build-arg`. `ENV` sets environment variables that are available to subsequent build instructions and, by default, to processes in the running container. For example, I might use `ARG NODE_VERSION=22` to choose a base image and `ENV NODE_ENV=production` to configure the application.”
+
+
+---
+
+## Q49. What does the `USER` instruction do?
+
+### 1. English Definition
+
+The `USER` instruction sets the user name or UID, optionally with a group name or GID, used for subsequent build instructions and as the default user for running the container.
+
+### 2. Hindi Definition
+
+`USER` instruction batata hai ki Docker image ki aage ki instructions aur container ke andar application kis user ke under run hogi.
+
+### 3. Hinglish Explanation
+
+Amit bhai, containers aksar default mein root user ke under run ho sakte hain, jo unnecessary privileges deta hai. Security improve karne ke liye hum non-root user create karke `USER` instruction se switch kar sakte hain.
+
+Example:
+
+```dockerfile
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+USER appuser
+```
+
+Ab subsequent build instructions aur container ka default process `appuser` ke under run hoga, jab tak baad mein user change na kiya jaye.
+
+### 4. Practical Example: Node.js / MERN Backend
+
+```dockerfile
+FROM node:22-alpine
+
+WORKDIR /app
+
+COPY --chown=node:node package*.json ./
+USER node
+RUN npm ci
+
+COPY --chown=node:node . .
+
+ENV NODE_ENV=production
+EXPOSE 5000
+CMD ["node", "server.js"]
+```
+
+This example uses the `node` user provided by the Node.js base image and assigns ownership of copied files to that user. Check that the required directories and files are writable by the selected user. For many production images, running as a non-root user reduces the impact of a compromised application.
+
+### 5. Useful Commands
+
+Check which user the container runs as:
+
+```bash
+docker run --rm mern-backend:1.0 id
+```
+
+Inspect the image's configured user:
+
+```bash
+docker image inspect mern-backend:1.0 --format '{{.Config.User}}'
+```
+
+### 6. Important Points
+
+- `USER` can specify a username or UID and optionally a group/GID.
+- It applies to later Dockerfile instructions and sets the default runtime user.
+- `COPY --chown=user:group` can set ownership of copied files.
+- Prefer a non-root user when practical, and ensure application files and required directories have suitable permissions.
+
+### Interview-ready answer
+
+“The `USER` instruction specifies the user and optionally the group used for subsequent Dockerfile instructions and the container's default runtime process. Running an application as a non-root user follows the principle of least privilege and can improve container security.”
