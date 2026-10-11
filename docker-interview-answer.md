@@ -8674,3 +8674,64 @@ docker compose ps
 ### Interview-ready answer
 
 “A `docker-compose.yml` file is a YAML configuration file that defines the services and settings required to run a multi-container application. It can specify images, build instructions, ports, environment variables, networks, and volumes. We use it with commands such as `docker compose up -d` to start the application stack.”
+
+
+---
+
+## Q104. What is the difference between Docker Compose and Docker?
+
+### 1. English Definition
+
+Docker is the platform and toolset used to build, distribute, and run containers. Docker Compose is a tool within the Docker ecosystem used to define and manage applications that contain multiple services through a YAML configuration file.
+
+### 2. Hindi Definition
+
+Docker ka use container images build karne aur containers run karne ke liye hota hai. Docker Compose ka use multiple related containers, jaise Node.js aur MongoDB, ko ek configuration file se manage karne ke liye hota hai.
+
+### 3. Difference Table
+
+| Feature | Docker CLI / Engine | Docker Compose |
+|---|---|---|
+| Main purpose | Build and run images/containers | Define and manage multi-service applications |
+| Configuration | Often individual commands and Dockerfiles | YAML file such as `compose.yaml` |
+| Starting services | Run each container with commands such as `docker run` | Start the configured stack with `docker compose up -d` |
+| Networking | Networks can be created and attached manually | Can configure a project network and service connections |
+| Volumes | Create and attach volumes with Docker commands | Declare volumes in the Compose file |
+| Best suited for | Container-level operations and image building | Coordinating a local or multi-container application |
+
+### 4. Practical MERN Example
+
+**Using Docker commands separately:**
+
+```bash
+docker network create mern-net
+
+docker run -d --name mongodb \
+  --network mern-net \
+  -v mongo-data:/data/db mongo:8
+
+docker run -d --name backend \
+  --network mern-net \
+  -p 5000:5000 my-backend-image
+```
+
+You must configure and start each container individually.
+
+**Using Docker Compose:**
+
+Define the backend and MongoDB services in `compose.yaml`, then run:
+
+```bash
+docker compose up -d
+```
+
+Compose reads the YAML file and manages the defined services together. Docker still performs the underlying container operations; Compose does not replace Docker.
+
+### 5. Easy Way to Remember
+
+- **Docker:** Container banane aur chalane ke tools.
+- **Docker Compose:** Multiple related containers ko ek file aur a few commands se coordinate karne ka tool.
+
+### Interview-ready answer
+
+“Docker is used to build and run containers, while Docker Compose is used to define and manage multi-container applications using a YAML file. For example, I can use Docker commands to run a Node.js container and MongoDB container individually, or use Docker Compose to configure and start both services together with `docker compose up -d`. Compose works with Docker; it does not replace it.”
