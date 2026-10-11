@@ -3541,3 +3541,113 @@ docker rmi ---> removes the image
 | Typical prerequisite | Container should be stopped unless force-removing | Image must not be in use by containers, unless removal conditions are resolved |
 
 **Interview-ready answer:** `docker rm` removes containers, while `docker rmi` removes images. A container is an instance created from an image, so removing a container does not automatically delete its image, and removing an image does not mean a container is removed.
+
+
+---
+
+### 3. Dockerfile
+
+## Q36. What is a Dockerfile?
+
+### 1. English Definition
+
+A Dockerfile is a text file containing instructions that Docker uses to build a Docker image. It defines the base image, working directory, dependencies, application files, ports, and default command as needed.
+
+### 2. Hindi Definition
+
+Dockerfile ek text file hoti hai jisme instructions likhe hote hain ki Docker image kaise banani hai.
+
+### 3. Hinglish Explanation
+
+Amit bhai, maan lo aapka MERN project hai aur aap chahte ho ki aapka Node.js backend kisi bhi server par same tarike se run ho. Aap Dockerfile mein define karte ho:
+
+1. Kaunsi base image use hogi, jaise Node.js.
+2. Container ke andar working directory kya hogi.
+3. Dependencies kaise install hongi.
+4. Project files kaise copy hongi.
+5. Container start hone par kaunsi command chalegi.
+
+Dockerfile **image banane ki recipe** hai. Docker image banane ke liye aap aam taur par `docker build` command use karte ho.
+
+### 4. Practical Example: Node.js / MERN Backend
+
+Project structure:
+
+```text
+mern-backend/
+├── Dockerfile
+├── package.json
+├── package-lock.json
+└── server.js
+```
+
+**Dockerfile:**
+
+```dockerfile
+FROM node:22-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+
+RUN npm ci
+
+COPY . .
+
+EXPOSE 5000
+
+CMD ["node", "server.js"]
+```
+
+Assumption: `server.js` exists, the lockfile is committed, and the application listens on port 5000. If the project does not have a `package-lock.json`, generate and commit one or adjust the dependency-install command.
+
+### 5. How It Works
+
+```text
+Dockerfile
+    |
+    | docker build -t mern-backend:1.0 .
+    v
+Docker Image: mern-backend:1.0
+    |
+    | docker run -p 5000:5000 mern-backend:1.0
+    v
+Running Container
+```
+
+### 6. Useful Commands
+
+Build an image from the current directory:
+
+```bash
+docker build -t mern-backend:1.0 .
+```
+
+Run a container:
+
+```bash
+docker run -d --name mern-backend-container -p 5000:5000 mern-backend:1.0
+```
+
+Check the image:
+
+```bash
+docker images
+```
+
+**Tip:** Add a `.dockerignore` file to exclude unnecessary files such as `node_modules`, `.git`, and local `.env` files from the build context. Provide runtime secrets securely rather than copying them into the image.
+
+### 7. Common Dockerfile Instructions
+
+| Instruction | Purpose |
+|---|---|
+| `FROM` | Selects the base image |
+| `WORKDIR` | Sets the working directory |
+| `COPY` | Copies files into the image |
+| `RUN` | Executes a command while building the image |
+| `EXPOSE` | Documents the port the application is expected to use |
+| `CMD` | Specifies the default command when a container starts |
+
+### Interview-ready answer
+
+“A Dockerfile is a text file containing instructions to build a Docker image. It defines the base image, working directory, dependencies, application files, and startup command. For example, in a Node.js project, we can use `FROM`, `WORKDIR`, `COPY`, `RUN`, and `CMD` to create a reproducible application image.”
