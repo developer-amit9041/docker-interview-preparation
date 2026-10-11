@@ -839,3 +839,94 @@ docker info
 **Interview-ready summary:**
 
 > Docker uses a client-server architecture. The Docker CLI sends requests through the Docker Engine API to the Docker daemon, which manages images, containers, networks, and volumes and can communicate with registries to pull or push images.
+
+
+---
+
+## Q9. What is the Docker client?
+
+### 1. English Definition
+
+The Docker client is the command-line interface (CLI) that lets users interact with Docker. It sends commands to the Docker daemon through the Docker Engine API.
+
+### 2. Hindi Definition
+
+Docker client ek command-line tool hai jiske through user Docker ko commands deta hai. Ye commands Docker Engine API ke zariye Docker daemon tak pahunchti hain.
+
+### 3. Hinglish Explanation
+
+Docker client ko woh tool samjho jahan aap Docker commands type karte ho, jaise `docker run`, `docker build`, aur `docker ps`.
+
+Client khud container ko directly run nahi karta. Ye request Docker daemon ko bhejta hai, aur daemon requested operation manage karta hai.
+
+**Flow:** User → Docker CLI → Docker Engine API → Docker daemon → Docker operation.
+
+### 4. Practical Example / Code
+
+Run this command in your terminal:
+
+```bash
+docker ps
+```
+
+Docker CLI daemon se running containers ki list maangta hai.
+
+Build an image:
+
+```bash
+docker build -t my-node-app .
+```
+
+Yahan CLI build request bhejta hai; image build karne ka kaam Docker Engine/daemon manage karta hai.
+
+### 5. Architecture Diagram
+
+```text
+       User types command
+              |
+              v
+         Docker CLI
+         (Client)
+              |
+        Docker Engine API
+              |
+              v
+        Docker Daemon
+          (dockerd)
+              |
+              v
+    Images / Containers / Networks
+```
+
+### 6. Practical Command / Configuration
+
+**Check the client and server versions:**
+
+```bash
+docker version
+```
+
+**Ask the daemon to list running containers:**
+
+```bash
+docker ps
+```
+
+**Check Docker Engine information:**
+
+```bash
+docker info
+```
+
+### 7. Summary Table
+
+| Component | Responsibility |
+|---|---|
+| Docker client / CLI | Commands accept karta hai aur requests bhejta hai |
+| Docker Engine API | Client aur daemon ke beech interface |
+| Docker daemon | Requests ke according Docker resources manage karta hai |
+| Example commands | `docker run`, `docker build`, `docker ps` |
+
+**Interview-ready summary:**
+
+> The Docker client is the CLI used to interact with Docker. It sends requests through the Docker Engine API to the Docker daemon, which performs operations such as building images and managing containers.
