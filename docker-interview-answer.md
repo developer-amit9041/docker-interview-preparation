@@ -7698,3 +7698,76 @@ docker network inspect mern-network
 ### Interview-ready answer
 
 “A Docker network is a virtual network that enables containers to communicate with each other and, when configured, with external systems. For example, in a MERN application, I can connect the backend and MongoDB containers to the same user-defined bridge network so the backend can connect to MongoDB using its container name.”
+
+
+---
+
+## Q91. What are the different Docker network drivers?
+
+### 1. English Definition
+
+Docker network drivers determine how containers connect and communicate. The main built-in drivers are `bridge`, `host`, `none`, `overlay`, and `macvlan`. The appropriate driver depends on whether containers need communication on one host, across hosts, direct host-network access, or their own network identity.
+
+### 2. Hindi Definition
+
+Docker network drivers decide karte hain ki containers network se kaise connect honge aur ek doosre ya external systems se kaise communicate karenge.
+
+### 3. Main Docker Network Drivers
+
+| Driver | Explanation | Common use |
+|---|---|---|
+| `bridge` | Connects containers on the same Docker host using a virtual bridge. User-defined bridge networks support container-name DNS. | Most single-host applications |
+| `host` | On supported Linux setups, container shares the host's network namespace and does not get an isolated container network stack. | When host networking is specifically needed |
+| `none` | Disables normal container networking, leaving only limited loopback networking. | Isolated workloads |
+| `overlay` | Connects containers or services across multiple Docker hosts; commonly used with Docker Swarm. | Multi-host container networking |
+| `macvlan` | Gives a container its own MAC address so it can appear as a device on the physical network. | Legacy apps or network setups requiring direct LAN presence |
+
+### 4. Practical Examples
+
+**Bridge network**
+
+```bash
+docker network create app-network
+docker run -d --name app1 --network app-network nginx
+```
+
+**Host network** (primarily Linux; platform support varies)
+
+```bash
+docker run --rm --network host nginx
+```
+
+**No normal network connectivity**
+
+```bash
+docker run --rm --network none alpine ip addr
+```
+
+**Overlay network** (create an attachable overlay in a Swarm setup)
+
+```bash
+docker swarm init
+docker network create -d overlay --attachable app-overlay
+```
+
+**Macvlan network:** Configuration requires a suitable host network interface, subnet, gateway, and IP address range. Example values must match the actual LAN, so do not copy arbitrary network values into production.
+
+### 5. How to Check Available Networks
+
+```bash
+docker network ls
+docker network inspect app-network
+docker network create --driver bridge my-bridge
+```
+
+The `DRIVER` column in `docker network ls` shows each network's driver.
+
+### 6. Which Driver Should You Use?
+
+- For a typical MERN application running on one Docker host, use a user-defined `bridge` network.
+- For communication across Docker hosts in Swarm, consider `overlay`.
+- Use `host`, `none`, or `macvlan` only when their specific networking behavior is needed.
+
+### Interview-ready answer
+
+“The main Docker network drivers are bridge, host, none, overlay, and macvlan. Bridge is commonly used for containers on a single host, overlay connects services across multiple hosts, host shares the host's network namespace on supported systems, none disables normal networking, and macvlan gives a container its own MAC address on the physical network.”
