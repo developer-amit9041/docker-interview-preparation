@@ -2634,3 +2634,101 @@ Image no longer listed locally
 | `docker image prune -a` | Removes images not used by any container |
 
 **Interview-ready answer:** Use `docker rmi IMAGE_NAME` or `docker image rm IMAGE_NAME` to remove a local Docker image. If a container references the image, Docker may require you to remove that dependency first. Be careful with prune commands because they can remove multiple images.
+
+
+---
+
+## Q27. How do you check container logs?
+
+### 1. English Definition
+
+The `docker logs` command displays the logs produced by a container's main process through its standard output (stdout) and standard error (stderr). Options such as `-f` let you follow new log entries in real time.
+
+### 2. Hindi Definition
+
+Docker container ke application logs dekhne ke liye `docker logs` command use karte hain. Isse container ke main process ke stdout aur stderr par aane wale messages dekh sakte hain.
+
+### 3. Hinglish Explanation
+
+Amit bhai, maan lo aapka Node.js backend Docker container mein run ho raha hai aur API error aa rahi hai. Aap container ke logs check karke samajh sakte ho ki application kya output de rahi hai aur error message kya hai.
+
+- `docker logs my-api` → available logs show karta hai.
+- `docker logs -f my-api` → naye logs ko real time mein follow karta hai.
+- `docker logs --tail 100 my-api` → last 100 log lines dikhata hai.
+
+Note: `docker logs` tabhi useful output dikhayega jab application apne logs stdout/stderr par likhti ho aur container ka logging setup un logs ko capture karta ho. Agar application sirf kisi internal file mein logs likhti hai, toh us file ko alag se inspect karna pad sakta hai.
+
+### 4. Practical Example / Code
+
+Run a sample container:
+
+```bash
+docker run -d --name my-nginx nginx
+```
+
+View its logs:
+
+```bash
+docker logs my-nginx
+```
+
+Follow logs live:
+
+```bash
+docker logs -f my-nginx
+```
+
+Show only the last 100 lines:
+
+```bash
+docker logs --tail 100 my-nginx
+```
+
+Show logs with timestamps:
+
+```bash
+docker logs -t my-nginx
+```
+
+Stop following live logs with `Ctrl+C`; this normally stops the log-following command, not the container itself.
+
+### 5. Architecture Diagram
+
+```text
+Application runs inside container
+              |
+              v
+Writes messages to stdout / stderr
+              |
+              v
+Docker logging mechanism
+              |
+              v
+docker logs my-nginx
+              |
+              v
+Logs displayed in terminal
+```
+
+### 6. Practical Commands / Configuration
+
+| Command | Purpose |
+|---|---|
+| `docker logs my-nginx` | Displays available container logs |
+| `docker logs -f my-nginx` | Follows new log entries live |
+| `docker logs --tail 100 my-nginx` | Shows the last 100 lines |
+| `docker logs -t my-nginx` | Includes timestamps |
+| `docker logs --since 10m my-nginx` | Shows logs from the last 10 minutes |
+| `docker logs --until 2026-10-11T12:00:00 my-nginx` | Limits logs to entries before the specified time |
+
+### 7. Summary Table
+
+| Option | Meaning |
+|---|---|
+| No option | Show available logs |
+| `-f` | Follow logs live |
+| `--tail 100` | Show last 100 lines |
+| `-t` | Include timestamps |
+| `--since 10m` | Show recent logs from the specified time window |
+
+**Interview-ready answer:** Use `docker logs CONTAINER_NAME` or `docker logs CONTAINER_ID` to inspect a container's stdout and stderr output. Use `docker logs -f` to follow logs in real time and `docker logs --tail 100` to view only the latest 100 lines.
