@@ -7083,3 +7083,67 @@ Docker normally refuses to remove a volume that is still in use by a container.
 ### Interview-ready answer
 
 “A Docker volume is Docker-managed persistent storage that exists outside a container's writable layer. It allows data to survive container removal and recreation as long as the volume is retained and reattached. I commonly use named volumes to persist database data, such as mounting `mongo-data` at MongoDB's `/data/db` directory.”
+
+
+---
+
+## Q82. Why do we need volumes?
+
+### 1. English Definition
+
+Docker volumes are needed to persist and manage application data independently of a container's writable layer. They help preserve data when containers are removed or recreated and make it easier to share data between containers.
+
+### 2. Hindi Definition
+
+Docker volumes ki zaroorat isliye hoti hai taaki container delete ya recreate hone par important data delete na ho. Volume data ko container ke writable layer se alag store karta hai.
+
+### 3. Hinglish Explanation
+
+Maan lo aapki MERN application mein MongoDB container users aur orders ka data store karta hai. Agar aap container remove kar dete ho aur data sirf uski writable layer mein tha, toh woh data generally lost ho jayega.
+
+Volume use karne par database files alag storage mein rehti hain. Aap container ko remove karke naya container bana sakte ho aur same volume attach karke data dobara use kar sakte ho.
+
+### 4. Main Reasons to Use Volumes
+
+1. **Data persistence:** Container remove hone ke baad bhi data retained reh sakta hai.
+2. **Container replacement:** Naye container ko same volume attach karke existing data reuse kar sakte hain.
+3. **Data sharing:** Multiple containers ek volume access kar sakte hain when the application's access pattern supports it.
+4. **Docker-managed storage:** Docker volume lifecycle aur mount configuration manage karta hai.
+5. **Separation of concerns:** Application container ko replace/update karna aur data ko retain karna independently possible hota hai.
+
+### 5. Practical Example: MongoDB
+
+**Create a volume:**
+
+```bash
+docker volume create mongo-data
+```
+
+**Run MongoDB using the volume:**
+
+```bash
+docker run -d \
+  --name mongodb \
+  -v mongo-data:/data/db \
+  mongo:8
+```
+
+**Remove the container:**
+
+```bash
+docker rm -f mongodb
+```
+
+The named volume `mongo-data` remains unless it is explicitly removed. A new compatible MongoDB container can mount that same volume to access the retained database files.
+
+### 6. What If We Do Not Use a Volume?
+
+| Without a volume | With a named volume |
+|---|---|
+| Data stored in writable layer is tied to the container | Data stored in volume is separate |
+| Removing the container generally loses writable-layer data | Removing the container normally retains volume data |
+| Container replacement may lose application data | Same volume can be attached to the replacement container |
+
+### Interview-ready answer
+
+“We need Docker volumes to store important data independently of a container's writable layer. They help data survive container removal and recreation, support data sharing where appropriate, and let us update or replace application containers without losing persistent data. For example, I use a named volume to persist MongoDB data.”
