@@ -13662,3 +13662,121 @@ Use \`docker history\` to inspect the image's layers and identify commands that 
 "I reduce Docker image size by using an appropriate lightweight base image, multi-stage builds, and only production dependencies. I add a \`.dockerignore\` file to exclude files such as local \`node_modules\`, Git history, and environment files. I also avoid unnecessary runtime packages, optimize layer caching, and measure the result with \`docker image ls\` and \`docker history\`. I verify compatibility and security rather than choosing an image only because it is small."
 
 ---
+## Q146. What is a multi-stage Docker build?
+
+### 1. English Interview Definition
+
+A multi-stage Docker build is a Dockerfile technique that uses multiple \`FROM\` instructions to create separate build and runtime stages. It allows us to copy only the required artifacts from one stage into the final image, reducing image size and keeping build tools and development dependencies out of production.
+
+### 2. Hindi Definition
+
+Multi-stage Docker build mein hum ek hi Dockerfile ke andar multiple stages banate hain. Pehle stage mein application build karte hain, phir final stage mein sirf required files copy karte hain, jisse final Docker image chhoti aur deployment ke liye efficient banti hai.
+
+### 3. Hinglish Explanation
+
+Maan lo aap React application bana rahe ho.
+
+React application ko build karne ke liye Node.js, npm packages aur build tools chahiye. Lekin build complete hone ke baad production mein generally sirf compiled HTML, CSS aur JavaScript files serve karni hoti hain.
+
+Multi-stage build mein:
+
+- **Stage 1 — Build:** Node.js se React application build hoti hai.
+- **Stage 2 — Runtime:** Nginx compiled files serve karta hai.
+- **Final image:** Build tools aur unnecessary development dependencies include nahi hote.
+
+### 4. Practical Example: React + Nginx
+
+This example assumes a Vite React project whose build output directory is \`dist\`.
+
+\`\`\`dockerfile
+# Stage 1: Build the React application
+FROM node:22-alpine AS build
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci
+
+COPY . .
+RUN npm run build
+
+# Stage 2: Serve the production files
+FROM nginx:alpine
+COPY --from=build /app/dist /usr/share/nginx/html
+
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
+\`\`\`
+
+**How it works:**
+
+1. \`FROM node:22-alpine AS build\` creates a named build stage.
+2. npm installs the dependencies needed to build the application.
+3. \`npm run build\` generates production files in \`dist\`.
+4. \`FROM nginx:alpine\` starts a fresh final stage.
+5. \`COPY --from=build\` copies only the compiled output into Nginx's web root.
+
+The final image does not include the Node.js build stage's dependencies or source tree, unless explicitly copied. For Create React App, the output directory is usually \`build\` instead of \`dist\`.
+
+### 5. Build and run
+
+Build the image:
+
+\`\`\`bash
+docker build -t react-multistage .
+\`\`\`
+
+Run the container:
+
+\`\`\`bash
+docker run --rm -p 8080:80 react-multistage
+\`\`\`
+
+Open \`http://localhost:8080\` in your browser.
+
+### 6. Multi-stage build for a Node.js backend
+
+A backend may also use multiple stages, especially when TypeScript or other source code must be compiled. The build stage compiles the application; the runtime stage receives only the production output and required dependencies.
+
+\`\`\`dockerfile
+FROM node:22-alpine AS build
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+FROM node:22-alpine AS runtime
+WORKDIR /app
+ENV NODE_ENV=production
+COPY package*.json ./
+RUN npm ci --omit=dev
+COPY --from=build --chown=node:node /app/dist ./dist
+USER node
+CMD ["node", "dist/server.js"]
+\`\`\`
+
+This example assumes a TypeScript project that produces \`dist/server.js\` and does not need additional runtime assets. Adjust the output path and copied assets for your project. Native modules may require compatible build and runtime environments.
+
+### 7. Advantages
+
+- **Smaller final image:** Build tools and intermediate files stay out of the runtime stage.
+- **Improved security posture:** Fewer unnecessary packages are shipped in the final image.
+- **Cleaner deployment:** Build-time and runtime responsibilities are separated.
+- **Reproducible workflow:** Build stages and artifacts are defined in the Dockerfile.
+
+Multi-stage builds do not automatically guarantee a secure image; base images, dependencies, secrets, and runtime permissions still need attention.
+
+### 8. Single-stage vs Multi-stage build
+
+| Single-stage build | Multi-stage build |
+|---|---|
+| Build and runtime often share one image | Separate build and runtime stages |
+| May include build tools and development dependencies | Can leave unnecessary build tools out of the final image |
+| Can produce a larger image | Often produces a smaller final image |
+| Simpler for some small applications | Useful for frontends and compiled applications |
+
+### Interview-ready answer
+
+"A multi-stage Docker build uses multiple \`FROM\` instructions to separate building an application from running it. For example, I build a React app in a Node.js stage and copy only the generated \`dist\` files into an Nginx stage. This keeps build tools and development dependencies out of the final image, usually reducing image size and improving the production security posture."
+
+---
