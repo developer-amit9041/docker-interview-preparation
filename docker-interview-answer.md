@@ -16498,3 +16498,92 @@ Use \`--no-cache\` only when you intentionally want to rebuild without cached la
 “To optimize slow Docker builds, I first identify the slow build step using plain build output. I then order instructions to maximize cache reuse, copy dependency manifests before source files, add a suitable \`.dockerignore\`, and use BuildKit cache mounts for package downloads. I also remove unnecessary build work and use multi-stage builds where appropriate. I avoid disabling the cache unless there is a specific reason.”
 
 ---
+## Q180. A Docker container keeps crashing in production. How would you debug it?
+
+### 1. English Interview Definition
+I debug a repeatedly crashing Docker container by checking its exit status, logs, restart count, Docker events, health status, resource usage, and application configuration. I identify the root cause—such as an application exception, incorrect startup command, missing environment variable, dependency/network failure, or out-of-memory termination—before applying a fix.
+
+### 2. Hindi Definition
+Agar production mein Docker container baar-baar crash ho raha hai, toh sabse pehle uske logs, exit code, restart count, memory/CPU usage aur configuration check karenge. Phir root cause identify karke fix aur verify karenge.
+
+### 3. Hinglish Troubleshooting Steps
+
+**Step 1: Container ka status check karo**
+\`\`\`bash
+docker ps -a
+docker inspect backend --format 'Status={{.State.Status}} ExitCode={{.State.ExitCode}} OOMKilled={{.State.OOMKilled}} Error={{.State.Error}} Restarts={{.RestartCount}}'
+\`\`\`
+- \`ExitCode\`: Process kis status ke saath exit hua.
+- \`OOMKilled=true\`: Container process memory pressure ki wajah se kill hua ho sakta hai.
+- \`RestartCount\`: Container kitni baar restart hua.
+- Exit code akela root cause prove nahi karta; logs aur surrounding evidence bhi check karo.
+
+**Step 2: Container logs dekho**
+\`\`\`bash
+docker logs --tail 200 backend
+docker logs --since 15m backend
+docker logs -f backend
+\`\`\`
+Look for stack traces, missing environment variables, failed database connections, port binding errors, and startup failures. If using Compose, also check:
+\`\`\`bash
+docker compose logs --tail=200 backend
+\`\`\`
+
+**Step 3: Check recent Docker events**
+\`\`\`bash
+docker events --since 15m
+\`\`\`
+Events can reveal starts, stops, kills, health-status changes, and other lifecycle activity.
+
+**Step 4: Check resource usage**
+\`\`\`bash
+docker stats
+docker inspect backend --format 'MemoryLimit={{.HostConfig.Memory}} NanoCPUs={{.HostConfig.NanoCpus}}'
+\`\`\`
+If the container is stopped, \`docker stats\` will not show its past resource usage. Check host metrics and monitoring history for spikes before the crash. If evidence points to an OOM event, review memory limits and application memory behavior rather than increasing limits blindly.
+
+**Step 5: Check health status and configuration**
+\`\`\`bash
+docker inspect backend --format '{{json .State}}'
+docker inspect backend --format '{{json .Config.Healthcheck}}'
+docker inspect backend --format '{{json .Config.Env}}'
+docker inspect backend --format '{{json .Config.Entrypoint}} {{json .Config.Cmd}}'
+\`\`\`
+Be careful: environment inspection may expose secrets, so do not paste raw output into public tickets or logs. Confirm the startup command, required configuration, health-check endpoint, mounted files, port configuration, and permissions.
+
+A failed health check does not necessarily mean the container process has crashed. In plain Docker, an unhealthy status alone does not automatically restart a container; an orchestrator or external policy may take action.
+
+**Step 6: Check dependencies and networking**
+For a Node.js API that depends on MongoDB, verify the connection URI, DNS/service name, network attachment, credentials, database availability, and whether the database is ready when the API starts. Inside a container, \`localhost\` refers to that same container, not a separate MongoDB container. In Compose, the database hostname is commonly the service name, such as \`mongodb\`.
+
+**Step 7: Inspect the container interactively if possible**
+If it stays running long enough:
+\`\`\`bash
+docker exec -it backend sh
+\`\`\`
+If it exits too quickly, \`docker exec\` will not work on the stopped container. Inspect its logs/configuration first, then use a controlled diagnostic run with an overridden command or a debug image if appropriate. Avoid changing the production container blindly.
+
+### 4. Common Causes and Fixes
+
+| Possible cause | What to check |
+|---|---|
+| Application exception | Logs, stack trace, recent code changes |
+| Wrong startup command | Entrypoint, CMD, script name, built file path |
+| Missing configuration | Required environment variables and mounted config |
+| Database/dependency unavailable | DNS, URI, network, credentials, readiness and retry logic |
+| Out of memory | OOMKilled state, host metrics, memory limit and app heap behavior |
+| Health-check failure | Probe command, endpoint, timeout, startup delay and dependencies |
+| Permission/file issue | Runtime user, file ownership, mounted paths |
+| Disk/host pressure | Host disk space, daemon logs and host monitoring |
+
+### 5. Production Debugging Principles
+- Preserve relevant logs and metrics before restarting or replacing the container.
+- Check recent deployments and compare the last known-good image/configuration.
+- Fix the underlying cause, then deploy a tested image and verify logs, health, and request behavior.
+- Use restart policies as recovery assistance, not as a substitute for root-cause analysis.
+- Do not expose secrets while collecting diagnostic output.
+
+### 6. Interview-Ready Answer
+“If a Docker container keeps crashing in production, I first inspect its status, exit code, OOMKilled flag, restart count, and logs. Then I review Docker events, resource metrics, health checks, startup configuration, mounted files, and dependency connectivity. After identifying the root cause, I apply a tested fix and verify that the container remains healthy and the application works correctly.”
+
+---
