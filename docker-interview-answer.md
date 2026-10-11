@@ -9840,3 +9840,97 @@ docker compose up --build -d
 
 “`docker compose build` builds or rebuilds images for services configured with `build` in the Compose file. It is useful after changing application code or a Dockerfile. It does not start containers; I can run `docker compose up -d` afterward, or use `docker compose up --build -d` to build and start the services together.”
 
+---
+
+## Q118. What does `docker compose restart` do?
+
+### 1. English Definition
+
+`docker compose restart` restarts the existing containers for services defined in the Docker Compose configuration. It stops and starts the containers again without recreating them or rebuilding their images.
+
+### 2. Hindi Definition
+
+`docker compose restart` command Docker Compose application ke existing containers ko stop karke dobara start karta hai. Yeh containers ko recreate nahi karta aur na hi Docker images ko rebuild karta hai.
+
+### 3. Hinglish Explanation
+
+Maan lo aapke MERN project mein React frontend, Node.js backend aur MongoDB containers running hain. Agar backend application ko restart karna ho, toh aap `docker compose restart backend` use kar sakte ho.
+
+- Existing containers ko restart karta hai.
+- Containers ki identity aur configuration generally same rehti hai.
+- Docker images rebuild nahi hoti.
+- `docker-compose.yml` mein kiye gaye configuration changes apply karne ke liye sirf restart karna sufficient nahi hota.
+
+### 4. Practical Example / Code
+
+Suppose your `compose.yaml` file contains:
+
+```yaml
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "5000:5000"
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+```
+
+Restart all existing service containers:
+
+```bash
+docker compose restart
+```
+
+Restart only the backend service:
+
+```bash
+docker compose restart backend
+```
+
+### 5. Architecture Diagram
+
+```text
+Existing containers
+(Frontend + Backend)
+        |
+        v
+docker compose restart
+        |
+        v
+Stop -> Start
+        |
+        v
+Containers running again
+(Same containers; no image rebuild)
+```
+
+### 6. Practical Commands
+
+| Command | Purpose |
+|---|---|
+| `docker compose restart` | Restarts all existing service containers |
+| `docker compose restart backend` | Restarts only the backend container |
+| `docker compose ps` | Checks container status |
+| `docker compose logs -f backend` | Follows backend logs |
+| `docker compose up -d --build` | Builds images and creates/updates/starts services as needed |
+
+**Important:** If you change a port from `5000` to `5001` in `compose.yaml`, `docker compose restart` will not apply the new container configuration. Run `docker compose up -d` so Compose can recreate the service when needed.
+
+### 7. Summary Table
+
+| Feature | `docker compose restart` |
+|---|---|
+| Restarts containers | Yes |
+| Recreates containers | No |
+| Rebuilds images | No |
+| Applies changed Compose configuration | Generally no |
+| Retains existing container identity | Yes |
+| Restarts a specific service | Yes |
+
+### Interview-ready answer
+
+“`docker compose restart` stops and starts existing containers for the specified Compose services. It does not rebuild images or recreate containers. I use it when I need to restart an application without changing its container configuration.”
+
