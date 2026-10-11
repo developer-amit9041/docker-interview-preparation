@@ -11428,3 +11428,177 @@ For most local Compose projects, use a named volume for MongoDB. Avoid casually 
 
 ---
 
+## Q130. How do you manage environment variables in a Dockerized MERN application?
+
+### 1. English Definition
+
+Environment variables configure an application at runtime without hardcoding environment-specific values into source code or a Docker image. In a Dockerized MERN application, Docker Compose can pass variables to the backend, while frontend variables need special care because React build-time values may become visible to browser users.
+
+### 2. Hindi Definition
+
+Environment variables ka use application ki configuration—jaise database URI, port, API keys aur environment mode—ko source code mein hardcode kiye bina manage karne ke liye hota hai. Docker Compose ke through hum backend container ko required variables de sakte hain.
+
+### 3. Hinglish Explanation
+
+Bhai, maan lo aapke MERN project mein MongoDB connection string, backend port aur third-party API key hai. In values ko code mein directly likhne ke bajay environment variables se read karo.
+
+\`\`\`js
+const mongoURI = process.env.MONGO_URI;
+const port = process.env.PORT || 5000;
+\`\`\`
+
+Docker Compose in variables ko container ke environment mein pass kar sakta hai. Dhyan rahe: **backend secrets aur frontend variables alag tarah se handle hote hain.** React ke browser bundle mein include ki gayi values user inspect kar sakta hai; frontend mein secret API keys kabhi mat rakho.
+
+### 4. Example Project Structure
+
+\`\`\`text
+mern-app/
+├── compose.yaml
+├── .env
+├── .gitignore
+├── frontend/
+│   └── Dockerfile
+└── backend/
+    ├── Dockerfile
+    └── ...
+\`\`\`
+
+### 5. Create a Root .env File
+
+Example for local development:
+
+\`\`\`dotenv
+BACKEND_PORT=5000
+MONGO_DATABASE=myapp
+MONGO_URI=mongodb://mongodb:27017/myapp
+JWT_SECRET=replace-with-a-long-random-secret
+\`\`\`
+
+These are illustrative local-development values. If MongoDB authentication is enabled, configure credentials securely. Do not commit real passwords, JWT secrets, or API keys to Git.
+
+Add the file to \`.gitignore\`:
+
+\`\`\`gitignore
+.env
+.env.*
+!.env.example
+\`\`\`
+
+Keep a \`.env.example\` file with placeholder values so teammates know which variables are required.
+
+### 6. Pass Variables Through Docker Compose
+
+\`\`\`yaml
+services:
+  backend:
+    build:
+      context: ./backend
+    ports:
+      - "\${BACKEND_PORT:-5000}:5000"
+    environment:
+      PORT: "5000"
+      MONGO_URI: \${MONGO_URI}
+      JWT_SECRET: \${JWT_SECRET}
+    depends_on:
+      - mongodb
+
+  mongodb:
+    image: mongo:8
+    volumes:
+      - mongo-data:/data/db
+
+volumes:
+  mongo-data:
+\`\`\`
+
+Compose reads a project-level \`.env\` file for interpolation of values such as \`\${MONGO_URI}\`. The \`environment\` section passes the resolved values into the backend container. The root \`.env\` file is not automatically injected wholesale into every container; variables must be passed through \`environment\`, \`env_file\`, or another supported mechanism.
+
+For a non-secret configuration file, you can also use:
+
+\`\`\`yaml
+services:
+  backend:
+    env_file:
+      - ./backend/backend.env
+\`\`\`
+
+Avoid placing production secrets in plain-text files or committed Compose configuration. Use a secrets manager or an appropriate Docker/Compose secrets workflow for sensitive production values.
+
+### 7. Read Variables in Node.js
+
+\`\`\`js
+const express = require("express");
+const mongoose = require("mongoose");
+
+const app = express();
+const port = process.env.PORT || 5000;
+const mongoURI = process.env.MONGO_URI;
+
+async function start() {
+  if (!mongoURI) {
+    throw new Error("MONGO_URI is required");
+  }
+
+  await mongoose.connect(mongoURI);
+  app.listen(port, "0.0.0.0", () => {
+    console.log("API listening on port", port);
+  });
+}
+
+start().catch((error) => {
+  console.error("Application startup failed:", error.message);
+  process.exit(1);
+});
+\`\`\`
+
+Do not log secret values. In this example, the application validates that the database URI exists before starting.
+
+### 8. What About React Environment Variables?
+
+React frontend variables are different from backend variables:
+
+- Values used by the frontend build may be embedded in the generated JavaScript bundle.
+- Names such as \`VITE_*\` (Vite) and \`REACT_APP_*\` (Create React App) are conventions used to expose selected variables to frontend code; they do **not** make those values secret.
+- Never put database credentials, private API keys, or JWT signing secrets in browser-side code.
+- For a static React build, changing a container's runtime environment does not automatically rewrite values already embedded in the build. Use a build-time configuration or a deliberate runtime-config mechanism for public settings.
+
+A safer architecture is to keep secrets in Node.js and let React call backend endpoints.
+
+### 9. Verify Configuration
+
+Check the resolved Compose configuration (be careful: rendered output may reveal secrets):
+
+\`\`\`bash
+docker compose config
+\`\`\`
+
+Check whether the backend container has a MongoDB URI set without printing its value:
+
+\`\`\`bash
+docker compose exec backend sh -c 'test -n "$MONGO_URI" && echo "MONGO_URI is set"'
+\`\`\`
+
+Recreate the backend after configuration changes when necessary:
+
+\`\`\`bash
+docker compose up -d --build backend
+\`\`\`
+
+### 10. Summary Table
+
+| Method | Purpose |
+|---|---|
+| Root \`.env\` | Supplies values for Compose-file interpolation |
+| \`environment\` | Explicitly passes variables into a service container |
+| \`env_file\` | Loads variables from a specified file into a container |
+| \`process.env\` | Reads variables in Node.js |
+| \`.gitignore\` | Helps prevent local secret files from being committed |
+| Secrets manager / Docker secrets | Better handling of sensitive production configuration |
+| React build variables | Public frontend configuration only; not secrets |
+
+### Interview-ready answer
+
+“I manage environment-specific configuration using environment variables rather than hardcoding values. In Docker Compose, I use a root .env file for Compose interpolation and pass the required values to the backend through environment or env_file. Node.js reads them through process.env. I keep real secrets out of Git and use a secrets manager for production. Frontend variables must be treated as public because values embedded in the React bundle can be inspected by users.”
+
+---
+
