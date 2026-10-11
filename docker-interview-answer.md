@@ -8599,3 +8599,78 @@ The named volume is retained by default; avoid `docker compose down -v` when you
 ### Interview-ready answer
 
 “We use Docker Compose to manage multi-container applications through one YAML configuration file. It simplifies service setup, networking, environment variables, volumes, and lifecycle commands. For example, I can start a Node.js backend and MongoDB together using `docker compose up -d` instead of managing each container manually.”
+
+
+---
+
+## Q103. What is a `docker-compose.yml` file?
+
+### 1. English Definition
+
+A `docker-compose.yml` file is a YAML configuration file used by Docker Compose to describe an application's services and their settings, such as images or build instructions, ports, environment variables, networks, and volumes.
+
+### 2. Hindi Definition
+
+`docker-compose.yml` ek YAML file hoti hai jisme hum define karte hain ki application ke kaun-kaun se containers/services chalenge aur unki configuration kya hogi.
+
+### 3. Hinglish Explanation
+
+Maan lo MERN application mein Node.js backend aur MongoDB database hain. Compose file mein aap backend ka port, MongoDB image, database volume aur connection configuration define kar sakte ho. Phir `docker compose up -d` se services start kar sakte ho.
+
+Modern Docker documentation commonly uses `compose.yaml`; `docker-compose.yml` is also a widely recognized filename. With the Docker Compose plugin, use `docker compose` (space), rather than the older standalone `docker-compose` command.
+
+### 4. Practical Example
+
+Create a file named `compose.yaml` (or `docker-compose.yml`):
+
+```yaml
+services:
+  backend:
+    image: my-backend-image
+    ports:
+      - "5000:5000"
+    environment:
+      MONGO_URI: mongodb://mongodb:27017/myapp
+    depends_on:
+      - mongodb
+
+  mongodb:
+    image: mongo:8
+    volumes:
+      - mongo-data:/data/db
+
+volumes:
+  mongo-data:
+```
+
+Run the application:
+
+```bash
+docker compose up -d
+```
+
+Validate the Compose configuration:
+
+```bash
+docker compose config
+```
+
+See running services:
+
+```bash
+docker compose ps
+```
+
+### 5. Important Sections
+
+- `services`: Defines the application's containers, such as backend and MongoDB.
+- `image` or `build`: Specifies an existing image or instructions to build one.
+- `ports`: Publishes container ports to the host.
+- `environment`: Supplies environment variables to a service.
+- `volumes`: Persists data or shares files.
+- `networks`: Configures communication between services.
+- `depends_on`: Controls startup order; by itself, it does not guarantee dependency readiness.
+
+### Interview-ready answer
+
+“A `docker-compose.yml` file is a YAML configuration file that defines the services and settings required to run a multi-container application. It can specify images, build instructions, ports, environment variables, networks, and volumes. We use it with commands such as `docker compose up -d` to start the application stack.”
