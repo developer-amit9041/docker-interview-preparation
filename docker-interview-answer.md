@@ -5427,3 +5427,100 @@ This way, source-code-only changes do not necessarily invalidate the dependency-
 ### Interview-ready answer
 
 “Docker image layers are reusable, read-only filesystem changes that make up an image. Docker can cache and reuse unchanged layers during subsequent builds, making builds faster and allowing images to share common layers. I improve cache efficiency by copying dependency manifests before frequently changing source files.”
+
+
+---
+
+## Q59. How do you reduce Docker image size?
+
+### 1. English Definition
+
+Docker image size can be reduced by choosing a suitable minimal base image, excluding unnecessary files with `.dockerignore`, installing only required dependencies, using multi-stage builds where appropriate, cleaning up temporary data in the same layer, and avoiding unnecessary build tools in the final image.
+
+### 2. Hindi Definition
+
+Docker image ka size kam karne ke liye lightweight aur compatible base image use karo, unnecessary files ko exclude karo, sirf required dependencies install karo, aur production image mein extra build tools ya temporary files mat rakho.
+
+### 3. Hinglish Explanation
+
+Maan lo aapka MERN backend image bahut badi ban rahi hai. Ho sakta hai local `node_modules`, `.git`, logs, development dependencies ya build tools image mein aa rahe hon.
+
+Image size reduce karne ke liye:
+
+1. **Suitable base image:** Official lightweight image, jaise `node:22-alpine`, use karo jab compatibility requirements match karti hon.
+2. **Use `.dockerignore`:** `node_modules`, `.git`, logs, coverage aur local `.env` ko build context se exclude karo.
+3. **Install only production dependencies:** `npm ci --omit=dev` use karo jab runtime ko dev dependencies ki zaroorat na ho.
+4. **Multi-stage build:** Build stage ke tools aur temporary files ko final image se bahar rakho.
+5. **Same-layer cleanup:** Package cache ya temporary files ko usi `RUN` instruction mein remove karo jahan woh create hue.
+6. **Avoid unnecessary packages and layers:** Sirf required software install karo.
+7. **Use image inspection tools:** Actual size aur layers check karke large components identify karo.
+
+### 4. Practical Node.js Example
+
+`.dockerignore`:
+
+```text
+node_modules
+.git
+.env
+*.log
+coverage
+```
+
+Dockerfile:
+
+```dockerfile
+FROM node:22-alpine
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
+
+COPY --chown=node:node . .
+
+ENV NODE_ENV=production
+USER node
+
+CMD ["node", "server.js"]
+```
+
+This example assumes the project has a valid `package-lock.json`, uses `server.js` as its entry point, and doesn't require development dependencies at runtime. Choose a base image based on your application's compatibility and security needs; the smallest image is not always the best choice.
+
+### 5. Multi-stage Build Concept
+
+```dockerfile
+# Build stage
+FROM node:22-alpine AS build
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+# Runtime stage
+FROM node:22-alpine AS runtime
+WORKDIR /app
+ENV NODE_ENV=production
+COPY package*.json ./
+RUN npm ci --omit=dev
+COPY --from=build /app/dist ./dist
+USER node
+CMD ["node", "dist/server.js"]
+```
+
+This is a conceptual example for a project that produces `dist/server.js` and needs only production dependencies at runtime. Adjust the build output and runtime files to match the app. A multi-stage build helps only when the final stage copies the files actually needed to run the application.
+
+### 6. Check Image Size
+
+```bash
+docker build -t my-node-app:optimized .
+docker image ls
+docker history my-node-app:optimized
+```
+
+Compare the image size before and after each change. `docker history` helps identify layers contributing to the image size.
+
+### Interview-ready answer
+
+“To reduce Docker image size, I use a suitable minimal base image, exclude unnecessary files with `.dockerignore`, install only production dependencies, and use multi-stage builds to keep build tools out of the final image. I also remove temporary data in the same layer where it is created and inspect image history to find large layers.”
