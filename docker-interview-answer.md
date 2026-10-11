@@ -9839,3 +9839,4 @@ docker compose up --build -d
 ### Interview-ready answer
 
 “`docker compose build` builds or rebuilds images for services configured with `build` in the Compose file. It is useful after changing application code or a Dockerfile. It does not start containers; I can run `docker compose up -d` afterward, or use `docker compose up --build -d` to build and start the services together.”
+
