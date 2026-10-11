@@ -37,3 +37,63 @@ These questions focus on how Docker is used to build, run, connect, and deploy a
 213. How would you debug a port-mapping problem when the application is running inside a container?
 214. How would you inspect container logs, health status, and resource usage when a production issue occurs?
 215. What would you change before moving a Dockerized MERN application from development to production?
+
+### 14. MERN and Docker: Real-World Questions
+
+These questions are especially important for a MERN developer because interviewers may ask how Docker is used in practical application development, containerization, networking, and production deployments.
+
+181. How would you Dockerize a complete MERN application?
+
+182. How would you create a Dockerfile for a React frontend?
+
+183. How would you create a Dockerfile for a Node.js/Express backend?
+
+184. How would you run MongoDB in a Docker container for a MERN application?
+
+185. How would you run React, Node.js, and MongoDB as separate Docker containers?
+
+186. Why would you use separate containers for the frontend, backend, and database?
+
+187. How would you connect a React frontend container to a Node.js backend container?
+
+188. How would the Node.js backend connect to MongoDB in Docker?
+
+189. Why does `localhost` cause connection problems between Docker containers?
+
+190. How would you configure environment variables for a Dockerized MERN application?
+
+191. How would you store MongoDB credentials and other sensitive information securely?
+
+192. How would you persist MongoDB data when a container is stopped, removed, or recreated?
+
+193. How would you write a Docker Compose file for a complete MERN application?
+
+194. How would you configure service names, ports, networks, and volumes in Docker Compose?
+
+195. How would you ensure MongoDB is ready before the Node.js backend connects to it?
+
+196. How would you use Nginx as a reverse proxy for a Dockerized MERN application?
+
+197. How would you serve a React production build using Nginx inside Docker?
+
+198. How would you optimize Docker images for a React and Node.js application using multi-stage builds?
+
+199. How would you separate development and production configurations for a Dockerized MERN application?
+
+200. How would you deploy a Dockerized MERN application on an AWS EC2 instance?
+
+201. How would you push MERN application images to Docker Hub and run them on another server?
+
+202. How would you update a Dockerized MERN application with a new version?
+
+203. How would you configure container restart policies and health checks for a MERN application?
+
+204. How would you troubleshoot a Node.js container that cannot connect to MongoDB?
+
+205. How would you debug a React frontend that cannot communicate with the backend after Docker deployment?
+
+206. How would you troubleshoot a Docker container that keeps restarting or exits immediately?
+
+207. How would you configure HTTPS for a Dockerized MERN application in production?
+
+208. How would you design a production-ready architecture for React, Node.js, and MongoDB using Docker?
