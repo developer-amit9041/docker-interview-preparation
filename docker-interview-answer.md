@@ -6749,3 +6749,72 @@ Detached mode terminal se container ko separate karta hai; it does not guarantee
 ### Interview-ready answer
 
 “I run a Docker container in the background using `docker run -d image-name`. The `-d` or `--detach` option starts the container without keeping the terminal attached. I use `docker ps` to check its status and `docker logs` to inspect its output.”
+
+
+---
+
+## Q77. What does detached mode (`-d`) mean?
+
+### 1. English Definition
+
+Detached mode runs a Docker container in the background and returns control to the terminal instead of attaching the terminal to the container's main process output.
+
+### 2. Hindi Definition
+
+Detached mode (`-d`) ka matlab hai container ko background mein run karna, taaki terminal container ke saath attached na rahe aur aap doosre commands chala sako.
+
+### 3. Hinglish Explanation
+
+Jab aap `docker run nginx` chalate ho, toh terminal aam taur par container ke foreground output se attached rehta hai. Lekin `docker run -d nginx` mein container background mein start hota hai aur terminal prompt wapas aa jata hai.
+
+**Yaad rakho:** `-d` ka matlab container hamesha chalta rahega, aisa nahi hai. Agar container ka main process exit ho gaya, toh container stop ho jayega.
+
+### 4. Practical Example
+
+**Foreground mode:**
+
+```bash
+docker run --name nginx-foreground nginx
+```
+
+**Detached mode:**
+
+```bash
+docker run -d --name nginx-background -p 8080:80 nginx
+```
+
+**Check running containers:**
+
+```bash
+docker ps
+```
+
+**Read logs from a detached container:**
+
+```bash
+docker logs nginx-background
+```
+
+**Follow logs continuously:**
+
+```bash
+docker logs -f nginx-background
+```
+
+**Stop the container:**
+
+```bash
+docker stop nginx-background
+```
+
+### 5. Foreground vs Detached Mode
+
+| Foreground | Detached |
+|---|---|
+| Terminal attached to container output | Terminal returns after starting container |
+| Output is shown directly in terminal | Use `docker logs` to inspect output |
+| Useful for debugging and interactive work | Useful for background services |
+
+### Interview-ready answer
+
+“Detached mode, enabled with `docker run -d`, runs a container in the background and returns control of the terminal. I can check its status with `docker ps` and view its output with `docker logs`. Detached mode does not guarantee the container stays running if its main process exits.”
