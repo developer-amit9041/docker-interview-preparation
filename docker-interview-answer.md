@@ -1938,3 +1938,100 @@ Display running containers
 | `docker ps --filter "status=exited"` | Containers with exited status |
 
 **Interview-ready answer:** The `docker ps` command lists currently running Docker containers and displays details such as container ID, image, status, ports, and name. Use `docker ps -a` to include stopped containers as well.
+
+
+---
+
+## Q19. What does the `docker ps -a` command do?
+
+### 1. English Definition
+
+The `docker ps -a` command lists all Docker containers on the host, including running, stopped, and exited containers. It displays details such as container ID, image, status, ports, and name.
+
+### 2. Hindi Definition
+
+`docker ps -a` command ka use system par maujood sabhi Docker containers dekhne ke liye hota hai—chahe container running ho, stopped ho, ya exit ho chuka ho.
+
+### 3. Hinglish Explanation
+
+Amit, `docker ps` aur `docker ps -a` ka main difference yaad rakho:
+
+- `docker ps`: sirf currently running containers dikhata hai.
+- `docker ps -a`: running aur stopped/exited containers samet sabhi existing containers dikhata hai.
+
+Maan lo aapne ek Nginx container run kiya aur baad mein stop kar diya. `docker ps` mein woh nahi dikhega, lekin `docker ps -a` mein uska status `Exited` ke saath dikh sakta hai. Stopped container ki information tab tak rehti hai jab tak container remove nahi kiya jata.
+
+### 4. Practical Example / Code
+
+Create and start a container:
+
+```bash
+docker run -d --name my-nginx nginx
+```
+
+Stop it:
+
+```bash
+docker stop my-nginx
+```
+
+List only running containers:
+
+```bash
+docker ps
+```
+
+The stopped container will not appear in this list. To see it, run:
+
+```bash
+docker ps -a
+```
+
+Example output:
+
+```text
+CONTAINER ID   IMAGE   COMMAND                  STATUS                     NAMES
+a1b2c3d4e5f6   nginx   "/docker-entrypoint…"    Exited (0) 5 seconds ago   my-nginx
+```
+
+Output is illustrative; your container ID and status may differ.
+
+### 5. Architecture Diagram
+
+```text
+User runs: docker ps -a
+           |
+           v
+       Docker CLI
+           |
+           v
+      Docker daemon
+           |
+           v
+  Retrieve all existing containers
+           |
+           v
+  Show running + stopped + exited
+           containers
+```
+
+### 6. Practical Commands / Configuration
+
+| Command | Purpose |
+|---|---|
+| `docker ps` | Shows running containers only |
+| `docker ps -a` | Shows all existing containers |
+| `docker ps -a -q` | Shows IDs of all existing containers |
+| `docker ps -a --filter "status=exited"` | Filters exited containers |
+| `docker start my-nginx` | Starts the existing stopped container |
+| `docker rm my-nginx` | Removes a stopped container |
+
+### 7. Summary Table
+
+| Container state | `docker ps` | `docker ps -a` |
+|---|---|---|
+| Running | Shown | Shown |
+| Stopped / Exited | Hidden | Shown |
+| Removed | Hidden | Hidden |
+
+**Interview-ready answer:** The `docker ps -a` command lists all existing Docker containers, including running and stopped containers. It is useful for checking a container's status and finding containers that are no longer running.
