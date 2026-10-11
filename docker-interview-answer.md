@@ -8187,3 +8187,77 @@ This restricts the published port to the host's loopback interface, subject to p
 ### Interview-ready answer
 
 “Port mapping in Docker publishes a host port and forwards traffic to a port inside a container. I use `-p HOST_PORT:CONTAINER_PORT`, for example, `-p 8080:80`, to access an Nginx container on host port 8080 even though Nginx listens on port 80 inside the container.”
+
+
+---
+
+## Q98. What is the difference between `EXPOSE 5000` and `-p 5000:5000`?
+
+### 1. English Definition
+
+`EXPOSE 5000` is Dockerfile metadata that documents the port an application is expected to listen on inside the container. It does not publish the port to the host. The `-p 5000:5000` option publishes host port 5000 and forwards traffic to container port 5000.
+
+### 2. Hindi Definition
+
+`EXPOSE 5000` Dockerfile mein batata hai ki application container ke andar port 5000 use karti hai; yeh host par port open nahi karta. `-p 5000:5000` host ke port 5000 ko container ke port 5000 se map karta hai.
+
+### 3. Hinglish Explanation
+
+Maan lo aapki Node.js application container ke andar port 5000 par listen karti hai.
+
+Dockerfile mein:
+
+```dockerfile
+EXPOSE 5000
+```
+
+Yeh port document karta hai, lekin sirf is instruction se aap host browser se `localhost:5000` par application access nahi kar paoge.
+
+Container run karte waqt:
+
+```bash
+docker run -d --name backend -p 5000:5000 my-backend-image
+```
+
+Ab host port 5000 ka traffic container port 5000 par forward hota hai, assuming the app is listening correctly.
+
+### 4. Comparison Table
+
+| Feature | `EXPOSE 5000` | `-p 5000:5000` |
+|---|---|---|
+| Where used | Dockerfile instruction | `docker run` option |
+| Purpose | Documents intended container port | Publishes host port and forwards traffic |
+| Host port published? | No | Yes |
+| Required for container networking? | No | No, not for same-network container communication |
+| Example | `EXPOSE 5000` | `docker run -p 5000:5000 image` |
+
+### 5. Practical Example
+
+Dockerfile:
+
+```dockerfile
+FROM node:22-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+EXPOSE 5000
+CMD ["npm", "start"]
+```
+
+Build and run:
+
+```bash
+docker build -t my-backend-image .
+docker run -d --name backend -p 5000:5000 my-backend-image
+```
+
+The application must actually listen on port 5000. In many Node.js containers, it should listen on `0.0.0.0` rather than only `127.0.0.1`, so traffic forwarded into the container can reach it.
+
+### 6. Important Point
+
+You can publish a port with `-p` even if the Dockerfile does not contain `EXPOSE`. Conversely, adding `EXPOSE` alone does not publish the port. The `-P` option is different: it publishes exposed ports to dynamically assigned host ports.
+
+### Interview-ready answer
+
+“`EXPOSE 5000` documents the port used inside the container; it does not publish that port on the host. `-p 5000:5000` publishes host port 5000 and forwards traffic to container port 5000. I use `EXPOSE` in the Dockerfile for documentation and `-p` at runtime when host access is required.”
