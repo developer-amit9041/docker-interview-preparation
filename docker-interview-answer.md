@@ -1143,3 +1143,126 @@ docker images
 **Interview-ready summary:**
 
 > A Docker registry is a service that stores and distributes Docker images. Developers push images to a registry and pull them on other machines or servers to run containers consistently.
+
+
+---
+
+## Q12. What is Docker Hub?
+
+### 1. English Definition
+
+Docker Hub is a cloud-based container registry where users can find, download, store, and share Docker images. It hosts official images, community images, and private repositories.
+
+### 2. Hindi Definition
+
+Docker Hub ek online container registry hai jahan developers Docker images ko search, download, store aur share kar sakte hain. Ismein official images, community images aur private repositories available hoti hain.
+
+### 3. Hinglish Explanation
+
+Docker Hub ko Docker images ka online store samjho. Jaise aap Node.js install karne ke liye official Node.js image pull kar sakte ho, ya apni application ki image upload karke AWS server par download kar sakte ho.
+
+Example:
+- `node:20` — Node.js image.
+- `nginx` — Nginx web server image.
+- `docker push` — apni image Docker Hub par upload karna.
+- `docker pull` — Docker Hub se image download karna.
+
+Docker Hub ek **Docker registry** hai. Har registry Docker Hub nahi hoti; organizations apni private registry bhi chala sakti hain.
+
+### 4. Practical Example / Code
+
+**Step 1: Pull an image from Docker Hub.**
+
+```bash
+docker pull node:20
+```
+
+**Step 2: Build your application image (assuming a Dockerfile exists).**
+
+```bash
+docker build -t my-node-app:1.0 .
+```
+
+**Step 3: Log in to Docker Hub.**
+
+```bash
+docker login
+```
+
+**Step 4: Tag your image with your Docker Hub username.**
+
+```bash
+docker tag my-node-app:1.0 YOUR_DOCKERHUB_USERNAME/my-node-app:1.0
+```
+
+**Step 5: Push the image.**
+
+```bash
+docker push YOUR_DOCKERHUB_USERNAME/my-node-app:1.0
+```
+
+Replace `YOUR_DOCKERHUB_USERNAME` with your actual Docker Hub username.
+
+### 5. Architecture Diagram
+
+```text
+ Developer / Local Machine
+          |
+   docker pull / push
+          |
+          v
+   +-------------------+
+   |     Docker Hub    |
+   |                   |
+   | Official Images   |
+   | Public Repositories|
+   | Private Repositories|
+   +-------------------+
+          |
+   docker pull
+          |
+          v
+     AWS / Server
+   Run image as container
+```
+
+### 6. Practical Command / Configuration
+
+**Search for images:** Use Docker Hub's website search or run:
+
+```bash
+docker search nginx
+```
+
+**Pull an image:**
+
+```bash
+docker pull nginx
+```
+
+**Check local images:**
+
+```bash
+docker images
+```
+
+**Sign in:**
+
+```bash
+docker login
+```
+
+### 7. Summary Table
+
+| Term | Meaning |
+|---|---|
+| Docker Hub | Cloud-based container registry |
+| Main purpose | Find, store and share images |
+| Official image | Image published or maintained by the relevant official publisher |
+| Pull | Download an image |
+| Push | Upload an image |
+| Private repository | Repository with restricted access |
+
+**Interview-ready summary:**
+
+> Docker Hub is a cloud-based container registry used to find, store, and share Docker images. Developers can pull existing images or push their own images for use on other machines and servers.
