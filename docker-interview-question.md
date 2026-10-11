@@ -1,222 +1,209 @@
 # Docker Interview Questions — Topic-wise (180 Questions)
 
-This is the original 180-question list, organized into 13 topics from fundamentals to scenario-based interview questions.
+All questions are written in English and organized into 13 interview-preparation topics.
 
-### 🔥 1. Docker Fundamentals
+### 1. Docker Fundamentals
+1. What is Docker?
+2. Why do we need Docker?
+3. What is the difference between Docker and a Virtual Machine (VM)?
+4. What is a Docker container?
+5. What is a Docker image?
+6. What is the difference between a Docker image and a container?
+7. What is Docker Engine?
+8. What is Docker architecture?
+9. What is the Docker client?
+10. What is the Docker daemon?
+11. What is a Docker registry?
+12. What is Docker Hub?
+13. What are the main benefits of Docker?
+14. What is containerization?
+15. How does Docker work internally?
 
-1. Docker kya hai?
-2. Docker ki need kyu hoti hai?
-3. Docker aur Virtual Machine (VM) mein kya difference hai?
-4. Docker Container kya hota hai?
-5. Docker Image kya hoti hai?
-6. Docker Image aur Container mein kya difference hai?
-7. Docker Engine kya hai?
-8. Docker Architecture kya hai?
-9. Docker Client kya hai?
-10. Docker Daemon kya hai?
-11. Docker Registry kya hoti hai?
-12. Docker Hub kya hai?
-13. Docker ke main benefits kya hain?
-14. Containerization kya hoti hai?
-15. Docker kaise internally kaam karta hai?
+### 2. Docker Commands
+16. How do you run a Docker container?
+17. What does the `docker run` command do?
+18. What does the `docker ps` command do?
+19. What does the `docker ps -a` command do?
+20. How do you stop a container?
+21. How do you start a container?
+22. How do you restart a container?
+23. How do you remove a container?
+24. How do you list Docker images?
+25. How do you remove a Docker image?
+26. How do you enter a running container?
+27. How do you check container logs?
+28. How do you execute a command inside a container?
+29. How do you expose or map a container port?
+30. How do you pull a Docker image?
+31. How do you push a Docker image?
+32. How do you build a Docker image?
+33. What is the difference between `docker exec` and `docker attach`?
+34. What is the difference between `docker stop` and `docker kill`?
+35. What is the difference between `docker rm` and `docker rmi`?
 
-### 🔥 2. Docker Commands
+### 3. Dockerfile
+36. What is a Dockerfile?
+37. Why do we use a Dockerfile?
+38. What is the basic structure of a Dockerfile?
+39. What does the `FROM` instruction do?
+40. What does the `RUN` instruction do?
+41. What does the `CMD` instruction do?
+42. What does the `ENTRYPOINT` instruction do?
+43. What is the difference between `COPY` and `ADD`?
+44. What does the `WORKDIR` instruction do?
+45. What does the `EXPOSE` instruction do?
+46. What does the `ENV` instruction do?
+47. What is the `ARG` instruction?
+48. What is the difference between `ENV` and `ARG`?
+49. What does the `USER` instruction do?
+50. What does the `VOLUME` instruction do?
+51. Why should unnecessary multiple `RUN` instructions be avoided?
+52. How do you optimize a Dockerfile?
+53. What is a `.dockerignore` file?
+54. How do you write comments in a Dockerfile?
+55. How do you containerize a Node.js application using a Dockerfile?
 
-16. Docker container kaise run karte hain?
-17. `docker run` kya karta hai?
-18. `docker ps` kya karta hai?
-19. `docker ps -a` kya karta hai?
-20. Container ko stop kaise karte hain?
-21. Container ko start kaise karte hain?
-22. Container restart kaise karte hain?
-23. Container delete kaise karte hain?
-24. Docker image kaise list karte hain?
-25. Docker image ko delete kaise karte hain?
-26. Running container ke andar kaise enter karte hain?
-27. Container ke logs kaise check karte hain?
-28. Container ke andar command kaise execute karte hain?
-29. Docker container ka port kaise expose/map karte hain?
-30. Docker image ko pull kaise karte hain?
-31. Docker image ko push kaise karte hain?
-32. Docker image build kaise karte hain?
-33. `docker exec` vs `docker attach`?
-34. `docker stop` vs `docker kill`?
-35. `docker rm` vs `docker rmi`?
+### 4. Docker Images
+56. How is a Docker image created?
+57. What are Docker image layers?
+58. How do Docker image layers work?
+59. How do you reduce Docker image size?
+60. What is Docker image caching?
+61. How do you tag a Docker image?
+62. How do you push a Docker image to Docker Hub?
+63. What is the relationship between a Docker image and a container?
+64. What is a base image?
+65. What is an Alpine image?
+66. What are the advantages of using Alpine images?
+67. How do you inspect a Docker image?
+68. What are dangling images?
+69. What is Docker image pruning?
 
-### 🔥 3. Dockerfile
+### 5. Containers
+70. What is the container lifecycle?
+71. What happens to data when a container is restarted?
+72. How do you copy files into a container?
+73. How do you copy files from a container to the host machine?
+74. What is container networking?
+75. How do you pass environment variables to a container?
+76. How do you run a container in the background?
+77. What does detached mode (`-d`) mean?
+78. What does interactive mode (`-it`) mean?
+79. What is a container health check?
+80. What does the `HEALTHCHECK` instruction do?
 
-36. Dockerfile kya hoti hai?
-37. Dockerfile kyu use karte hain?
-38. Dockerfile ka basic structure kya hota hai?
-39. `FROM` instruction kya karta hai?
-40. `RUN` kya karta hai?
-41. `CMD` kya karta hai?
-42. `ENTRYPOINT` kya karta hai?
-43. `COPY` vs `ADD`?
-44. `WORKDIR` kya karta hai?
-45. `EXPOSE` kya karta hai?
-46. `ENV` kya karta hai?
-47. `ARG` kya hota hai?
-48. `ENV` vs `ARG`?
-49. `USER` instruction kya karta hai?
-50. `VOLUME` kya karta hai?
-51. Dockerfile mein multiple `RUN` kyu avoid karte hain?
-52. Dockerfile ko optimize kaise karte hain?
-53. `.dockerignore` kya hai?
-54. Dockerfile mein comments kaise likhte hain?
-55. Dockerfile mein Node.js application kaise containerize karenge?
+### 6. Docker Volumes
+81. What is a Docker volume?
+82. Why do we need volumes?
+83. How can you preserve data when a container is deleted?
+84. What is the difference between a Docker volume and a bind mount?
+85. What is a named volume?
+86. What is an anonymous volume?
+87. How do you create a volume?
+88. How do you attach a volume to a container?
+89. How do you persist MongoDB data in Docker?
 
-### 🔥 4. Docker Image
+### 7. Docker Networking
+90. What is a Docker network?
+91. What are the different Docker network drivers?
+92. What is a bridge network?
+93. What is host networking?
+94. What is a none network?
+95. How does container-to-container communication work?
+96. How can Docker containers access each other by hostname?
+97. What is port mapping in Docker?
+98. What is the difference between `EXPOSE 5000` and `-p 5000:5000`?
+99. How do you create a Docker network?
+100. How can React and Node.js containers communicate on the same Docker network?
 
-56. Docker image kaise create hoti hai?
-57. Docker image ke layers kya hote hain?
-58. Docker image layers kaise kaam karti hain?
-59. Image size kaise reduce karenge?
-60. Docker image caching kya hoti hai?
-61. Docker image ko tag kaise karte hain?
-62. Docker image ko Docker Hub par kaise push karenge?
-63. Docker image aur Docker container ka relationship kya hai?
-64. Base image kya hoti hai?
-65. Alpine image kya hoti hai?
-66. Alpine image use karne ke advantages kya hain?
-67. Docker image ko inspect kaise karenge?
-68. Dangling images kya hoti hain?
-69. Docker image pruning kya hoti hai?
+### 8. Docker Compose
+101. What is Docker Compose?
+102. Why do we use Docker Compose?
+103. What is a `docker-compose.yml` file?
+104. What is the difference between Docker Compose and Docker?
+105. How do you run multiple containers using Docker Compose?
+106. What does `services` mean in Docker Compose?
+107. What does `ports` mean in Docker Compose?
+108. What does `environment` mean in Docker Compose?
+109. What does `volumes` mean in Docker Compose?
+110. What does `networks` mean in Docker Compose?
+111. What does `depends_on` do?
+112. How do you set up MongoDB using Docker Compose?
+113. How do you connect a Node.js application to MongoDB using Docker Compose?
+114. How do you set up React, Node.js, and MongoDB using Docker Compose?
+115. What is the difference between `docker compose up` and `docker compose up -d`?
+116. What does `docker compose down` do?
+117. What does `docker compose build` do?
+118. What does `docker compose restart` do?
+119. How do you manage environment variables in Docker Compose?
+120. How do you implement volume persistence in Docker Compose?
 
-### 🔥 5. Container
+### 9. Docker + MERN Stack
+121. How do you Dockerize a MERN application?
+122. How do you create a Dockerfile for a React application?
+123. How do you create a Dockerfile for a Node.js/Express application?
+124. How do you run MongoDB in a Docker container?
+125. How can a React container access a Node.js container?
+126. How can a Node.js container connect to a MongoDB container?
+127. Why can using `localhost` cause problems inside Docker containers?
+128. How do you write a Docker Compose file for a MERN application?
+129. How do you persist MongoDB data in Docker?
+130. How do you manage environment variables in a Dockerized MERN application?
+131. Why are the frontend and backend usually placed in separate containers?
+132. How do you deploy a Dockerized MERN application to AWS EC2?
+133. How do you use Nginx in front of a Dockerized MERN application?
+134. Explain the architecture of Docker, Nginx, and Node.js.
+135. How do you deploy a Dockerized MERN application to Kubernetes?
 
-70. Container lifecycle kya hota hai?
-71. Container restart hone par data ka kya hota hai?
-72. Container ke andar files kaise copy karenge?
-73. Container se host machine mein file kaise copy karenge?
-74. Container networking kya hoti hai?
-75. Container mein environment variables kaise pass karenge?
-76. Container ko background mein kaise run karenge?
-77. Detached mode `-d` kya hota hai?
-78. Interactive mode `-it` kya hota hai?
-79. Container health check kya hota hai?
-80. `HEALTHCHECK` kya karta hai?
+### 10. Docker Security
+136. How do you secure Docker containers?
+137. How do you run a container without using the root user?
+138. What are Docker secrets?
+139. How do you manage passwords and secrets in Docker?
+140. What are Docker image vulnerabilities?
+141. How do you scan a Docker image for vulnerabilities?
+142. What are the best practices for container security?
+143. What is the Docker socket?
+144. Why is exposing the Docker socket risky?
 
-### 🔥 6. Docker Volumes
+### 11. Docker Performance and Optimization
+145. How do you reduce Docker image size?
+146. What is a multi-stage Docker build?
+147. Why do we use multi-stage builds?
+148. What is the Docker build cache?
+149. How do you set a memory limit for a Docker container?
+150. How do you set a CPU limit for a Docker container?
+151. How do you monitor Docker container resource usage?
+152. How do you optimize a Docker image?
+153. What is the difference between a production Dockerfile and a development Dockerfile?
 
-81. Docker Volume kya hai?
-82. Volume ki need kyu hoti hai?
-83. Container delete hone par data kaise preserve karenge?
-84. Docker Volume vs Bind Mount?
-85. Named Volume kya hota hai?
-86. Anonymous Volume kya hota hai?
-87. Volume create kaise karenge?
-88. Volume ko container ke saath kaise attach karenge?
-89. MongoDB ke data ko Docker mein kaise persist karenge?
+### 12. Advanced and Production Questions
+154. What is Docker Swarm?
+155. What is the difference between Docker Swarm and Kubernetes?
+156. What is the difference between Docker Compose and Kubernetes?
+157. What is Docker orchestration?
+158. Why do we need container orchestration?
+159. How do you scale services in Docker?
+160. What is horizontal scaling?
+161. What is a rolling update in container deployments?
+162. Why are container health checks important?
+163. How do you manage Docker logging?
+164. What happens when a Docker container crashes?
+165. How do you configure a container to restart automatically?
+166. What are Docker restart policies?
+167. What does `restart: always` do?
+168. How is Docker used in production?
+169. How is Docker used in a CI/CD pipeline?
+170. How do you integrate Docker with GitHub Actions?
 
-### 🔥 7. Docker Networking
-
-90. Docker Network kya hota hai?
-91. Docker ke different network drivers kaunse hain?
-92. Bridge network kya hai?
-93. Host network kya hai?
-94. None network kya hai?
-95. Container-to-container communication kaise hoti hai?
-96. Docker container ek dusre ko hostname se kaise access karte hain?
-97. Docker mein port mapping kya hoti hai?
-98. `EXPOSE 5000` aur `-p 5000:5000` mein difference?
-99. Docker network create kaise karenge?
-100. Same Docker network mein React aur Node containers kaise communicate karenge?
-
-### 🔥 8. Docker Compose ⭐ Very Important
-
-101. Docker Compose kya hai?
-102. Docker Compose kyu use karte hain?
-103. `docker-compose.yml` kya hoti hai?
-104. Docker Compose aur Docker mein kya difference hai?
-105. Docker Compose se multiple containers kaise run karenge?
-106. `services` kya hota hai?
-107. `ports` kya hota hai?
-108. `environment` kya hota hai?
-109. `volumes` kya hota hai?
-110. `networks` kya hota hai?
-111. `depends_on` kya karta hai?
-112. Docker Compose mein MongoDB kaise setup karenge?
-113. Docker Compose mein Node.js + MongoDB kaise connect karenge?
-114. Docker Compose mein React + Node + MongoDB kaise setup karenge?
-115. `docker compose up` vs `docker compose up -d`?
-116. `docker compose down` kya karta hai?
-117. `docker compose build` kya karta hai?
-118. `docker compose restart` kya karta hai?
-119. Docker Compose mein environment variables kaise manage karenge?
-120. Docker Compose mein volume persistence kaise implement karenge?
-
-### 🔥 9. Docker + MERN ⭐⭐⭐
-
-121. MERN application ko Dockerize kaise karenge?
-122. React application ke liye Dockerfile kaise banayenge?
-123. Node.js/Express application ke liye Dockerfile kaise banayenge?
-124. MongoDB ko Docker container mein kaise run karenge?
-125. React container Node container ko kaise access karega?
-126. Node container MongoDB container ko kaise access karega?
-127. `localhost` Docker container mein problem kyu karta hai?
-128. MERN application ke liye Docker Compose kaise likhenge?
-129. Docker mein MongoDB data persist kaise karenge?
-130. MERN application mein environment variables kaise manage karenge?
-131. Docker mein frontend aur backend ko separate containers mein kyu rakhte hain?
-132. Dockerized MERN app ko AWS EC2 par kaise deploy karenge?
-133. Dockerized MERN application ke saamne Nginx kaise use karenge?
-134. Docker + Nginx + Node.js architecture explain karo.
-135. Dockerized MERN application ko Kubernetes par kaise deploy karenge?
-
-### 🔥 10. Docker Security
-
-136. Docker containers ko secure kaise karenge?
-137. Container ko root user ke bina kaise run karenge?
-138. Docker secrets kya hote hain?
-139. Docker mein passwords/secrets kaise manage karenge?
-140. Docker image vulnerabilities kya hoti hain?
-141. Docker image scan kaise karenge?
-142. Container security ke best practices kya hain?
-143. Docker socket kya hai?
-144. Docker socket expose karna risky kyu hai?
-
-### 🔥 11. Docker Performance & Optimization
-
-145. Docker image size kaise reduce karenge?
-146. Multi-stage Docker build kya hota hai?
-147. Multi-stage build kyu use karte hain?
-148. Docker build cache kya hota hai?
-149. Docker container memory limit kaise set karenge?
-150. Docker CPU limit kaise set karenge?
-151. Docker containers ke resource usage ko kaise monitor karenge?
-152. Docker image ko optimize kaise karenge?
-153. Production Dockerfile aur development Dockerfile mein kya difference hai?
-
-### 🔥 12. Advanced / Production Questions
-
-154. Docker Swarm kya hai?
-155. Docker Swarm vs Kubernetes?
-156. Docker Compose vs Kubernetes?
-157. Docker orchestration kya hoti hai?
-158. Container orchestration ki need kyu hoti hai?
-159. Docker mein scaling kaise karenge?
-160. Horizontal scaling kya hoti hai?
-161. Docker mein rolling update kya hota hai?
-162. Container health check kyu important hai?
-163. Docker logging kaise manage karenge?
-164. Docker container crash hone par kya hota hai?
-165. Container automatically restart kaise karte hain?
-166. Restart policies kya hoti hain?
-167. `restart: always` kya karta hai?
-168. Docker production mein kaise use karte hain?
-169. Docker CI/CD pipeline mein kaise use hota hai?
-170. GitHub Actions + Docker kaise integrate karenge?
-
-### 🔥 13. Scenario-Based Questions ⭐⭐⭐
-
-171. **Container mein Node.js application chal rahi hai but MongoDB connect nahi ho raha. Debug kaise karoge?**
-172. **Docker container immediately exit ho raha hai. Reason kaise find karoge?**
-173. **Application local machine par chal rahi hai but Docker mein nahi. Kya check karoge?**
-174. **Container ke andar `localhost` kaam kyu nahi kar raha?**
-175. **Docker image bahut large hai. Size kaise reduce karoge?**
-176. **Container restart hone ke baad MongoDB ka data disappear ho gaya. Fix kaise karoge?**
-177. **Docker container mein port accessible nahi hai. Kya check karoge?**
-178. **Two containers ek dusre se communicate nahi kar rahe. Kaise debug karoge?**
-179. **Docker build bahut slow hai. Kaise optimize karoge?**
-180. **Production mein Docker container baar-baar crash ho raha hai. Kaise debug karoge?**
+### 13. Scenario-Based Questions
+171. A Node.js application inside a container cannot connect to MongoDB. How would you debug the issue?
+172. A Docker container exits immediately after starting. How would you find the cause?
+173. An application works on the local machine but fails in Docker. What would you check?
+174. Why might `localhost` not work as expected inside a Docker container?
+175. A Docker image is too large. How would you reduce its size?
+176. MongoDB data disappears after a container restarts. How would you fix the issue?
+177. A port is not accessible on a Docker container. What would you check?
+178. Two containers cannot communicate with each other. How would you debug the issue?
+179. Docker image builds are very slow. How would you optimize them?
+180. A Docker container keeps crashing in production. How would you debug it?
