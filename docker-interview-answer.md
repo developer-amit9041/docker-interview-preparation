@@ -6521,3 +6521,76 @@ In these examples:
 ### Interview-ready answer
 
 “I use `docker cp` to copy files from a container to the host machine. For example, `docker cp my-app:/app/logs/app.log ./app.log` copies the container's log file into the current host directory. This works with both running and stopped containers.”
+
+
+---
+
+## Q74. What is container networking?
+
+### 1. English Definition
+
+Container networking allows Docker containers to communicate with each other, the host machine, and external networks. Docker provides network drivers such as bridge, host, none, and overlay to support different connectivity requirements.
+
+### 2. Hindi Definition
+
+Container networking ka matlab hai Docker containers ko aapas mein, host machine se, ya external network aur internet se communicate karne ki facility dena.
+
+### 3. Hinglish Explanation
+
+Maan lo aapki MERN application Docker mein run ho rahi hai:
+- React frontend ko Node.js/Express backend se API call karni hai.
+- Backend ko MongoDB container se connect karna hai.
+- Browser ko frontend ya backend ke published port tak pahunchna hai.
+
+In containers ke beech communication aur external access configure karne ke liye Docker networking use hoti hai. User-defined bridge network par containers ek doosre ko container name se reach kar sakte hain.
+
+### 4. Common Docker Network Types
+
+| Network driver | Purpose |
+|---|---|
+| Bridge | Same Docker host par containers ko network karna; common default |
+| Host | Container host ka network namespace share karta hai (Linux; platform-specific behavior applies) |
+| None | Container ko normal external network connectivity nahi deta |
+| Overlay | Multiple Docker hosts par containers ko connect karna, commonly with Swarm |
+
+### 5. Practical Example
+
+**Create a user-defined bridge network:**
+
+```bash
+docker network create app-network
+```
+
+**Run a backend container on that network:**
+
+```bash
+docker run -d --name backend --network app-network my-backend:1.0
+```
+
+**Run MongoDB on the same network:**
+
+```bash
+docker run -d --name mongodb --network app-network mongo:8
+```
+
+From the backend container, the MongoDB hostname can be `mongodb` because both containers share the user-defined network. For example, the backend's connection string can use:
+
+```text
+mongodb://mongodb:27017/mydb
+```
+
+This assumes MongoDB is listening on its default port and the application is configured to use this URI.
+
+### 6. Publish a Port for Host Access
+
+To make a container port reachable through the Docker host, publish it with `-p`:
+
+```bash
+docker run -d --name backend --network app-network -p 3000:3000 my-backend:1.0
+```
+
+Here, host port `3000` forwards to container port `3000`. Containers on the same user-defined network generally do not need published ports to communicate with each other.
+
+### Interview-ready answer
+
+“Container networking enables Docker containers to communicate with each other, the host, and external networks. Docker supports drivers such as bridge, host, none, and overlay. In a typical application, I create a user-defined bridge network so the backend can reach the database by its container name, and I publish only the ports that need host access.”
