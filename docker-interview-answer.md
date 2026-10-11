@@ -5980,3 +5980,62 @@ Compare sizes with another suitable base image by building the same application 
 ### Interview-ready answer
 
 “An Alpine image is based on Alpine Linux, a lightweight Linux distribution. Images such as `node:22-alpine` are often smaller than standard variants, which can reduce image transfer and storage costs. However, I test application compatibility because some native dependencies or system libraries may need additional setup.”
+
+
+---
+
+## Q66. What are the advantages of using Alpine images?
+
+### 1. English Definition
+
+Alpine-based Docker images often provide a smaller image footprint because Alpine Linux includes a minimal set of packages by default. This can reduce image storage and transfer costs, though actual benefits depend on the application and its dependencies.
+
+### 2. Hindi Definition
+
+Alpine images ka main advantage yeh hai ki ye aksar lightweight aur size mein chhoti hoti hain. Isse image download karne, store karne aur registry se transfer karne mein kam resources lag sakte hain.
+
+### 3. Hinglish Explanation
+
+Maan lo aap Node.js backend ko Dockerize kar rahe ho. Agar aapke application ke liye required libraries Alpine par available hain, toh `node:22-alpine` use karne se image size standard variant se kam ho sakta hai.
+
+Iske important advantages:
+
+1. **Smaller image size:** Image storage ki requirement kam ho sakti hai.
+2. **Faster transfers:** Registry se pull/push karte waqt kam data transfer ho sakta hai.
+3. **Less default packages:** Minimal environment se unnecessary components kam ho sakte hain.
+4. **Useful for containerized deployments:** Chhoti images CI/CD pipelines aur deployment workflows ko efficient bana sakti hain.
+
+### 4. Practical Example
+
+```dockerfile
+FROM node:22-alpine
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
+
+COPY . .
+
+CMD ["node", "server.js"]
+```
+
+Build the image:
+
+```bash
+docker build -t my-node-app:alpine .
+docker image ls
+```
+
+Application ko ek compatible standard base image ke saath bhi build karke resulting image sizes compare karo; actual savings project par depend karti hain.
+
+### 5. Trade-offs to Remember
+
+- Alpine images may not include all libraries or tools an application expects.
+- Some native modules or binaries built for glibc-based systems may need adjustments because Alpine commonly uses musl libc.
+- Smaller does not automatically mean more secure; patch and scan the image regularly.
+- Choose the image based on compatibility, support, and security—not size alone.
+
+### Interview-ready answer
+
+“The main advantage of Alpine images is their often smaller footprint, which can reduce image storage and transfer time. Their minimal package set can also reduce unnecessary components. However, I verify compatibility with native modules and system libraries, and I keep the image patched and scanned rather than choosing it only because it is small.”
