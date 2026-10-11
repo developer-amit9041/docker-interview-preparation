@@ -6410,3 +6410,62 @@ The file will not exist in the newly created container unless it was stored in p
 ### Interview-ready answer
 
 “When a Docker container is restarted, data in its writable layer generally remains because the same container is reused. However, process memory is reset. If the container is removed and recreated, writable-layer data is lost, so I use Docker volumes or bind mounts for data that must persist independently of the container.”
+
+
+---
+
+## Q72. How do you copy files into a container?
+
+### 1. English Definition
+
+Use `docker cp` to copy files or directories between the host filesystem and a container's filesystem. It works with running and stopped containers.
+
+### 2. Hindi Definition
+
+Docker container ke andar host machine se file ya folder copy karne ke liye hum `docker cp` command use karte hain. Isse container se host machine par bhi files copy kar sakte hain.
+
+### 3. Hinglish Explanation
+
+Maan lo aapke laptop par `config.json` file hai aur aap use `my-app` container ke andar copy karna chahte ho. Aap `docker cp` se host se container ya container se host dono directions mein copy kar sakte ho.
+
+### 4. Practical Commands
+
+**Host se container mein file copy karna:**
+
+```bash
+docker cp ./config.json my-app:/app/config.json
+```
+
+Yahan:
+- `./config.json` host machine ki file hai.
+- `my-app` container ka naam hai.
+- `/app/config.json` container ke andar destination path hai.
+
+**Host se container mein directory copy karna:**
+
+```bash
+docker cp ./uploads my-app:/app/uploads
+```
+
+**Container se host machine par file copy karna:**
+
+```bash
+docker cp my-app:/app/logs/app.log ./app.log
+```
+
+**Container se host machine par directory copy karna:**
+
+```bash
+docker cp my-app:/app/reports ./reports
+```
+
+### 5. Important Notes
+
+- `docker cp` running aur stopped, dono containers ke saath kaam karta hai.
+- Container ka naam ya ID use kar sakte ho.
+- Destination path aur file permissions check karna useful hota hai.
+- Agar files ko continuously share karna hai, toh bind mount ya volume better option ho sakta hai; `docker cp` ek one-time copy operation hai.
+
+### Interview-ready answer
+
+“I use `docker cp` to copy files and directories between the host and a Docker container. For example, `docker cp ./config.json my-app:/app/config.json` copies a host file into the container. The command works with both running and stopped containers.”
