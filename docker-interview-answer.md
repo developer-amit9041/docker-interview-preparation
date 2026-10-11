@@ -13374,3 +13374,83 @@ Store important database data in appropriately managed volumes or a managed data
 "Container security requires a defense-in-depth approach. I use trusted and patched images, run containers as non-root, apply least privilege, avoid privileged mode, and manage secrets through a suitable secret-management solution. I scan images and dependencies, restrict exposed ports and network access, use read-only filesystems and resource limits where appropriate, patch the host and Docker Engine, and monitor runtime activity. I also secure the CI/CD pipeline and maintain tested backups for persistent data."
 
 ---
+## Q143. What is the Docker socket?
+
+### 1. English Interview Definition
+
+The Docker socket is a communication endpoint, commonly located at \`/var/run/docker.sock\` on Linux, through which Docker clients communicate with the Docker daemon. It allows clients to send commands to manage containers, images, networks, and volumes.
+
+### 2. Hindi Definition
+
+Docker socket ek communication endpoint hai jiske through Docker CLI ya koi doosra authorized client Docker daemon se baat karta hai aur containers, images, networks aur volumes ko manage karta hai.
+
+### 3. Hinglish Explanation
+
+Docker architecture mein teen important components samjho:
+
+- **Docker CLI:** Jahan aap commands likhte ho, jaise \`docker ps\`.
+- **Docker daemon:** Jo commands execute karke containers aur images manage karta hai.
+- **Docker socket:** CLI aur daemon ke beech communication ka raasta.
+
+Linux par iska common path hai:
+
+\`\`\`text
+/var/run/docker.sock
+\`\`\`
+
+Jab aap \`docker ps\` chalate ho, Docker CLI socket ke through Docker daemon ko request bhejta hai. Daemon running containers ki information return karta hai.
+
+### 4. How does it work?
+
+\`\`\`text
+Developer
+   |
+   v
+Docker CLI (docker ps)
+   |
+   v
+Docker socket (/var/run/docker.sock)
+   |
+   v
+Docker daemon (dockerd)
+   |
+   v
+Container / Image / Network information
+\`\`\`
+
+On a typical Linux installation, the socket is a Unix domain socket. Docker can also be configured to communicate through other endpoints, such as a secured remote connection.
+
+### 5. How can you check the Docker socket?
+
+On Linux, check whether the socket exists:
+
+\`\`\`bash
+ls -l /var/run/docker.sock
+\`\`\`
+
+Check Docker information:
+
+\`\`\`bash
+docker info
+docker ps
+\`\`\`
+
+The socket's owner and group depend on the installation and configuration. Do not change its permissions to make it world-writable.
+
+### 6. Why is mounting the Docker socket into a container risky?
+
+Example of a socket mount:
+
+\`\`\`bash
+docker run -v /var/run/docker.sock:/var/run/docker.sock some-image
+\`\`\`
+
+This gives the container access to the host's Docker API through the mounted socket. If the container process can issue privileged Docker API requests, it may be able to start containers with host filesystem mounts or otherwise gain extensive control over the host.
+
+**Security best practice:** Do not mount the Docker socket into ordinary application containers unless there is a justified, reviewed requirement. If Docker API access is needed, use a narrowly scoped alternative or a controlled proxy and restrict who can access it.
+
+### 7. Interview-ready answer
+
+"The Docker socket is the communication endpoint between Docker clients and the Docker daemon, commonly located at \`/var/run/docker.sock\` on Linux. When I run commands such as \`docker ps\`, the CLI sends requests to the daemon through this socket. Mounting the socket into a container is risky because it can grant that container extensive control over the host's Docker environment, so I avoid it unless absolutely necessary."
+
+---
