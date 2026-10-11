@@ -2327,3 +2327,102 @@ docker restart my-nginx
 | `docker run` | Creates and starts a new container |
 
 **Interview-ready answer:** Use `docker restart CONTAINER_NAME` or `docker restart CONTAINER_ID` to restart a container. Docker stops the existing container and starts it again without creating a new container.
+
+
+---
+
+## Q23. How do you remove a container?
+
+### 1. English Definition
+
+The `docker rm` command removes an existing Docker container. A container generally must be stopped before it can be removed; use `docker rm -f` only when you intentionally want to force-remove a running container.
+
+### 2. Hindi Definition
+
+Docker container ko remove karne ke liye `docker rm` command use karte hain. Normally, container ko remove karne se pehle stop karna hota hai.
+
+### 3. Hinglish Explanation
+
+Amit, yahan teen commands ka difference samjho:
+
+- `docker stop my-nginx` → container stop karta hai, delete nahi.
+- `docker rm my-nginx` → stopped container remove karta hai.
+- `docker rm -f my-nginx` → running container ko bhi forcefully stop karke remove kar sakta hai.
+
+Container remove karne par us container ka writable layer aur container metadata delete ho jata hai. Named volumes ko `docker rm` normally delete nahi karta, lekin container ke andar sirf writable layer mein stored data remove ho sakta hai. Zaroori data ko volumes ya backups mein rakho.
+
+### 4. Practical Example / Code
+
+Create a container:
+
+```bash
+docker run -d --name my-nginx nginx
+```
+
+Stop the container:
+
+```bash
+docker stop my-nginx
+```
+
+Remove the stopped container:
+
+```bash
+docker rm my-nginx
+```
+
+Verify that it has been removed:
+
+```bash
+docker ps -a
+```
+
+To force-remove a running container, if that is intentional:
+
+```bash
+docker rm -f my-nginx
+```
+
+### 5. Architecture Diagram
+
+```text
+docker rm my-nginx
+        |
+        v
+   Docker daemon
+        |
+        v
+ Is container stopped?
+      /       \\
+    Yes        No
+     |          |
+     v          v
+ Remove it   Command fails
+                |
+                v
+       Stop it, then retry
+       (or intentionally use
+          docker rm -f)
+```
+
+### 6. Practical Commands / Configuration
+
+| Command | Purpose |
+|---|---|
+| `docker stop my-nginx` | Stops the container |
+| `docker rm my-nginx` | Removes a stopped container |
+| `docker rm -f my-nginx` | Force-removes a container, including a running one |
+| `docker rm -v my-nginx` | Removes the container and anonymous volumes associated with it; named volumes are not removed by this option |
+| `docker ps -a` | Lists all existing containers |
+| `docker container prune` | Removes all stopped containers after confirmation |
+
+### 7. Summary Table
+
+| Command | Result |
+|---|---|
+| `docker stop` | Stops but keeps the container |
+| `docker rm` | Removes a stopped container |
+| `docker rm -f` | Force-removes a container |
+| `docker container prune` | Removes all stopped containers |
+
+**Interview-ready answer:** Use `docker rm CONTAINER_NAME` or `docker rm CONTAINER_ID` to remove a stopped container. To remove a running container, `docker rm -f` can be used intentionally. Removing a container is different from stopping it, and important data should be stored in volumes or backed up.
