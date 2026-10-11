@@ -15467,7 +15467,7 @@ In ordinary Docker Compose, use the service-level \`restart\` policy. Swarm serv
 “Docker restart policies control whether a container restarts after it exits. The four main policies are \`no\`, \`on-failure\`, \`always\`, and \`unless-stopped\`. We configure one using \`docker run --restart=unless-stopped ...\` or the \`restart\` field in a Compose service. The right policy depends on how the application should behave after failures and manual stops.”
 
 ---
-## Q167. What does \`restart: always\` do?
+## Q167. What does `restart: always` do?
 
 ### 1. English Interview Definition
 The Docker restart policy \`always\` tells Docker to restart a container whenever it stops, including after a Docker daemon restart. If a container is manually stopped, Docker does not immediately restart it while it remains intentionally stopped; it can be started again manually, and the \`always\` policy also brings it back when the daemon restarts.
