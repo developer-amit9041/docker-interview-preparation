@@ -6039,3 +6039,65 @@ Application ko ek compatible standard base image ke saath bhi build karke result
 ### Interview-ready answer
 
 “The main advantage of Alpine images is their often smaller footprint, which can reduce image storage and transfer time. Their minimal package set can also reduce unnecessary components. However, I verify compatibility with native modules and system libraries, and I keep the image patched and scanned rather than choosing it only because it is small.”
+
+
+---
+
+## Q67. How do you inspect a Docker image?
+
+### 1. English Definition
+
+You can inspect a Docker image using commands such as `docker image inspect` to view detailed metadata, `docker image ls` to list images and sizes, and `docker history` to review the image's layer history.
+
+### 2. Hindi Definition
+
+Docker image inspect karne ka matlab hai image ki details dekhna, jaise image ID, tags, creation time, configuration, environment variables, default command aur layers ka overview.
+
+### 3. Hinglish Explanation
+
+Maan lo aapke paas `my-node-app:1.0` naam ki image hai. Aap check karna chahte ho ki image ka ID kya hai, kaunsa startup command set hai, ya image kitni badi hai.
+
+Docker iske liye alag-alag commands deta hai. Detailed metadata ke liye `docker image inspect`, size dekhne ke liye `docker image ls`, aur layer history ke liye `docker history` use kar sakte ho.
+
+### 4. Practical Commands
+
+**List images and sizes:**
+
+```bash
+docker image ls
+```
+
+**Inspect detailed metadata:**
+
+```bash
+docker image inspect my-node-app:1.0
+```
+
+**Show only selected fields using Go templates:**
+
+```bash
+docker image inspect --format='{{.Id}}' my-node-app:1.0
+docker image inspect --format='{{json .Config.Cmd}}' my-node-app:1.0
+docker image inspect --format='{{json .Config.Env}}' my-node-app:1.0
+```
+
+Be careful when sharing inspect output because image configuration can contain environment values. Avoid embedding secrets in image metadata.
+
+**View layer history:**
+
+```bash
+docker history my-node-app:1.0
+```
+
+### 5. Which Command Shows What?
+
+| Command | Information |
+|---|---|
+| `docker image ls` | Local images, tags, IDs, and sizes |
+| `docker image inspect IMAGE` | Detailed image metadata and configuration |
+| `docker history IMAGE` | Image history and layer-size overview |
+| `docker image inspect --format=...` | Selected fields without displaying all metadata |
+
+### Interview-ready answer
+
+“I inspect a Docker image using `docker image inspect image-name:tag` to view its metadata and configuration. I use `docker image ls` to check its size and tags, and `docker history` to understand its layer history.”
