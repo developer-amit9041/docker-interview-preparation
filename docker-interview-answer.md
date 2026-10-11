@@ -11700,3 +11700,223 @@ No. For a very small demo or a tightly coupled legacy application, running multi
 
 ---
 
+## Q132. How do you deploy a Dockerized MERN application to AWS EC2?
+
+### 1. English Definition
+
+To deploy a Dockerized MERN application to AWS EC2, launch and secure an EC2 instance, install Docker and the Docker Compose plugin, copy or clone the application, configure environment variables, and start the containers with Docker Compose. Then configure networking, a domain name, HTTPS, monitoring, and backups as required.
+
+### 2. Hindi Definition
+
+AWS EC2 par Dockerized MERN application deploy karne ke liye hum EC2 virtual server launch karte hain, us par Docker install karte hain, project aur environment configuration set karte hain, aur Docker Compose se frontend, backend aur database services run karte hain. Phir security group, domain aur HTTPS configure karte hain.
+
+### 3. Hinglish Explanation
+
+Bhai, local machine par aapka MERN project Docker containers mein run ho raha hai. Ab usi application ko internet par accessible banane ke liye AWS EC2 ko server ki tarah use karenge.
+
+High-level process:
+1. AWS mein Ubuntu EC2 instance launch karo.
+2. Security group mein sirf required inbound ports allow karo.
+3. EC2 par Docker Engine aur Compose plugin install karo.
+4. Git se project clone karo aur production environment variables configure karo.
+5. \`docker compose up --build -d\` se application start karo.
+6. Domain, HTTPS, logs, monitoring aur database backups configure karo.
+
+### 4. Deployment Architecture
+
+\`\`\`text
+                  Users / Browser
+                         |
+                     HTTPS :443
+                         |
+                  EC2 Security Group
+                         |
+                  Nginx / Reverse Proxy
+                         |
+                  Frontend Container
+                 React static files
+                         |
+                     /api requests
+                         |
+                  Backend Container
+                 Node.js + Express
+                         |
+                  Docker Compose Network
+                         |
+                  MongoDB Container
+                         |
+                   Named Data Volume
+\`\`\`
+
+For production, MongoDB should normally remain private and should not be exposed directly to the public internet. For a larger or more resilient deployment, consider a managed database and services such as a load balancer, container registry, and orchestration platform.
+
+### 5. Step 1 — Launch an EC2 Instance
+
+In the AWS Console:
+- Open **EC2 → Launch instance**.
+- Choose a supported Ubuntu Server LTS image.
+- Select an instance type suitable for your workload and budget.
+- Create or select a key pair and store the private key securely.
+- Configure a security group with only the required inbound rules.
+
+Typical inbound rules:
+
+| Port | Source | Purpose |
+|---|---|---|
+| 22 (SSH) | Your trusted IP address | Server administration |
+| 80 (HTTP) | Internet, if serving public traffic | HTTP or redirect to HTTPS |
+| 443 (HTTPS) | Internet, if serving public traffic | Secure web traffic |
+
+Do not open MongoDB port 27017 to the internet. Avoid exposing backend port 5000 publicly if Nginx or another reverse proxy can route API traffic internally. Restrict SSH to trusted addresses rather than allowing it from everywhere.
+
+### 6. Step 2 — Connect to EC2
+
+From a terminal on your computer, use the downloaded key pair:
+
+\`\`\`bash
+chmod 400 my-ec2-key.pem
+ssh -i my-ec2-key.pem ubuntu@<EC2_PUBLIC_IP>
+\`\`\`
+
+Replace the key filename and public IP with your actual values. The default SSH username depends on the selected AMI.
+
+### 7. Step 3 — Install Docker and Compose
+
+On a supported Ubuntu image, install the Docker Engine and Compose plugin by following Docker's official Ubuntu installation instructions. After installation, verify:
+
+\`\`\`bash
+docker --version
+docker compose version
+\`\`\`
+
+If you configure your Linux user to run Docker without \`sudo\`, remember that membership in the Docker group effectively grants root-level privileges. Only trusted users should have that access.
+
+### 8. Step 4 — Get the Application Code
+
+Clone your repository:
+
+\`\`\`bash
+git clone <YOUR_REPOSITORY_URL>
+cd <YOUR_PROJECT_DIRECTORY>
+\`\`\`
+
+Check that the project includes its Compose file and the frontend/backend Dockerfiles. Do not put private repository tokens directly into shell history or the Compose file.
+
+### 9. Step 5 — Configure Production Environment Variables
+
+Create the production environment file on the server using a secure method. Example values:
+
+\`\`\`dotenv
+NODE_ENV=production
+PORT=5000
+MONGO_URI=<YOUR_PRIVATE_MONGODB_CONNECTION_STRING>
+JWT_SECRET=<YOUR_STRONG_SECRET>
+\`\`\`
+
+These are placeholders, not values to copy literally. Keep real secrets out of Git. For production, prefer AWS Secrets Manager or Systems Manager Parameter Store with appropriately restricted IAM permissions. If MongoDB runs in the same Compose project, the URI can use the service hostname, for example \`mongodb://mongodb:27017/myapp\`; configure database authentication and access controls.
+
+### 10. Step 6 — Configure Compose for Production
+
+A simplified example:
+
+\`\`\`yaml
+services:
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "5000"
+      MONGO_URI: \${MONGO_URI}
+      JWT_SECRET: \${JWT_SECRET}
+    expose:
+      - "5000"
+    depends_on:
+      - mongodb
+
+  mongodb:
+    image: mongo:8
+    restart: unless-stopped
+    volumes:
+      - mongo-data:/data/db
+    # Configure authentication, health checks, and backups for production.
+    # Do not publish port 27017 to the public host.
+
+volumes:
+  mongo-data:
+\`\`\`
+
+This example assumes the frontend image's web server is configured to serve React and proxy \`/api/\` requests to \`http://backend:5000\`. The backend must listen on \`0.0.0.0\` inside its container. The \`expose\` declaration documents the internal port; it does not publish port 5000 on the EC2 host.
+
+For production, review secrets handling, MongoDB authentication, health checks, image updates, backups, and access restrictions before exposing the application publicly.
+
+### 11. Step 7 — Build and Start Containers
+
+From the directory containing the Compose file:
+
+\`\`\`bash
+docker compose config
+docker compose up --build -d
+docker compose ps
+\`\`\`
+
+Be careful: \`docker compose config\` may display resolved secret values. Do not share or paste that output publicly.
+
+Check logs if a service does not start:
+
+\`\`\`bash
+docker compose logs -f frontend
+docker compose logs -f backend
+docker compose logs -f mongodb
+\`\`\`
+
+### 12. Step 8 — Test the Deployment
+
+- Visit \`http://<EC2_PUBLIC_IP>\` if port 80 is configured.
+- Test the API through the intended public route, such as \`/api/health\`.
+- Confirm that frontend-to-backend requests work and that the backend can reach MongoDB over the Compose network.
+- Verify that the database data survives container recreation by using the named volume.
+
+For a production website, point your domain's DNS record to the appropriate public endpoint and configure HTTPS using a reverse proxy with a certificate, or an AWS load balancer with TLS. Renew and monitor certificates as needed.
+
+### 13. Step 9 — Operations and Maintenance
+
+Useful commands:
+
+\`\`\`bash
+docker compose ps
+docker compose logs --tail=100 backend
+docker compose pull
+docker compose up -d --build
+docker compose down
+\`\`\`
+
+Use a deliberate deployment and rollback process rather than blindly rebuilding on every production change. Monitor EC2 CPU, memory, disk space, application health, and logs. Back up MongoDB data regularly and test restoring those backups. A single EC2 instance is a single point of failure; use multiple instances and a load balancer if high availability is required.
+
+### 14. Summary Table
+
+| Step | Task |
+|---|---|
+| 1 | Launch EC2 and configure a restrictive security group |
+| 2 | Connect securely through SSH |
+| 3 | Install Docker Engine and Docker Compose |
+| 4 | Clone the application repository |
+| 5 | Configure production environment variables and secrets |
+| 6 | Verify the Compose file and start the services |
+| 7 | Test frontend, API, database connectivity, and persistence |
+| 8 | Configure DNS, HTTPS, monitoring, and backups |
+
+### Interview-ready answer
+
+“To deploy a Dockerized MERN application on AWS EC2, I launch an Ubuntu instance and configure its security group to allow only required traffic, typically SSH from a trusted IP and public HTTP/HTTPS. I install Docker and Docker Compose, clone the application, configure production environment variables securely, and start the services with docker compose up --build -d. The frontend is served through a web server or reverse proxy, the backend connects to MongoDB over a private Docker network, and MongoDB data is stored in a named volume or a suitable managed database. Finally, I configure a domain, HTTPS, monitoring, and backups.”
+
+---
+
