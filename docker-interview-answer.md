@@ -7771,3 +7771,83 @@ The `DRIVER` column in `docker network ls` shows each network's driver.
 ### Interview-ready answer
 
 “The main Docker network drivers are bridge, host, none, overlay, and macvlan. Bridge is commonly used for containers on a single host, overlay connects services across multiple hosts, host shares the host's network namespace on supported systems, none disables normal networking, and macvlan gives a container its own MAC address on the physical network.”
+
+
+---
+
+## Q92. What is a bridge network?
+
+### 1. English Definition
+
+A Docker bridge network is a virtual network that connects containers running on the same Docker host. A user-defined bridge network also provides automatic DNS resolution between connected containers, so they can communicate using container names.
+
+### 2. Hindi Definition
+
+Bridge network ek virtual network hota hai jo same Docker host par chal rahe containers ko aapas mein connect karta hai. User-defined bridge network par containers ek doosre ko naam se access kar sakte hain.
+
+### 3. Hinglish Explanation
+
+Maan lo aapke MERN project mein Node.js backend aur MongoDB alag containers mein run ho rahe hain. Dono ko ek user-defined bridge network par connect kar do. Ab backend MongoDB ko uske container name, jaise `mongodb`, se access kar sakta hai.
+
+Host machine ya browser se service access karni ho toh zaroorat ke hisaab se port publish karna pad sakta hai. Same bridge network par container-to-container communication ke liye host port publish karna generally required nahi hota.
+
+### 4. Practical Example
+
+**Step 1: Bridge network create karo**
+
+```bash
+docker network create mern-network
+```
+
+By default, a user-defined network created this way uses the bridge driver.
+
+**Step 2: MongoDB container run karo**
+
+```bash
+docker volume create mongo-data
+
+docker run -d \
+  --name mongodb \
+  --network mern-network \
+  -v mongo-data:/data/db \
+  mongo:8
+```
+
+**Step 3: Backend ko same network par run karo**
+
+```bash
+docker run -d \
+  --name backend \
+  --network mern-network \
+  -p 5000:5000 \
+  -e MONGO_URI=mongodb://mongodb:27017/myapp \
+  my-backend-image
+```
+
+Because both containers share `mern-network`, the backend can resolve `mongodb` to the MongoDB container. The backend image must read the `MONGO_URI` environment variable.
+
+**Step 4: Network inspect karo**
+
+```bash
+docker network inspect mern-network
+```
+
+### 5. Default Bridge vs User-Defined Bridge
+
+| Feature | Default bridge | User-defined bridge |
+|---|---|---|
+| Created automatically | Yes, named `bridge` | Usually created explicitly |
+| Container-name DNS | Not provided by default | Supported |
+| Network configuration | Less flexible | Easier to customize |
+| Recommended for app stacks | Usually prefer a user-defined bridge | Yes, for containers on one host |
+
+### 6. Important Points
+
+- Bridge networking is a common choice for containers on one Docker host.
+- Containers on a user-defined bridge can communicate using container names.
+- Publishing ports with `-p` is for access through the host; it is not normally needed for communication between containers on the same bridge.
+- Containers must be attached to the same network, or to networks that provide a valid route, to communicate directly.
+
+### Interview-ready answer
+
+“A Docker bridge network is a virtual network that connects containers on the same Docker host. I commonly use a user-defined bridge network for a MERN application so the backend can communicate with MongoDB using its container name, without publishing the database port to the host.”
