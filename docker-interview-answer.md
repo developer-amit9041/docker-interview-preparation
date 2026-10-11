@@ -9654,3 +9654,61 @@ The named MongoDB volume is retained by default. Avoid `docker compose down -v` 
 ### Interview-ready answer
 
 “I set up React, Node.js, and MongoDB by defining three services in `compose.yaml`. I build the React and Node.js images from their Dockerfiles, use a named volume for MongoDB data, and let the backend connect to the database using the Compose service name `mongodb`. I serve React through Nginx and proxy `/api` requests to the backend so the browser does not need to resolve internal Docker hostnames. Then I run `docker compose up --build -d`.”
+
+
+---
+
+## Q115. What is the difference between `docker compose up` and `docker compose up -d`?
+
+### 1. English Definition
+
+Both commands create and start the services defined in a Compose file. The difference is that `docker compose up` runs in the foreground and displays attached logs, while `docker compose up -d` runs the services in detached mode and returns control of the terminal.
+
+### 2. Hindi Definition
+
+`docker compose up` containers ko start karta hai aur terminal par unke logs dikhata rehta hai. `docker compose up -d` containers ko background (detached) mode mein start karta hai, isliye terminal free ho jata hai.
+
+### 3. Difference Table
+
+| Feature | `docker compose up` | `docker compose up -d` |
+|---|---|---|
+| Mode | Foreground / attached | Detached / background |
+| Logs | Terminal par logs stream hote hain | Command finish hone ke baad terminal free hota hai |
+| Terminal | Attached process ko stop karne ke liye Ctrl+C use kar sakte ho | Other commands ke liye terminal available rehta hai |
+| Common use | Development aur debugging | Background mein application run karna |
+
+### 4. Practical Example
+
+Start services in the foreground:
+
+```bash
+docker compose up
+```
+
+Logs terminal par dikhte rahenge. Attached session ko Ctrl+C se stop kar sakte ho; Compose generally services ko stop karta hai.
+
+Start services in detached mode:
+
+```bash
+docker compose up -d
+```
+
+Check status:
+
+```bash
+docker compose ps
+```
+
+View logs when running detached:
+
+```bash
+docker compose logs -f
+```
+
+### 5. Important Point
+
+The `-d` flag changes how Compose attaches to the services; it does not mean the containers are permanently running or immune to failures. Container lifecycle and restart behavior depend on the application, container exit status, and restart policy.
+
+### Interview-ready answer
+
+“Both commands start the services defined in the Compose file. `docker compose up` runs in the foreground and streams logs to the terminal, which is useful for development and debugging. `docker compose up -d` runs in detached mode, so the command returns and the services continue running in the background.”
