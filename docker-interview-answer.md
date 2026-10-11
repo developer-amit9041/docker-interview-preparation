@@ -4947,3 +4947,80 @@ docker history mern-backend:optimized
 ### Interview-ready answer
 
 “I optimize a Dockerfile by using a suitable minimal base image, adding a `.dockerignore` file, copying dependency manifests before source code to improve cache reuse, installing only required production dependencies, and using multi-stage builds when appropriate. I also avoid unnecessary files, run the application as a non-root user, and inspect image size and vulnerabilities.”
+
+
+---
+
+## Q53. What is a `.dockerignore` file?
+
+### 1. English Definition
+
+A `.dockerignore` file specifies files and directories that Docker should exclude from the build context when building an image. It helps reduce the amount of data sent to the builder, speeds up builds, and prevents unnecessary files from being included in the build context.
+
+### 2. Hindi Definition
+
+`.dockerignore` ek file hoti hai jisme hum un files aur folders ke naam likhte hain jinhe Docker image build karte waqt build context mein include nahi karna chahte.
+
+### 3. Hinglish Explanation
+
+Maan lo aapke MERN backend project mein `node_modules`, `.git`, logs aur local `.env` file hai. Jab aap `docker build .` chalate ho, toh current directory build context banti hai.
+
+Agar unnecessary files ko `.dockerignore` mein exclude kar doge, toh Docker unhe build context se ignore karega. Isse build context chhota ho sakta hai aur build faster ho sakta hai.
+
+**Important:** `.dockerignore` files ko automatically image se delete nahi karta. Yeh build context se matching files ko exclude karta hai. Agar koi file kisi doosre tareeke se image mein create ya copy ki jaati hai, toh `.dockerignore` usse image mein aane se har situation mein nahi rokta.
+
+### 4. Practical MERN Example
+
+Project structure:
+
+```text
+backend/
+├── node_modules/
+├── src/
+├── .env
+├── .git/
+├── package.json
+├── package-lock.json
+├── server.js
+├── Dockerfile
+└── .dockerignore
+```
+
+**`.dockerignore` file:**
+
+```text
+node_modules
+.git
+.env
+*.log
+coverage
+```
+
+Ab build command:
+
+```bash
+docker build -t mern-backend .
+```
+
+Docker build context se matching `node_modules`, `.git`, `.env`, log files aur `coverage` ko exclude karega. Ensure karo ki application ko build/run karne ke liye zaroori files exclude na ho jaayen.
+
+### 5. Why Is It Important?
+
+- **Smaller build context:** Builder ko kam files process/send karni padti hain.
+- **Faster builds:** Unnecessary files ko transfer aur process karne ka overhead kam hota hai.
+- **Cleaner builds:** Local dependencies, Git history aur logs accidentally copy hone ka risk kam hota hai.
+- **Secret hygiene:** `.env` ko exclude karna useful hai, lekin secrets ko Dockerfile mein hardcode na karo aur runtime par secure configuration se provide karo.
+
+### 6. `.dockerignore` vs `.gitignore`
+
+| `.dockerignore` | `.gitignore` |
+|---|---|
+| Docker build context se files exclude karta hai | Git ko untracked files track karne se rokta hai |
+| Docker image build process ko affect karta hai | Git version control ko affect karta hai |
+| Dockerfile ke build context ke paas rakha jaata hai | Repository mein Git ke liye use hota hai |
+
+Ek file `.gitignore` mein hone se woh automatically Docker build context se exclude nahi hoti; isliye zaroorat ho toh use `.dockerignore` mein bhi add karo.
+
+### Interview-ready answer
+
+“A `.dockerignore` file tells Docker which files and directories to exclude from the build context. It helps reduce unnecessary data transfer, improve build efficiency, and avoid accidentally including files such as local dependencies, Git metadata, logs, or environment files. It is separate from `.gitignore`.”
