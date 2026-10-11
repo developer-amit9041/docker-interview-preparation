@@ -9250,3 +9250,85 @@ Here, Compose waits for MongoDB's health check to pass before starting the backe
 ### Interview-ready answer
 
 “In Docker Compose, `depends_on` defines dependencies between services and controls their startup order. For example, a Node.js backend can depend on MongoDB so Compose starts MongoDB first. However, the short form does not guarantee that MongoDB is ready to accept connections; for that, we can use a health check with `condition: service_healthy` and implement connection-retry logic.”
+
+
+---
+
+## Q112. How do you set up MongoDB using Docker Compose?
+
+### 1. English Definition
+
+You can set up MongoDB with Docker Compose by defining a MongoDB service, configuring its environment variables and storage volume, and starting it with `docker compose up -d`.
+
+### 2. Hindi Definition
+
+Docker Compose se MongoDB setup karne ke liye hum Compose YAML file mein MongoDB service define karte hain, data persist karne ke liye volume configure karte hain, aur phir Compose command se container start karte hain.
+
+### 3. Hinglish Explanation
+
+Maan lo aap Node.js backend ke saath MongoDB use kar rahe ho. Compose file mein MongoDB image specify karo aur named volume mount karo, taaki container recreate hone par database data retained rahe. Agar backend bhi Compose mein hai, toh woh MongoDB ko service name `mongodb` se connect kar sakta hai.
+
+### 4. Practical Example
+
+Create a `compose.yaml` file:
+
+```yaml
+services:
+  mongodb:
+    image: mongo:8
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: appadmin
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+    volumes:
+      - mongo-data:/data/db
+    ports:
+      - "127.0.0.1:27017:27017"
+
+volumes:
+  mongo-data:
+```
+
+Create a local `.env` file beside the Compose file:
+
+```env
+MONGO_ROOT_PASSWORD=replace_with_a_strong_password
+```
+
+Do not commit the real `.env` file or password to Git. Add `.env` to `.gitignore`. For production, use a secrets manager or the platform's supported secret mechanism.
+
+Start MongoDB:
+
+```bash
+docker compose up -d
+```
+
+Check the service and logs:
+
+```bash
+docker compose ps
+docker compose logs -f mongodb
+```
+
+### 5. Connect from a Node.js Service
+
+If the Node.js backend is also defined in the same Compose project and shares its default network, use a service hostname in the URI, for example:
+
+```text
+mongodb://appadmin:<password>@mongodb:27017/myapp?authSource=admin
+```
+
+Pass the password through a protected environment variable rather than hardcoding it. In Node.js, read the connection string using `process.env.MONGO_URI`.
+
+From a client running on the host machine, the example's port binding is limited to loopback, so connect to `localhost:27017` with the appropriate credentials. If host access is not needed, remove the `ports` section; containers on the same Compose network can still communicate internally.
+
+### 6. Important Notes
+
+- The named volume `mongo-data` persists database files independently of the container.
+- The official MongoDB image's `MONGO_INITDB_ROOT_USERNAME` and `MONGO_INITDB_ROOT_PASSWORD` variables initialize a root user when the data directory is empty. They do not reset credentials in an already initialized database.
+- Do not expose MongoDB publicly without a deliberate security configuration.
+- For real deployments, plan backups, access control, secret handling, upgrades, and monitoring.
+
+### Interview-ready answer
+
+“To set up MongoDB with Docker Compose, I define a MongoDB service using the official image, configure initialization credentials, and mount a named volume at `/data/db` for persistence. I then run `docker compose up -d` and check the service with `docker compose ps`. If my Node.js backend is in the same Compose network, it can connect using the hostname `mongodb` and port 27017.”
