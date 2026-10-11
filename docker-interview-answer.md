@@ -1026,3 +1026,120 @@ Note: Docker Desktop on Windows/macOS manages the Docker Engine differently, so 
 **Interview-ready summary:**
 
 > The Docker daemon, also called `dockerd`, is the background service responsible for managing Docker images, containers, networks, and volumes. It receives requests through the Docker Engine API and carries out the requested operations.
+
+
+---
+
+## Q11. What is a Docker registry?
+
+### 1. English Definition
+
+A Docker registry is a service that stores and distributes Docker images. Users can push images to a registry and pull images from it to build and deploy containerized applications.
+
+### 2. Hindi Definition
+
+Docker registry ek service hai jahan Docker images store aur share ki jaati hain. Developers images ko registry mein push kar sakte hain aur deployment ke time wahan se pull kar sakte hain.
+
+### 3. Hinglish Explanation
+
+Registry ko Docker images ka online store samjho. Example ke liye Docker Hub ek public registry hai.
+
+Maan lo aapne apni MERN backend ki image local machine par build ki. Ab aap us image ko Docker Hub par push kar sakte ho. Phir AWS server ya doosri machine par us image ko pull karke container run kar sakte ho.
+
+**Important difference:**
+- **Image:** Application ka packaged template.
+- **Container:** Image se bana runtime instance.
+- **Registry:** Images ko store aur distribute karne ki service.
+- **Repository:** Registry ke andar related image names/tags ka collection.
+
+Registries public ya private ho sakti hain. Private registry mein access ke liye authentication aur permissions ki zaroorat ho sakti hai.
+
+### 4. Practical Example / Code
+
+**Step 1: Sign in to Docker Hub from the CLI.**
+
+```bash
+docker login
+```
+
+**Step 2: Tag your local image using your Docker Hub username.**
+
+```bash
+docker tag my-node-app:1.0 YOUR_DOCKERHUB_USERNAME/my-node-app:1.0
+```
+
+Replace `YOUR_DOCKERHUB_USERNAME` with your actual username.
+
+**Step 3: Push the image to the registry.**
+
+```bash
+docker push YOUR_DOCKERHUB_USERNAME/my-node-app:1.0
+```
+
+**Step 4: Pull it on another machine.**
+
+```bash
+docker pull YOUR_DOCKERHUB_USERNAME/my-node-app:1.0
+```
+
+Then create a container from the pulled image with `docker run`.
+
+### 5. Architecture Diagram
+
+```text
+ Developer Machine                    Server / AWS
+ +------------------+                +------------------+
+ | Build Docker     |                | Pull Docker      |
+ | Image            |                | Image            |
+ +--------+---------+                +---------^--------+
+          |                                    |
+       docker push                         docker pull
+          |                                    |
+          v                                    |
+      +---------------------------------------------+
+      |               Docker Registry               |
+      |     Stores and distributes Docker images   |
+      |              (e.g. Docker Hub)              |
+      +---------------------------------------------+
+```
+
+### 6. Practical Command / Configuration
+
+**Sign in:**
+
+```bash
+docker login
+```
+
+**Push an image:**
+
+```bash
+docker push YOUR_DOCKERHUB_USERNAME/my-node-app:1.0
+```
+
+**Pull an image:**
+
+```bash
+docker pull YOUR_DOCKERHUB_USERNAME/my-node-app:1.0
+```
+
+**List local images:**
+
+```bash
+docker images
+```
+
+### 7. Summary Table
+
+| Term | Meaning |
+|---|---|
+| Docker registry | Service to store and distribute images |
+| Docker Hub | A widely used public registry with private-repository options |
+| Push | Upload an image to a registry |
+| Pull | Download an image from a registry |
+| Docker repository | Collection of image versions/tags under a repository name |
+| Use case | Share images and deploy the same image across environments |
+
+**Interview-ready summary:**
+
+> A Docker registry is a service that stores and distributes Docker images. Developers push images to a registry and pull them on other machines or servers to run containers consistently.
