@@ -291,3 +291,114 @@ For a VM, allocate virtual CPU, memory, storage, and a guest OS image in a hyper
 **Interview-ready summary:**
 
 > Docker containers share the host OS kernel and are generally lightweight and fast to start. Virtual machines run separate guest operating systems on a hypervisor, typically using more resources while offering greater guest-OS flexibility.
+
+
+---
+
+## Q4. What is a Docker container?
+
+### 1. English Definition
+
+A Docker container is an isolated runtime environment created from a Docker image. It runs an application and its required processes and dependencies while sharing the host OS kernel on Linux.
+
+### 2. Hindi Definition
+
+Docker container ek isolated runtime environment hota hai, jo Docker image se create hota hai. Iske andar application aur uske required processes run hote hain, aur Linux par container host operating system ka kernel share karta hai.
+
+### 3. Hinglish Explanation
+
+Container ko application chalane ke liye ek isolated environment samjho.
+
+Example: Aapki MERN application mein Node.js backend hai. Aap backend ko Docker image se container ke andar run kar sakte ho. Container ke andar application ka process chalta hai aur uske liye required dependencies available hoti hain.
+
+Yaad rakhein:
+
+- **Image** ek template hai.
+- **Container** image se create hua runtime instance hai.
+- Ek hi image se multiple containers create kiye ja sakte hain.
+- Container stop ya delete karne se uske writable layer ka data generally persist nahi karta. Persistent data ke liye volume ya bind mount use karein.
+
+### 4. Practical Example / Code
+
+Run a Node.js container:
+
+```bash
+docker run -d --name my-node-container -p 5000:5000 node:20
+```
+
+This starts a container from the Node.js 20 image. The base image's default command starts Node.js, so a real web application would normally use your application image built from a Dockerfile.
+
+Build and run your own Node.js app:
+
+```bash
+docker build -t my-node-app .
+docker run -d --name my-app -p 5000:5000 my-node-app
+```
+
+### 5. Architecture Diagram
+
+```text
+       Docker Image
+   (app + dependencies)
+              |
+        docker run
+              |
+              v
+   +----------------------+
+   |   Docker Container   |
+   |                      |
+   |  Node.js Application |
+   |  Required Libraries  |
+   |  Writable Layer      |
+   +----------------------+
+              |
+       Host OS Kernel
+       (Linux example)
+```
+
+### 6. Practical Command / Configuration
+
+**List running containers:**
+
+```bash
+docker ps
+```
+
+**List all containers, including stopped ones:**
+
+```bash
+docker ps -a
+```
+
+**View logs:**
+
+```bash
+docker logs my-app
+```
+
+**Stop the container:**
+
+```bash
+docker stop my-app
+```
+
+**Remove the stopped container:**
+
+```bash
+docker rm my-app
+```
+
+### 7. Summary Table
+
+| Term | Meaning |
+|---|---|
+| Docker container | Isolated runtime environment for an application |
+| Created from | Docker image |
+| Contains | Application process and required runtime dependencies |
+| Kernel | Shares the host kernel on Linux |
+| Persistence | Use volumes or bind mounts for data that must survive container removal |
+| Multiple instances | Multiple containers can be created from one image |
+
+**Interview-ready summary:**
+
+> A Docker container is an isolated runtime instance created from a Docker image. It runs an application with its required dependencies and shares the host OS kernel on Linux, making it generally lightweight and portable.
