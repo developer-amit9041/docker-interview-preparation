@@ -1482,3 +1482,128 @@ docker ps
 **Interview-ready summary:**
 
 > Containerization is the process of packaging an application and its dependencies into an isolated container so it can run consistently across compatible environments, improving portability and deployment reliability.
+
+
+---
+
+## Q15. How does Docker work internally?
+
+### 1. English Definition
+
+Docker works through a client-server architecture. The Docker CLI sends requests to the Docker daemon through the Docker Engine API, and the daemon builds images, creates and manages containers, and works with registries. On Linux, containers use kernel features such as namespaces and control groups (cgroups) for isolation and resource management.
+
+### 2. Hindi Definition
+
+Docker client-server architecture par kaam karta hai. CLI se command daemon tak API ke through jaati hai. Docker daemon images build/pull karta hai, containers create aur manage karta hai. Linux par namespaces isolation aur cgroups resource limits manage karne mein help karte hain.
+
+### 3. Hinglish Explanation
+
+Maan lo aap command chalate ho:
+
+`docker run -d -p 8080:80 nginx`
+
+Internally broadly ye steps hote hain:
+
+1. **CLI request:** Docker CLI command ko Docker Engine API ke through daemon tak bhejta hai.
+2. **Image lookup:** Daemon local image cache check karta hai. Image nahi milti toh configured registry se pull kar sakta hai.
+3. **Container setup:** Daemon image ke layers ke upar container ki writable layer configure karta hai.
+4. **Isolation:** Linux par namespaces container ke process, network aur filesystem view ko isolate karte hain; cgroups resource usage ko control/measure karne mein help karte hain.
+5. **Networking and ports:** Docker network configure karta hai aur `-p 8080:80` ke liye host port ko container port se publish karta hai.
+6. **Process start:** Container ke configured command ko start kiya jata hai; yahan Nginx process run hota hai.
+
+Important: Container ek lightweight isolated process environment hai, full virtual machine nahi. Containerization ke implementation details OS aur Docker configuration ke hisaab se differ kar sakte hain.
+
+### 4. Practical Example / Code
+
+Run Nginx:
+
+```bash
+docker run -d --name web -p 8080:80 nginx
+```
+
+Check the container:
+
+```bash
+docker ps
+docker logs web
+```
+
+Inspect its configuration:
+
+```bash
+docker inspect web
+```
+
+Open `http://localhost:8080` in a browser to see the Nginx welcome page when the container starts successfully.
+
+### 5. Architecture Diagram
+
+```text
+           User command
+                |
+                v
+           Docker CLI
+                |
+        Docker Engine API
+                |
+                v
+         Docker Daemon
+           (dockerd)
+                |
+        +-------+--------+
+        |                |
+   Find / pull       Create container
+   image             + writable layer
+        |                |
+        v                v
+ Docker Registry     Namespaces / cgroups
+                         |
+                   Network + port mapping
+                         |
+                         v
+                   Start app process
+                      (Nginx)
+```
+
+### 6. Practical Command / Configuration
+
+**Run a container with a published port:**
+
+```bash
+docker run -d --name web -p 8080:80 nginx
+```
+
+**Inspect its configuration and state:**
+
+```bash
+docker inspect web
+```
+
+**View resource usage:**
+
+```bash
+docker stats web
+```
+
+**View logs:**
+
+```bash
+docker logs web
+```
+
+### 7. Summary Table
+
+| Component / Feature | Role |
+|---|---|
+| Docker CLI | User commands bhejta hai |
+| Docker daemon | Docker resources aur lifecycle manage karta hai |
+| Image layers | Packaged application files provide karti hain |
+| Writable container layer | Container ke runtime filesystem changes store karti hai |
+| Namespaces | Linux par process/network/mount jaise views isolate karte hain |
+| cgroups | Linux par resource usage control/measure karte hain |
+| Networking | Containers ko connect karta hai aur ports publish kar sakta hai |
+| Registry | Images pull/push karne ki service |
+
+**Interview-ready summary:**
+
+> Docker CLI sends requests to the Docker daemon through the Engine API. The daemon obtains the image, configures the container's filesystem, isolation, networking, and resource controls, then starts the application process. On Linux, namespaces and cgroups provide key isolation and resource-management mechanisms.
