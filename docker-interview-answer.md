@@ -5847,3 +5847,69 @@ docker ps
 ### Interview-ready answer
 
 “A Docker image is a read-only template used to create containers. A container is a runnable instance of that image with its own runtime state and writable layer. Multiple containers can be created from the same image, and changes inside a container do not automatically change the original image.”
+
+
+---
+
+## Q64. What is a base image?
+
+### 1. English Definition
+
+A base image is the starting image used to build another Docker image. It provides a filesystem and, depending on the image, an operating system userland, runtime, libraries, or other tools required by the application.
+
+### 2. Hindi Definition
+
+Base image woh starting image hoti hai jiske upar hum apni application ki Docker image banate hain. Ismein application ke liye required runtime, libraries ya basic files ho sakti hain.
+
+### 3. Hinglish Explanation
+
+Maan lo aap Node.js application ki Docker image banana chahte ho. Aapko zero se Node.js install aur configure karne ki zaroorat nahi; aap existing Node.js image ko base bana sakte ho.
+
+Dockerfile mein `FROM` instruction base image select karti hai. Uske baad aap application files copy karte ho, dependencies install karte ho aur startup command define karte ho.
+
+### 4. Practical Example
+
+```dockerfile
+FROM node:22-alpine
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN npm ci
+
+COPY . .
+
+CMD ["node", "server.js"]
+```
+
+Yahan `node:22-alpine` base image hai. Yeh Node.js 22 runtime aur Alpine-based userland provide karti hai. Application ke liye required dependencies phir Dockerfile ke remaining steps mein add hoti hain.
+
+Build command:
+
+```bash
+docker build -t my-node-app:1.0 .
+```
+
+### 5. Common Base Image Examples
+
+| Base image | Typical use |
+|---|---|
+| `node:22-alpine` | Node.js applications |
+| `python:3.12-slim` | Python applications |
+| `nginx:alpine` | Nginx web server |
+| `ubuntu:24.04` | General-purpose Linux userland |
+| `scratch` | Minimal starting point for suitable images, such as some static binaries |
+
+The best base image depends on application compatibility, required libraries, security updates, and operational needs—not size alone.
+
+### 6. Important Points
+
+- The `FROM` instruction specifies the base image.
+- A base image can itself contain multiple filesystem layers.
+- Choosing an appropriate base image can simplify builds and reduce image size.
+- Pin and update base-image versions thoughtfully, and rebuild regularly to incorporate security fixes.
+- `scratch` is an empty starting image; it is not a complete operating system.
+
+### Interview-ready answer
+
+“A base image is the starting image specified by the `FROM` instruction in a Dockerfile. It provides the filesystem and any required runtime or libraries on top of which we add our application code and dependencies. For example, `node:22-alpine` is a common base image for compatible Node.js applications.”
