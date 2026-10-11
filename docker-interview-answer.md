@@ -11338,3 +11338,93 @@ Open the frontend at `http://localhost:3000`. The backend port is published at `
 
 ---
 
+## Q129. How do you persist MongoDB data in Docker?
+
+### 1. English Definition
+
+To persist MongoDB data in Docker, mount a Docker volume at MongoDB's data directory, \`/data/db\`. A named volume is commonly recommended because the data can survive container removal and recreation.
+
+### 2. Hindi Definition
+
+Docker mein MongoDB ka data persist karne ke liye hum Docker volume ko MongoDB ke data directory \`/data/db\` par mount karte hain. Isse container delete ya recreate hone ke baad bhi database files volume mein safe reh sakti hain.
+
+### 3. Hinglish Explanation
+
+Bhai, container ko temporary environment samjho. Agar MongoDB container remove ho gaya aur data sirf usi container ki writable layer mein tha, toh container ke saath data bhi lose ho sakta hai.
+
+Isliye MongoDB ke data folder \`/data/db\` ko named volume se connect karte hain:
+
+\`\`\`text
+MongoDB container: /data/db
+          |
+          v
+Docker named volume: mongo-data
+          |
+          v
+Data survives container replacement
+\`\`\`
+
+Volume container ke lifecycle se alag manage hota hai. Lekin volume **backup ka replacement nahi hai**.
+
+### 4. Docker Compose Example
+
+\`\`\`yaml
+services:
+  mongodb:
+    image: mongo:8
+    volumes:
+      - mongo-data:/data/db
+    restart: unless-stopped
+
+volumes:
+  mongo-data:
+\`\`\`
+
+Here:
+- \`mongo-data\` is the named volume.
+- \`/data/db\` is MongoDB's data directory in the container.
+- Docker manages the named volume's storage location.
+
+### 5. Start and Verify
+
+Start MongoDB:
+
+\`\`\`bash
+docker compose up -d
+\`\`\`
+
+Check the volume:
+
+\`\`\`bash
+docker volume ls
+docker volume inspect <project>_mongo-data
+\`\`\`
+
+The actual volume name may be prefixed with the Compose project name. You can also run \`docker compose config\` to inspect the resolved configuration.
+
+### 6. What Happens When You Remove the Container?
+
+| Command | Container | Named volume / data |
+|---|---|---|
+| \`docker compose stop\` | Stopped | Preserved |
+| \`docker compose down\` | Removed | Preserved by default |
+| \`docker compose up -d\` | Created/started as needed | Reuses the named volume |
+| \`docker compose down -v\` | Removed | Compose-managed named volumes are also removed; data can be lost |
+
+**Important:** Be careful with \`docker compose down -v\`. Do not use it when you need to keep the database data. Also, a named volume can be deleted separately with volume-removal commands, so keep backups of important data.
+
+### 7. Named Volume vs Bind Mount
+
+| Type | Example | Typical use |
+|---|---|---|
+| Named volume | \`mongo-data:/data/db\` | Recommended default for persistent database storage |
+| Bind mount | \`./mongo-data:/data/db\` | When you intentionally want to use a specific host directory |
+
+For most local Compose projects, use a named volume for MongoDB. Avoid casually editing database files directly on the host while MongoDB is running.
+
+### 8. Interview-ready answer
+
+“I persist MongoDB data in Docker by mounting a named volume at MongoDB's data directory, /data/db. For example, in Docker Compose I configure mongo-data:/data/db and declare mongo-data under the top-level volumes section. The volume survives container removal and recreation, but docker compose down -v can remove the Compose-managed volume, so I avoid that command when preserving data and maintain separate backups.”
+
+---
+
