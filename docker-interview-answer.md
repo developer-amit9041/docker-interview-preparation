@@ -5774,3 +5774,76 @@ Another machine: docker pull
 ### Interview-ready answer
 
 “To push a Docker image to Docker Hub, I build the image, log in using `docker login`, tag it with my Docker Hub username and repository name using `docker tag`, and push it with `docker push`. I then verify the repository and tag on Docker Hub or pull the image from another machine.”
+
+
+---
+
+## Q63. What is the relationship between a Docker image and a container?
+
+### 1. English Definition
+
+A Docker image is a read-only template that contains the application filesystem and configuration needed to create a container. A container is a runnable instance of that image, with its own runtime state and a writable layer.
+
+### 2. Hindi Definition
+
+Docker image ek template ya package hoti hai jisme application aur usko run karne ke liye required files hoti hain. Container usi image se banne wala running ya stopped instance hota hai.
+
+### 3. Hinglish Explanation
+
+Image ko recipe/template samjho aur container ko us recipe se bani running application.
+
+Maan lo aapne `my-node-app:1.0` image banayi. Aap isi image se multiple containers create kar sakte ho. Har container ka apna runtime state aur writable layer hota hai, jabki image ke base layers read-only aur reusable rehte hain.
+
+Container ke andar writable layer par kiye gaye changes automatically original image ko modify nahi karte. Container delete karne par uski writable-layer data generally remove ho jaati hai; persistent data ke liye volume ya bind mount use karo.
+
+### 4. Practical Example
+
+Build an image:
+
+```bash
+docker build -t my-node-app:1.0 .
+```
+
+Create and run two containers from the same image:
+
+```bash
+docker run -d --name app-one -p 5001:5000 my-node-app:1.0
+docker run -d --name app-two -p 5002:5000 my-node-app:1.0
+```
+
+Both containers use the same image, but have separate container identities, runtime state, and writable layers. The host ports differ so both can be accessed through different host ports.
+
+Check them:
+
+```bash
+docker image ls
+docker ps
+```
+
+### 5. Relationship Diagram
+
+```text
+            Docker Image
+          my-node-app:1.0
+                 |
+          +------+------+
+          |             |
+          v             v
+      Container 1   Container 2
+       app-one        app-two
+      writable       writable
+        layer          layer
+```
+
+### 6. Quick Difference
+
+| Docker Image | Docker Container |
+|---|---|
+| Template/package | Image ka instance |
+| Read-only image layers | Image layers plus a writable layer |
+| Used to create containers | Runs or has run an application |
+| Can be shared through a registry | Has its own runtime state and configuration |
+
+### Interview-ready answer
+
+“A Docker image is a read-only template used to create containers. A container is a runnable instance of that image with its own runtime state and writable layer. Multiple containers can be created from the same image, and changes inside a container do not automatically change the original image.”
