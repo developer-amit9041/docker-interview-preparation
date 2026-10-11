@@ -9332,3 +9332,145 @@ From a client running on the host machine, the example's port binding is limited
 ### Interview-ready answer
 
 “To set up MongoDB with Docker Compose, I define a MongoDB service using the official image, configure initialization credentials, and mount a named volume at `/data/db` for persistence. I then run `docker compose up -d` and check the service with `docker compose ps`. If my Node.js backend is in the same Compose network, it can connect using the hostname `mongodb` and port 27017.”
+
+
+---
+
+## Q113. How do you connect a Node.js application to MongoDB using Docker Compose?
+
+### 1. English Definition
+
+To connect a Node.js application to MongoDB using Docker Compose, define both as services on the same Compose network and configure the Node.js application's MongoDB URI to use the MongoDB service name as the hostname.
+
+### 2. Hindi Definition
+
+Node.js application ko Docker Compose ke through MongoDB se connect karne ke liye dono services ko same Compose network par define karte hain aur connection string mein MongoDB ka service name hostname ke roop mein use karte hain.
+
+### 3. Hinglish Explanation
+
+Maan lo Compose file mein MongoDB service ka naam `mongodb` hai. Node.js container ke andar `localhost` use karne par aap Node.js container ko hi refer karte ho, MongoDB container ko nahi. Isliye connection URI mein `mongodb://mongodb:27017/myapp` use karte hain.
+
+### 4. Practical Example
+
+Project structure:
+
+```text
+myapp/
+├── compose.yaml
+└── backend/
+    ├── Dockerfile
+    ├── package.json
+    └── server.js
+```
+
+**Dockerfile** (inside `backend/`):
+
+```dockerfile
+FROM node:22-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+EXPOSE 5000
+CMD ["node", "server.js"]
+```
+
+Ensure `package.json` has a startable app and the `mongodb` package dependency is installed if the app uses the MongoDB driver.
+
+**compose.yaml** (project root):
+
+```yaml
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "5000:5000"
+    environment:
+      PORT: "5000"
+      MONGO_URI: mongodb://appadmin:${MONGO_APP_PASSWORD}@mongodb:27017/myapp?authSource=admin
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+  mongodb:
+    image: mongo:8
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: appadmin
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_APP_PASSWORD}
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  mongo-data:
+```
+
+Create a local `.env` file in the project root:
+
+```env
+MONGO_APP_PASSWORD=replace_with_a_strong_password
+```
+
+Do not commit the real `.env` file or secrets to Git. The example uses the same initial root credentials for simplicity; in production, create a dedicated least-privilege application user and manage its credentials securely.
+
+**Node.js example** (using the official MongoDB Node.js driver):
+
+```js
+const { MongoClient } = require("mongodb");
+
+const uri = process.env.MONGO_URI;
+const client = new MongoClient(uri);
+
+async function start() {
+  try {
+    await client.connect();
+    await client.db("admin").command({ ping: 1 });
+    console.log("Connected to MongoDB");
+
+    // Start your HTTP server after the database connection succeeds.
+  } catch (error) {
+    console.error("MongoDB connection failed:", error);
+    process.exit(1);
+  }
+}
+
+start();
+```
+
+Install the driver if needed:
+
+```bash
+npm install mongodb
+```
+
+Start the application:
+
+```bash
+docker compose up --build -d
+docker compose ps
+docker compose logs -f backend
+```
+
+### 5. How the Connection Works
+
+1. Compose creates a project network and starts the MongoDB service.
+2. The MongoDB service is discoverable by the hostname `mongodb` on that network.
+3. The backend reads `MONGO_URI` from its environment.
+4. The MongoDB driver connects to `mongodb:27017` from inside the backend container.
+
+### 6. Important Points
+
+- Use the Compose **service name** as the hostname, not `localhost` or a container IP.
+- You do not need to publish MongoDB's port to the host for backend-to-database communication on the shared Compose network.
+- A health check and `condition: service_healthy` help with startup readiness, but the health-check command must work in the selected image.
+- Production applications should use a dedicated database user, secure secret handling, connection error handling, and retry/reconnect logic.
+- If the backend starts before MongoDB is ready, ensure startup logic handles temporary connection failures.
+
+### Interview-ready answer
+
+“To connect Node.js to MongoDB with Docker Compose, I define both services in the same Compose project and use the MongoDB service name as the hostname in the connection URI, for example `mongodb://mongodb:27017/myapp`. I pass the URI through an environment variable and connect using the MongoDB Node.js driver or Mongoose. A shared Compose network enables service-name DNS, so MongoDB's port does not need to be published to the host for internal communication.”
