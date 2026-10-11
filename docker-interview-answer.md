@@ -7297,3 +7297,88 @@ This mounts the current host directory at `/app` inside the container. On Window
 ### Interview-ready answer
 
 “A Docker volume is managed by Docker, whereas a bind mount maps a specific host path into a container. I usually use named volumes for persistent database data, such as MongoDB files, and bind mounts when I want to share local source code or configuration files with a container during development.”
+
+
+---
+
+## Q85. What is a named volume?
+
+### 1. English Definition
+
+A named volume is a Docker-managed storage volume identified by a name chosen by the user. It stores data independently of a container's writable layer, so the data can be reused by other containers and can remain available after a container is removed.
+
+### 2. Hindi Definition
+
+Named volume Docker ka manage kiya hua storage hota hai jise hum apna naam dete hain, jaise `mongo-data`. Container delete hone ke baad bhi volume ka data rehta hai, jab tak volume ko khud delete na kiya jaye.
+
+### 3. Hinglish Explanation
+
+Maan lo aap MongoDB container chala rahe ho. Agar database ka data sirf container ke writable layer mein store ho, toh container remove karne par woh data lose ho sakta hai. Named volume use karne par data Docker-managed volume mein store hota hai.
+
+Ek hi named volume ko compatible containers ke saath reuse bhi kiya ja sakta hai. Dhyan rahe: container remove karna aur volume remove karna alag operations hain.
+
+### 4. Practical Example
+
+**Step 1: Named volume create karo**
+
+```bash
+docker volume create mongo-data
+```
+
+**Step 2: Volume ke saath MongoDB container run karo**
+
+```bash
+docker run -d \
+  --name mongodb \
+  -v mongo-data:/data/db \
+  mongo:8
+```
+
+Yahan:
+- `mongo-data` named volume ka naam hai.
+- `/data/db` MongoDB container ke andar data directory hai.
+
+**Step 3: Volumes list karo**
+
+```bash
+docker volume ls
+```
+
+**Step 4: Volume inspect karo**
+
+```bash
+docker volume inspect mongo-data
+```
+
+**Step 5: Container remove karke volume retain karo**
+
+```bash
+docker rm -f mongodb
+docker volume ls
+```
+
+Container remove ho jayega, lekin named volume normally retained rahega. Aap same volume ke saath naya MongoDB container bana sakte ho.
+
+### 5. Named Volume vs Anonymous Volume
+
+| Feature | Named volume | Anonymous volume |
+|---|---|---|
+| Name | User-defined, e.g. `mongo-data` | Docker-generated name |
+| Identify and reuse | Easier | Harder, because name is not chosen by you |
+| Data persistence | Persists until removed | Persists until removed; cleanup behavior depends on the command/tool |
+| Typical use | Persistent database and application data | Storage when an explicit reusable name is not needed |
+
+### 6. Important Commands
+
+```bash
+docker volume create app-data
+docker volume ls
+docker volume inspect app-data
+docker volume rm app-data
+```
+
+A volume can be removed only when it is not in use by a container. Be careful with `docker volume rm` and prune commands because removing a volume can permanently delete its data.
+
+### Interview-ready answer
+
+“A named volume is a Docker-managed volume that has a user-defined name, such as `mongo-data`. It stores data separately from a container's writable layer and makes persistent data easy to identify and reuse across containers. The volume remains after container removal unless the volume itself is deleted.”
