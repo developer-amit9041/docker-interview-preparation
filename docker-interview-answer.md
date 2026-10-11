@@ -8428,3 +8428,93 @@ In production, a common pattern is to serve React and proxy API requests through
 ### Interview-ready answer
 
 “I connect the React and Node.js containers to the same user-defined Docker network. Docker-internal clients can reach the backend by its service/container name, such as `backend:5000`. However, React code runs in the browser, so it must call a browser-accessible API URL or use a reverse proxy that forwards requests to the backend over the Docker network.”
+
+
+---
+
+## Q101. What is Docker Compose?
+
+### 1. English Definition
+
+Docker Compose is a tool for defining and running multi-container applications using a YAML configuration file, commonly named `compose.yaml` or `docker-compose.yml`. It lets you configure services, networks, volumes, environment variables, and ports in one place and manage them with commands such as `docker compose up` and `docker compose down`.
+
+### 2. Hindi Definition
+
+Docker Compose ek tool hai jisse hum multiple containers wali application ko ek YAML file mein configure karke ek saath run aur manage kar sakte hain.
+
+### 3. Hinglish Explanation with MERN Example
+
+Maan lo aapke MERN project mein teen services hain:
+- React frontend
+- Node.js backend
+- MongoDB database
+
+Har container ko baar-baar alag `docker run` command se start karne ke bajaye, Compose file mein teeno services define kar do. Phir ek command se poora setup start kar sakte ho.
+
+### 4. Practical Example
+
+Create a `compose.yaml` file:
+
+```yaml
+services:
+  backend:
+    image: my-backend-image
+    ports:
+      - "5000:5000"
+    environment:
+      MONGO_URI: mongodb://mongodb:27017/myapp
+    depends_on:
+      - mongodb
+
+  mongodb:
+    image: mongo:8
+    volumes:
+      - mongo-data:/data/db
+
+volumes:
+  mongo-data:
+```
+
+In this example, Compose creates a default network for the project, so the backend can reach MongoDB using the service name `mongodb`. The named volume `mongo-data` stores MongoDB data independently of the container's writable layer.
+
+Start the services:
+
+```bash
+docker compose up -d
+```
+
+See service status:
+
+```bash
+docker compose ps
+```
+
+View logs:
+
+```bash
+docker compose logs
+```
+
+Stop and remove the containers and project network:
+
+```bash
+docker compose down
+```
+
+The named volume is retained by default. Avoid `docker compose down -v` if you want to keep the Compose-managed volume.
+
+### 5. Benefits of Docker Compose
+
+- Defines multi-container services in one readable YAML file.
+- Starts and stops the application stack with simple commands.
+- Creates a project network so services can communicate by service name.
+- Supports named volumes, environment variables, port mappings, and build configuration.
+- Makes local development and repeatable test environments easier to manage.
+
+### 6. Important Point
+
+`depends_on` controls startup ordering, but by itself it does not guarantee that MongoDB is ready to accept connections. The backend should handle connection retries, or the Compose configuration should use an appropriate health check and readiness strategy.
+
+### Interview-ready answer
+
+“Docker Compose is a tool for defining and running multi-container applications using a YAML file. I use it to configure services such as a Node.js backend and MongoDB, their networks, ports, environment variables, and volumes, then manage the stack with commands like `docker compose up -d` and `docker compose down`.”
