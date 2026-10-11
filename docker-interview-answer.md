@@ -12248,3 +12248,232 @@ In this example, Nginx is part of the frontend image. Another valid design is to
 
 ---
 
+## Q135. How do you deploy a Dockerized MERN application to Kubernetes?
+
+### 1. English Definition
+
+To deploy a Dockerized MERN application to Kubernetes, build and publish container images to a registry, create Kubernetes manifests for Deployments, Services, configuration, secrets, and persistent storage, then apply the manifests to a Kubernetes cluster. Kubernetes schedules containers, provides service discovery, and can restart or scale application Pods.
+
+### 2. Hindi Definition
+
+Kubernetes par Dockerized MERN application deploy karne ke liye hum frontend aur backend ki container images build karke registry mein push karte hain. Phir Kubernetes manifests ke through Deployments, Services, configuration, secrets aur storage define karke cluster par apply karte hain.
+
+### 3. Hinglish Explanation
+
+Bhai, Docker Compose local ya single-server setup mein containers manage karta hai, jabki Kubernetes cluster ke andar Pods aur application workloads ko manage karta hai.
+
+Typical flow:
+1. React frontend aur Node.js backend ki Docker images build karo.
+2. Images ko Docker Hub, Amazon ECR, ya kisi container registry mein push karo.
+3. Kubernetes cluster banao, jaise Amazon EKS ya learning ke liye Minikube/kind.
+4. Deployments, Services, ConfigMaps/Secrets aur storage manifests banao.
+5. \`kubectl apply -f k8s/\` se resources create karo.
+6. Ingress/load balancer configure karke application ko expose karo.
+7. Rollouts, logs, health checks aur persistent database backups monitor karo.
+
+### 4. Architecture Diagram
+
+\`\`\`text
+                   User / Browser
+                         |
+                    HTTPS / DNS
+                         |
+                Ingress / Load Balancer
+                         |
+              +----------+----------+
+              |                     |
+       Frontend Service       Backend Service
+              |                     |
+       Frontend Pods           Backend Pods
+       React + Nginx           Node.js + Express
+                                    |
+                              MongoDB Service
+                                    |
+                          MongoDB Stateful Workload
+                           + Persistent Volume
+\`\`\`
+
+Container images are pulled from a registry by the cluster nodes. Kubernetes Services provide stable network endpoints for Pods. In production, a managed database such as MongoDB Atlas or an appropriately configured database service may be preferable to running MongoDB inside the cluster.
+
+### 5. Build and Push Images
+
+Build and tag images for your registry:
+
+\`\`\`bash
+docker build -t <REGISTRY>/mern-frontend:1.0.0 ./frontend
+docker build -t <REGISTRY>/mern-backend:1.0.0 ./backend
+
+docker push <REGISTRY>/mern-frontend:1.0.0
+docker push <REGISTRY>/mern-backend:1.0.0
+\`\`\`
+
+Replace \`<REGISTRY>\` with your actual registry path, such as a Docker Hub namespace or an Amazon ECR repository URI. Authenticate to the registry before pushing, and ensure the Kubernetes cluster can pull the images. Prefer immutable version tags or digests rather than relying on \`latest\` for controlled releases.
+
+### 6. Create Kubernetes Manifests
+
+Example directory:
+
+\`\`\`text
+k8s/
+├── frontend.yaml
+├── backend.yaml
+└── mongodb.yaml
+\`\`\`
+
+#### Frontend Deployment and Service — frontend.yaml
+
+\`\`\`yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      containers:
+        - name: frontend
+          image: <REGISTRY>/mern-frontend:1.0.0
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+spec:
+  selector:
+    app: frontend
+  ports:
+    - port: 80
+      targetPort: 80
+  type: ClusterIP
+\`\`\`
+
+The Deployment maintains the desired number of frontend Pods. The ClusterIP Service provides an internal endpoint; an Ingress or load balancer can expose it externally.
+
+#### Backend Deployment and Service — backend.yaml
+
+\`\`\`yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+        - name: backend
+          image: <REGISTRY>/mern-backend:1.0.0
+          ports:
+            - containerPort: 5000
+          env:
+            - name: PORT
+              value: "5000"
+            - name: MONGO_URI
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: mongo-uri
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+spec:
+  selector:
+    app: backend
+  ports:
+    - port: 5000
+      targetPort: 5000
+  type: ClusterIP
+\`\`\`
+
+Create the \`app-secrets\` Secret securely before deploying the backend. The Node.js application should listen on \`0.0.0.0:5000\`. For production, add readiness and liveness probes, resource requests/limits, and a deliberate rollout strategy.
+
+### 7. Configure Secrets and Database
+
+Do not hardcode production credentials into an image or commit them in plain-text manifests. For a basic example, a Kubernetes Secret can be created from a protected local file:
+
+\`\`\`bash
+kubectl create secret generic app-secrets \
+  --from-literal=mongo-uri='<YOUR_PRIVATE_MONGODB_URI>'
+\`\`\`
+
+Be aware that command-line arguments can be exposed through shell history or process inspection. In production, prefer a managed secret integration such as AWS Secrets Manager with the appropriate Kubernetes/IAM integration, and configure RBAC and encryption at rest.
+
+For MongoDB, you have two common options:
+- **Managed database:** Use MongoDB Atlas or an appropriately configured managed database endpoint; store its URI securely and restrict network access.
+- **Run MongoDB in Kubernetes:** Use a StatefulSet and PersistentVolumeClaim, configure authentication, storage classes, backups, and recovery. A container filesystem alone is not durable database storage.
+
+The backend must use a reachable MongoDB hostname, not \`localhost\`, when the database is in another Pod or service.
+
+### 8. Deploy the Resources
+
+After replacing the image placeholders and preparing required configuration:
+
+\`\`\`bash
+kubectl apply -f k8s/
+kubectl get deployments
+kubectl get pods
+kubectl get services
+\`\`\`
+
+Check backend logs:
+
+\`\`\`bash
+kubectl logs deployment/backend
+kubectl describe deployment backend
+\`\`\`
+
+If a Pod does not start, inspect \`kubectl describe pod <POD_NAME>\` and its logs. Common causes include image pull errors, missing Secrets, failing health checks, and database connectivity issues.
+
+### 9. Expose the Frontend
+
+A common production approach is to configure an Ingress controller or cloud load balancer with DNS and TLS. The Ingress can route browser traffic to the frontend Service, while Nginx in the frontend image proxies \`/api/\` requests to the backend Service at \`http://backend:5000\`.
+
+Do not expose the backend or MongoDB Service publicly unless there is a specific, secured requirement. Kubernetes Services and Ingress require the appropriate cluster networking and controller configuration; applying a manifest alone does not automatically provision every external component in every cluster.
+
+### 10. Verify and Scale
+
+\`\`\`bash
+kubectl get pods -o wide
+kubectl rollout status deployment/frontend
+kubectl rollout status deployment/backend
+kubectl scale deployment/backend --replicas=3
+\`\`\`
+
+Use readiness probes so traffic is sent only to ready Pods. Liveness probes can help restart unhealthy containers. Monitor resource use and configure autoscaling when metrics and workload requirements justify it.
+
+### 11. Summary Table
+
+| Resource / component | Purpose |
+|---|---|
+| Container registry | Stores frontend and backend images |
+| Deployment | Maintains desired Pod replicas and manages rollouts |
+| Service | Provides a stable network endpoint for Pods |
+| ConfigMap | Stores non-sensitive configuration |
+| Secret | Supplies sensitive configuration; protect it with appropriate controls |
+| Ingress / LoadBalancer | Exposes the application to external traffic |
+| PersistentVolumeClaim | Requests durable storage for workloads such as MongoDB |
+| Probes and resource limits | Improve health management and resource control |
+
+### Interview-ready answer
+
+“To deploy a Dockerized MERN application to Kubernetes, I build the frontend and backend images and push them to a container registry. I create Deployments and Services for the frontend and backend, configure non-sensitive values with ConfigMaps and credentials with Secrets or a managed secret service, and configure database connectivity and persistent storage. I apply the manifests with kubectl, expose the frontend through an Ingress or load balancer, and verify the rollout, logs, probes, and scaling. For production, I also configure RBAC, monitoring, backups, and secure network access to MongoDB.”
+
+---
+
