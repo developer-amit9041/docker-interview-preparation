@@ -10788,3 +10788,129 @@ Add `.env` to `.gitignore`. This example binds the published port to localhost, 
 
 “I run MongoDB using the official MongoDB Docker image. I publish port 27017 only when host access is needed, and mount a named volume at /data/db so database files persist when the container is recreated. For secured setups, I configure authentication, keep credentials out of source control, and restrict network access. With Docker Compose, I can manage the database and its volume in a YAML configuration.”
 
+---
+
+## Q125. How can a React container access a Node.js container?
+
+### 1. English Definition
+
+Containers in the same Docker Compose network can communicate using each other's service names and container ports. However, if React is served to a user's browser, browser-side API requests cannot normally resolve Docker-internal service names; use a published host port or a reverse proxy such as Nginx.
+
+### 2. Hindi Definition
+
+Docker Compose ke same network mein containers ek doosre ko service name aur container port se access kar sakte hain. Lekin browser mein chalne wali React application Docker ke internal service names, jaise backend, ko normally resolve nahi kar sakti. Iske liye published port ya Nginx reverse proxy use kiya ja sakta hai.
+
+### 3. Hinglish Explanation
+
+Bhai, maan lo aapke MERN project mein React frontend aur Node.js backend alag containers mein hain. Compose automatically ek network banata hai, jahan backend service ka naam hostname ki tarah use ho sakta hai.
+
+- Container-to-container communication: React container ke andar chal raha process backend ko `http://backend:5000` se access kar sakta hai.
+- Browser-to-backend communication: Browser Docker network ke andar nahi hota, isliye React code mein `http://backend:5000` likhna usually kaam nahi karega.
+- Common production solution: Nginx ko frontend ke saath run karke `/api` requests backend service ko proxy karna.
+
+### 4. Practical Example — Docker Compose
+
+```yaml
+services:
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+  backend:
+    build: ./backend
+    expose:
+      - "5000"
+```
+
+Compose creates a default network for these services. The backend is reachable from other containers on that network using `backend:5000`. The `expose` entry documents the internal port; it does not publish the port to the host.
+
+### 5. Recommended Production Pattern — Nginx Reverse Proxy
+
+Configure Nginx in the frontend container so requests to `/api/` are forwarded to the backend:
+
+```nginx
+server {
+    listen 80;
+    server_name _;
+
+    location / {
+        root /usr/share/nginx/html;
+        index index.html;
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /api/ {
+        proxy_pass http://backend:5000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+This example assumes the backend API routes use the `/api/` prefix. With this setup, browser-side React code can call a relative URL:
+
+```js
+fetch("/api/users")
+  .then((response) => response.json())
+  .then((users) => console.log(users))
+  .catch((error) => console.error(error));
+```
+
+The browser sends the request to the same origin that serves React. Nginx then forwards it internally to `backend:5000`.
+
+### 6. Architecture Diagram
+
+```text
+User's Browser
+     |
+     | GET /api/users
+     v
+Frontend container (Nginx)
+     |
+     | Docker Compose network
+     | proxy to backend:5000
+     v
+Node.js / Express container
+     |
+     v
+API response returns through Nginx
+to the browser
+```
+
+### 7. Alternative — Publish the Backend Port
+
+For local development, publish the backend port:
+
+```yaml
+services:
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+
+  backend:
+    build: ./backend
+    ports:
+      - "5000:5000"
+```
+
+Then browser-side React code can call `http://localhost:5000/api/users` when the browser and Docker host are the same machine. Configure CORS on the backend if the frontend and backend have different origins. In deployments, use the appropriate public hostname rather than assuming localhost refers to the server.
+
+### 8. Summary Table
+
+| Scenario | Address to use |
+|---|---|
+| Process inside a Compose container calls backend | `http://backend:5000` |
+| Browser calls a backend port published on the same host | `http://localhost:5000` (local development) |
+| Browser calls API through frontend Nginx | Relative URL such as `/api/users` |
+| Compose service name in browser-side JavaScript | Normally not accessible directly |
+
+### Interview-ready answer
+
+“Docker Compose services on the same network can communicate using service names, so a container can reach the Node.js backend at `http://backend:5000`. But browser-side React code cannot normally resolve Docker-internal names. In production, I commonly configure Nginx to proxy requests such as `/api/users` to the backend service. For local development, I can also publish the backend port and call it through localhost, configuring CORS if needed.”
+
