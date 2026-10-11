@@ -930,3 +930,99 @@ docker info
 **Interview-ready summary:**
 
 > The Docker client is the CLI used to interact with Docker. It sends requests through the Docker Engine API to the Docker daemon, which performs operations such as building images and managing containers.
+
+
+---
+
+## Q10. What is the Docker daemon?
+
+### 1. English Definition
+
+The Docker daemon (`dockerd`) is a background service that manages Docker objects such as images, containers, networks, and volumes. It receives requests through the Docker Engine API and performs the requested operations.
+
+### 2. Hindi Definition
+
+Docker daemon ek background service hai jo Docker images, containers, networks aur volumes ko manage karti hai. Ye Docker Engine API ke through requests receive karke required operations perform karti hai.
+
+### 3. Hinglish Explanation
+
+Docker daemon ko Docker ka background manager samjho. Aap terminal mein `docker run nginx` command dete ho. Docker client request bhejta hai, aur daemon image check/pull karke container create aur start karne ka kaam manage karta hai.
+
+**Yaad rakho:**
+- **Docker Client:** Command bhejta hai.
+- **Docker Daemon (`dockerd`):** Request process karke Docker resources manage karta hai.
+- **Docker Engine API:** Client aur daemon ke beech communication interface hai.
+
+Daemon background mein run karta hai; isliye terminal mein har operation ko manually manage karne ki zaroorat nahi hoti.
+
+### 4. Practical Example / Code
+
+Start an Nginx container:
+
+```bash
+docker run -d --name my-nginx -p 8080:80 nginx
+```
+
+Is request ko Docker client daemon tak bhejta hai. Daemon zaroorat padne par image pull karta hai, phir container create aur start karta hai.
+
+Check the running container:
+
+```bash
+docker ps
+```
+
+### 5. Architecture Diagram
+
+```text
+       User / Terminal
+              |
+              v
+         Docker CLI
+              |
+        Docker Engine API
+              |
+              v
+      Docker Daemon (dockerd)
+              |
+     +--------+---------+
+     |        |         |
+   Images  Containers  Networks
+                         |
+                      Volumes
+```
+
+### 6. Practical Command / Configuration
+
+**Check Docker daemon / Engine details:**
+
+```bash
+docker info
+```
+
+**On many Linux systems using systemd, check the Docker service:**
+
+```bash
+sudo systemctl status docker
+```
+
+**On those Linux systems, start the service if needed:**
+
+```bash
+sudo systemctl start docker
+```
+
+Note: Docker Desktop on Windows/macOS manages the Docker Engine differently, so these systemd commands may not apply.
+
+### 7. Summary Table
+
+| Component | Responsibility |
+|---|---|
+| Docker Client | Commands send karta hai |
+| Docker Engine API | Client requests daemon tak pahunchati hai |
+| Docker Daemon (`dockerd`) | Images, containers, networks aur volumes manage karta hai |
+| Runs as | Background service/process |
+| Example operation | Container create/start karna |
+
+**Interview-ready summary:**
+
+> The Docker daemon, also called `dockerd`, is the background service responsible for managing Docker images, containers, networks, and volumes. It receives requests through the Docker Engine API and carries out the requested operations.
