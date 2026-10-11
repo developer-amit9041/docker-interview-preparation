@@ -10353,3 +10353,136 @@ All Compose services can communicate over the default Compose network using serv
 
 “To Dockerize a MERN application, I create separate Dockerfiles for the React frontend and Node.js/Express backend, and run MongoDB using its official image. I define all services in a Compose file, configure the backend with a MongoDB URI that uses the Compose service name, and mount a named volume for database persistence. Then I build and start the stack with `docker compose up --build -d`. For production, I also configure secrets, TLS, backups, health checks, and appropriate network access.”
 
+---
+
+## Q122. How do you create a Dockerfile for a React application?
+
+### 1. English Definition
+
+A Dockerfile for a React application defines the steps to install dependencies, build the React source code into static assets, and package those assets into an image that can serve the frontend. A common production approach uses a multi-stage build with Node.js for building and Nginx for serving the output.
+
+### 2. Hindi Definition
+
+React application ke liye Dockerfile woh instructions define karta hai jinke through dependencies install hoti hain, React code build hota hai aur final static files ko web server, jaise Nginx, ke through serve kiya jata hai.
+
+### 3. Hinglish Explanation
+
+Bhai, React application ka source code browser directly waise run nahi karta jaise development tooling chalti hai. Production build se HTML, CSS aur JavaScript files generate hoti hain.
+
+Dockerfile mein hum:
+- Node.js image use karke dependencies install karte hain.
+- `npm run build` se production files generate karte hain.
+- Nginx image mein sirf generated files copy karte hain.
+- Final image se React frontend serve karte hain.
+
+Isse final production image lightweight rehti hai, kyunki usmein build tools aur source dependencies rakhna zaroori nahi hota.
+
+### 4. Practical Example — Multi-stage Dockerfile
+
+Create `frontend/Dockerfile`:
+
+```dockerfile
+# Stage 1: Build React app
+FROM node:22-alpine AS build
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci
+
+COPY . .
+RUN npm run build
+
+# Stage 2: Serve static files
+FROM nginx:alpine
+
+COPY --from=build /app/build /usr/share/nginx/html
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]
+```
+
+**Important:** This example assumes the React build output is `build/`, as in a standard Create React App setup. If using Vite, the output is usually `dist/`; change the COPY source to `/app/dist`.
+
+The frontend's `package.json` must contain the appropriate build script, and the lockfile must be committed for `npm ci` to work.
+
+### 5. Architecture Diagram
+
+```text
+React source code
+       |
+       v
+Node.js build stage
+(npm ci + npm run build)
+       |
+       v
+Static files
+(build/ or dist/)
+       |
+       v
+Nginx final image
+       |
+       v
+Browser accesses frontend
+```
+
+### 6. Build and Run Commands
+
+Run from the project root if the Dockerfile is in `frontend/`:
+
+```bash
+docker build -t react-frontend ./frontend
+docker run --rm -p 3000:80 react-frontend
+```
+
+Open `http://localhost:3000` in the browser.
+
+To build with Docker Compose:
+
+```yaml
+services:
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:80"
+```
+
+Then run:
+
+```bash
+docker compose up --build -d frontend
+```
+
+### 7. Recommended .dockerignore
+
+Create `frontend/.dockerignore`:
+
+```text
+node_modules
+build
+dist
+.git
+.env*
+npm-debug.log*
+```
+
+This prevents unnecessary local files from being sent in the Docker build context. If the application needs build-time environment variables, supply the required non-secret configuration deliberately; do not assume runtime container variables will automatically be embedded into an already-built static React bundle.
+
+### 8. Summary Table
+
+| Instruction | Purpose |
+|---|---|
+| `FROM node:22-alpine AS build` | Provides Node.js build environment |
+| `WORKDIR /app` | Sets the working directory |
+| `COPY package*.json ./` | Copies dependency manifests |
+| `RUN npm ci` | Installs locked dependencies |
+| `RUN npm run build` | Generates production assets |
+| `FROM nginx:alpine` | Creates a lightweight serving stage |
+| `COPY --from=build ...` | Copies only built assets to Nginx |
+| `EXPOSE 80` | Documents the container's HTTP port |
+
+### Interview-ready answer
+
+“I use a multi-stage Dockerfile for a React application. In the first stage, I use a Node.js image to install dependencies and run the production build. In the second stage, I copy the generated static files into an Nginx image to serve the frontend. This keeps the final image smaller because it does not need the Node.js build environment. I adjust the output path for the toolchain, such as build for Create React App or dist for Vite.”
+
