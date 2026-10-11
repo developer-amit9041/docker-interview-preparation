@@ -14498,3 +14498,66 @@ The image must be accessible to the nodes that need to run it, typically through
 “Docker Swarm is Docker's native container orchestration tool. It combines multiple Docker hosts into a cluster of manager and worker nodes and manages services across them. It supports replica scaling, scheduling, service discovery, load balancing, and rescheduling tasks to maintain the desired state.”
 
 ---
+## Q155. What is the difference between Docker Swarm and Kubernetes?
+
+### 1. English Interview Definition
+Docker Swarm and Kubernetes are container orchestration platforms. Both help deploy and manage containerized applications across multiple machines. Docker Swarm is generally simpler to set up and operate, while Kubernetes provides a broader orchestration ecosystem and more extensive configuration and extensibility for complex production environments.
+
+### 2. Hindi Definition
+Docker Swarm aur Kubernetes dono multiple servers par containers ko deploy, scale aur manage karne ke tools hain. Swarm comparatively simple hai, jabki Kubernetes zyada features aur customization provide karta hai, lekin use seekhna aur operate karna bhi comparatively complex ho sakta hai.
+
+### 3. Hinglish Explanation
+Maan lo aapki MERN application ke multiple backend containers chal rahe hain:
+- **Docker Swarm:** Cluster setup aur service scaling relatively simple hoti hai.
+- **Kubernetes:** Deployments, Services, ConfigMaps, Secrets, autoscaling, probes, and a large ecosystem ke through application ko manage kar sakte ho.
+
+Dono containers ko orchestrate karte hain, lekin Kubernetes usually complex, large-scale, or highly configurable deployments ke liye choose kiya jata hai. Har project ko Kubernetes ki complexity ki zaroorat nahi hoti.
+
+### 4. Main Differences
+
+| Feature | Docker Swarm | Kubernetes |
+|---|---|---|
+| Setup and learning | Generally simpler | Generally more complex |
+| Architecture | Docker Swarm managers and workers | Control plane and worker nodes |
+| Deployment unit | Service and task | Pod managed by objects such as Deployment or StatefulSet |
+| Scaling | Service replicas can be scaled | Replica counts, autoscaling, and workload controllers |
+| Networking and service discovery | Built-in overlay networking and routing mesh options | Services and a networking model commonly implemented through a CNI plugin |
+| Load balancing | Swarm routing mesh for published ports and service-level distribution | Service load balancing; ingress or Gateway solutions can handle HTTP routing |
+| Configuration and secrets | Swarm configs and secrets | ConfigMaps and Secrets, with security depending on cluster configuration |
+| Ecosystem and extensibility | Smaller, Docker-focused feature set | Broad ecosystem and extensible APIs |
+| Typical fit | Simpler clustered container deployments | Complex deployments needing advanced orchestration and ecosystem integrations |
+
+### 5. Simple Architecture
+
+\`\`\`text
+Docker Swarm
+Manager
+  ├── Worker 1: backend task
+  └── Worker 2: backend tasks
+
+Kubernetes
+Control Plane
+  ├── Worker Node 1: Pod(s)
+  └── Worker Node 2: Pod(s)
+\`\`\`
+
+This is a simplified comparison; actual cluster architectures can contain multiple managers/control-plane nodes and multiple workloads per worker.
+
+### 6. When Should You Choose Each?
+
+**Choose Docker Swarm when:**
+- You need straightforward container orchestration.
+- Your team wants a relatively simple Docker-native setup.
+- Your deployment requirements are modest and fit Swarm's feature set.
+
+**Choose Kubernetes when:**
+- You need advanced workload management, autoscaling, rollout strategies, or extensibility.
+- Your organization already operates Kubernetes or uses a managed Kubernetes service.
+- Your application requires a broader ecosystem of deployment, networking, policy, and observability tools.
+
+Kubernetes is not automatically the best choice for every application: operational complexity and team expertise matter.
+
+### 7. Interview-Ready Answer
+“Docker Swarm and Kubernetes both orchestrate containers across multiple machines. Swarm is generally easier to set up and manage for simpler clustered deployments. Kubernetes has a richer ecosystem and more advanced workload management, scaling, configuration, and extensibility, but it has a steeper learning and operational curve. The choice depends on application complexity, operational needs, and team expertise.”
+
+---
