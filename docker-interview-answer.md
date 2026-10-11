@@ -5607,3 +5607,72 @@ docker build --no-cache -t my-node-app .
 ### Interview-ready answer
 
 “Docker build caching reuses the results of previous build steps when the instructions and their relevant inputs remain unchanged. It reduces repeated work and speeds up image builds. For Node.js projects, I copy package manifests and install dependencies before copying frequently changing source files so the dependency layer can often be reused.”
+
+
+---
+
+## Q61. How do you tag a Docker image?
+
+### 1. English Definition
+
+A Docker image is tagged by assigning it a repository name and an optional version identifier. You can provide a tag while building an image with `docker build -t` or add another tag to an existing image with `docker tag`.
+
+### 2. Hindi Definition
+
+Docker image ko tag karne ka matlab hai image ko ek naam aur version dena, jaise `my-node-app:1.0`. Isse different versions ko identify karna aur registry par push karna easy hota hai.
+
+### 3. Hinglish Explanation
+
+Maan lo aapne Node.js application ki image banayi hai. Aap usko `my-node-app:1.0` naam de sakte ho. Baad mein updated version ko `my-node-app:1.1` tag de sakte ho.
+
+Tag image ko identify karta hai; tag dene se image ke andar application code automatically change nahi hota. Ek hi image ke multiple tags ho sakte hain.
+
+### 4. Method 1: Tag While Building
+
+```bash
+docker build -t my-node-app:1.0 .
+```
+
+- `my-node-app`: image repository/name.
+- `1.0`: tag/version.
+- `.`: current directory build context.
+
+Check the image:
+
+```bash
+docker image ls
+```
+
+### 5. Method 2: Tag an Existing Image
+
+Suppose image `my-node-app:1.0` already exists:
+
+```bash
+docker tag my-node-app:1.0 my-node-app:latest
+```
+
+Ab same image ko `my-node-app:1.0` aur `my-node-app:latest` dono tags se refer kar sakte ho, jab tak tags alag images par retag na kiye jaayen.
+
+### 6. Tag for a Registry
+
+Docker Hub par push karne ke liye image ko registry username ke saath tag karo:
+
+```bash
+docker tag my-node-app:1.0 YOUR_DOCKERHUB_USERNAME/my-node-app:1.0
+docker login
+docker push YOUR_DOCKERHUB_USERNAME/my-node-app:1.0
+```
+
+`YOUR_DOCKERHUB_USERNAME` ko apne actual Docker Hub username se replace karo. Registry par push karne se pehle authentication aur repository permissions sahi honi chahiye.
+
+### 7. Important Points
+
+- Format usually `repository:tag` hota hai.
+- Agar tag specify nahi karte, toh Docker generally `latest` tag assume karta hai.
+- `latest` ka matlab automatically newest version nahi; yeh sirf ek tag hai.
+- Production mein explicit version tags, jaise `1.0.0` ya release/commit-based tags, use karna better hai.
+- `docker tag` existing image ko rename/copy nahi karta; yeh usi image ko ek additional reference deta hai.
+
+### Interview-ready answer
+
+“I can tag a Docker image during a build using `docker build -t image-name:tag .`, or tag an existing image using `docker tag source-image:tag target-image:tag`. Tags help identify versions and prepare images for pushing to a registry. The `latest` tag is not automatically the newest version; it is just a tag name.”
