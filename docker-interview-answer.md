@@ -16318,3 +16318,102 @@ The left side is the host port; the right side is the container port. If the app
 “If a Docker port is not accessible, I first verify that the container is running and inspect its logs. Then I confirm the port mapping with \`docker ps\` or \`docker port\`, ensure the application listens on \`0.0.0.0\` and the correct container port, and test the endpoint from inside the container. If it works internally, I investigate host port conflicts, Docker networking, firewall rules, and cloud security groups.”
 
 ---
+## Q178. Two containers cannot communicate with each other. How would you debug the issue?
+
+### 1. English Interview Definition
+To debug communication between Docker containers, first verify that both containers are running and attached to a compatible Docker network. Then check DNS/service names, listening ports, application bind addresses, firewall rules, and logs. The correct fix depends on whether the containers use Docker Compose, a user-defined bridge network, or an orchestrator such as Swarm or Kubernetes.
+
+### 2. Hindi Definition
+Agar do Docker containers ek doosre se communicate nahi kar paa rahe, toh pehle unka network, container status, hostname/service name, port aur application configuration check karte hain.
+
+### 3. Hinglish Explanation
+Maan lo aapke MERN project mein Node.js backend aur MongoDB alag containers mein run ho rahe hain. Backend MongoDB se connect nahi kar paa raha. Common mistake ye hai ki backend connection string mein \`localhost\` use karta hai.
+
+Container ke andar \`localhost\` usi container ko refer karta hai, doosre container ko nahi. Compose mein backend ko MongoDB ke service name, jaise \`mongodb\`, se connect karna chahiye.
+
+### 4. Step-by-Step Debugging
+
+**Step 1: Check whether both containers are running**
+\`\`\`bash
+docker ps
+docker ps -a
+\`\`\`
+If a container exited, inspect its logs and exit status first.
+
+**Step 2: Check the Docker networks**
+\`\`\`bash
+docker network ls
+docker inspect backend
+docker inspect mongodb
+\`\`\`
+Inspect the \`Networks\` section and confirm both containers share a network that allows them to communicate. On a user-defined bridge network, containers can generally resolve each other by container name or network alias.
+
+**Step 3: Inspect network membership**
+\`\`\`bash
+docker network inspect my-network
+\`\`\`
+If appropriate, attach a running container to an existing user-defined network:
+\`\`\`bash
+docker network connect my-network backend
+\`\`\`
+Only connect containers to networks that are intended to communicate; avoid exposing sensitive services to unnecessary networks.
+
+**Step 4: Use the correct hostname and container port**
+For Docker Compose, use the service name and the port on which the target application listens inside its container:
+\`\`\`text
+mongodb://mongodb:27017/farmlogic
+\`\`\`
+Here, \`mongodb\` is an example Compose service name and \`27017\` is MongoDB's container port. The database name is illustrative. A published host port is usually not needed for container-to-container communication on the same Docker network.
+
+**Step 5: Check that the application listens on the correct interface**
+A server inside a container may need to bind to \`0.0.0.0\` rather than only \`127.0.0.1\`, so other containers can reach it through the container network interface.
+
+**Step 6: Check logs and test connectivity**
+\`\`\`bash
+docker logs backend
+docker logs mongodb
+\`\`\`
+If diagnostic utilities are available in the image, test DNS resolution and TCP connectivity from the source container. Minimal images may not include tools such as \`curl\`, \`nc\`, or \`ping\`; use a temporary diagnostic container attached to the same network if needed.
+
+**Step 7: Check credentials, health, and access controls**
+Network connectivity can work while the application connection still fails due to incorrect credentials, database permissions, TLS settings, startup timing, or an unhealthy destination service. Verify these separately and do not print secrets into shared logs.
+
+### 5. Docker Compose Example
+
+\`\`\`yaml
+services:
+  backend:
+    build: ./backend
+    environment:
+      MONGO_URI: mongodb://mongodb:27017/farmlogic
+    depends_on:
+      - mongodb
+
+  mongodb:
+    image: mongo:7
+    volumes:
+      - mongo_data:/data/db
+
+volumes:
+  mongo_data:
+\`\`\`
+
+Compose creates a default network for the application, allowing the backend to reach MongoDB using the service name \`mongodb\`. Basic \`depends_on\` controls startup order but does not by itself guarantee that MongoDB is ready to accept connections; configure health checks and application retry logic where needed.
+
+### 6. Common Causes and Fixes
+
+| Problem | What to check or fix |
+|---|---|
+| Containers are on different networks | Attach them to an appropriate shared network |
+| Connection string uses \`localhost\` | Use the target service/container name |
+| Wrong port | Use the destination container's listening port |
+| App listens only on loopback | Bind to the appropriate container interface, often \`0.0.0.0\` |
+| Target container is stopped or not ready | Check status, logs, health checks, and retry behavior |
+| DNS/service name fails | Check network membership and service aliases |
+| Connection refused or timeout | Check listening process, network path, firewall, and access rules |
+| Authentication fails | Verify credentials, roles, and TLS configuration |
+
+### 7. Interview-Ready Answer
+“I would first check that both containers are running and attached to a shared Docker network. Then I would verify the target service name, container port, application bind address, and logs. For example, a Node.js container connecting to MongoDB in Compose should usually use \`mongodb://mongodb:27017/...\`, not \`localhost\`. I would also check service readiness, credentials, and network access rules.”
+
+---
