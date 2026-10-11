@@ -13122,3 +13122,126 @@ A vulnerability scanner identifies known weaknesses; it does not guarantee that 
 "Docker image vulnerabilities are known security weaknesses in the image's OS packages, libraries, or application dependencies. I use trusted and supported base images, scan images with tools such as Trivy or Docker Scout, update vulnerable packages, rebuild the image, and rescan before deployment. I integrate scanning into CI/CD and prioritize findings based on severity, exploitability, and available fixes. Scanning is an important control, but it does not guarantee complete security."
 
 ---
+## Q141. How do you scan a Docker image for vulnerabilities?
+
+### 1. English Interview Definition
+
+A Docker image can be scanned for vulnerabilities using security tools such as **Trivy** or **Docker Scout**. These tools inspect the image's operating system packages and application dependencies for known security issues, report their severity, and identify available fixes.
+
+### 2. Hindi Definition
+
+Docker image scan karne ka matlab hai image ke andar installed OS packages, libraries aur application dependencies ko check karna, taaki unmein maujood known security vulnerabilities ka pata chal sake.
+
+### 3. Hinglish Explanation
+
+Maan lo aapki MERN application ka backend Docker image \`my-backend:1.0\` hai. Is image mein koi vulnerable npm package ya outdated OS library ho sakti hai.
+
+Scanner image ko analyze karke batata hai:
+
+- Kaunsi vulnerability mili hai.
+- Uski severity kya hai — Critical, High, Medium ya Low.
+- Kaunsa package affected hai.
+- Fix available hai ya nahi.
+
+**Important:** Scanner chalane se vulnerability automatically fix nahi hoti. Report analyze karke package update karna, image rebuild karna aur dobara scan karna hota hai.
+
+### 4. Method 1: Scan with Trivy
+
+Build your application image:
+
+\`\`\`bash
+docker build -t my-backend:1.0 ./backend
+\`\`\`
+
+Scan the image:
+
+\`\`\`bash
+trivy image my-backend:1.0
+\`\`\`
+
+To show only important severities:
+
+\`\`\`bash
+trivy image --severity HIGH,CRITICAL my-backend:1.0
+\`\`\`
+
+To fail a CI job when fixable HIGH or CRITICAL findings are present:
+
+\`\`\`bash
+trivy image \
+  --severity HIGH,CRITICAL \
+  --ignore-unfixed \
+  --exit-code 1 \
+  my-backend:1.0
+\`\`\`
+
+The exact policy depends on your team's risk requirements. \`--ignore-unfixed\` filters out findings without an available fix; it does not mean those findings are harmless.
+
+### 5. Method 2: Scan with Docker Scout
+
+Docker Scout can analyze a local image:
+
+\`\`\`bash
+docker scout quickview my-backend:1.0
+docker scout cves my-backend:1.0
+\`\`\`
+
+The first command provides a high-level security overview, and the second lists known CVEs affecting the image. Some Docker Scout features may require authentication or an eligible account.
+
+### 6. How to fix the findings
+
+1. Review the CVE, severity, affected package, and whether a patch is available.
+2. Update the base image to a supported, patched version.
+3. Update vulnerable npm dependencies carefully; review changes and test the application.
+4. Rebuild the image and run the scan again.
+5. Add scanning to CI/CD so findings are checked before deployment.
+
+Example:
+
+\`\`\`bash
+npm audit
+docker build --pull -t my-backend:1.1 ./backend
+trivy image my-backend:1.1
+\`\`\`
+
+Review \`npm audit\` results before applying dependency updates. The \`--pull\` flag refreshes the base image during the build; it does not automatically upgrade every npm package.
+
+### 7. Typical CI/CD workflow
+
+\`\`\`text
+Source code
+    |
+    v
+Build Docker image
+    |
+    v
+Scan image (Trivy / Docker Scout)
+    |
+    v
+Review severity and policy
+    |
+    +---- Critical policy failure ---> Stop deployment and fix
+    |
+    v
+Pass policy
+    |
+    v
+Deploy image
+\`\`\`
+
+### 8. Quick Summary
+
+| Step | Action |
+|---|---|
+| 1 | Build the Docker image |
+| 2 | Run Trivy or Docker Scout |
+| 3 | Review CVEs, severity, and available fixes |
+| 4 | Patch the base image or dependencies |
+| 5 | Rebuild and rescan |
+| 6 | Integrate scanning into CI/CD |
+
+### Interview-ready answer
+
+"I scan Docker images using tools such as Trivy or Docker Scout. After building the image, I run a scan to identify known vulnerabilities in OS packages and application dependencies, review severity and available fixes, update vulnerable components, rebuild, and rescan. In CI/CD, I can define a policy that fails the build for selected high-risk findings. Scanning detects known issues, but it does not guarantee that the image is completely secure."
+
+---
