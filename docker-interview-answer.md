@@ -13526,3 +13526,139 @@ A non-root user inside a container does not make an unrestricted Docker socket m
 "Exposing the Docker socket is risky because it can give a container powerful control over the Docker daemon. If an attacker compromises that container, they may create privileged containers or mount host directories and potentially access the host system. I avoid mounting the Docker socket into application containers, restrict daemon access, and use a narrowly scoped alternative when Docker API access is genuinely required."
 
 ---
+## Q145. How do you reduce Docker image size?
+
+### 1. English Interview Definition
+
+Docker image size can be reduced by using lightweight base images, multi-stage builds, installing only production dependencies, excluding unnecessary files with \`.dockerignore\`, and removing build tools and temporary files that are not required at runtime. Smaller images generally improve build times, image transfer speed, and deployment efficiency.
+
+### 2. Hindi Definition
+
+Docker image ka size kam karne ke liye lightweight base images use karte hain, unnecessary files ko exclude karte hain, sirf production dependencies install karte hain, aur multi-stage builds ka use karte hain.
+
+### 3. Hinglish Explanation
+
+Maan lo aapki Node.js backend application ki Docker image \`1.2 GB\` ki hai. Isko server par push ya pull karne mein zyada time lag sakta hai aur storage bhi zyada use hoti hai.
+
+Hum image size reduce karne ke liye:
+
+- Lightweight base image use karte hain.
+- Development dependencies ko production image se remove rakhte hain.
+- \`.dockerignore\` se unnecessary files exclude karte hain.
+- Multi-stage builds se build tools ko final image mein include nahi karte.
+- Dockerfile ki layers aur copied files ko optimize karte hain.
+
+**Important:** Image chhoti banana hi goal nahi hai—application compatible, reliable aur secure bhi rehni chahiye.
+
+### 4. Use a lightweight base image
+
+Choose a supported image appropriate for the application, such as a slim or Alpine variant where compatible.
+
+\`\`\`dockerfile
+FROM node:22-alpine
+WORKDIR /app
+\`\`\`
+
+A smaller image can reduce download size, but Alpine uses musl libc rather than glibc and can cause compatibility issues with some native Node.js modules. Test the application before choosing it.
+
+### 5. Use multi-stage builds
+
+Multi-stage builds keep build tools and intermediate artifacts out of the final runtime image.
+
+Example for a React app built with Vite:
+
+\`\`\`dockerfile
+# Stage 1: Build the frontend
+FROM node:22-alpine AS build
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+# Stage 2: Serve only the build output
+FROM nginx:alpine
+COPY --from=build /app/dist /usr/share/nginx/html
+EXPOSE 80
+\`\`\`
+
+The final image contains Nginx and the compiled frontend files, not Node.js development dependencies or the frontend build toolchain. For Create React App, the build output directory is typically \`build\` instead of \`dist\`.
+
+### 6. Install only production dependencies
+
+For a Node.js backend, install only the dependencies needed at runtime:
+
+\`\`\`dockerfile
+FROM node:22-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --omit=dev
+COPY . .
+USER node
+CMD ["node", "server.js"]
+\`\`\`
+
+This assumes the app's runtime dependencies are correctly declared in \`dependencies\`, and that any required build step has already been handled. If your application needs TypeScript compilation or native modules, use an appropriate build stage and copy only the required runtime output.
+
+### 7. Add a \`.dockerignore\` file
+
+Exclude local dependencies, Git history, environment files, logs, and other unnecessary files from the Docker build context.
+
+Example \`.dockerignore\`:
+
+\`\`\`text
+node_modules
+.git
+.env
+coverage
+npm-debug.log
+dist
+\`\`\`
+
+Only exclude \`dist\` if the image build generates it inside Docker; do not exclude required prebuilt artifacts when your workflow depends on copying them into the image. Keep secrets out of the build context and never rely on \`.dockerignore\` as the only secret protection.
+
+### 8. Optimize COPY and build layers
+
+Copy dependency manifests before copying frequently changing source files. Docker can then reuse the dependency-installation layer when the manifest files have not changed.
+
+\`\`\`dockerfile
+COPY package*.json ./
+RUN npm ci --omit=dev
+COPY . .
+\`\`\`
+
+This primarily improves build-cache reuse rather than directly shrinking every image. Avoid copying unnecessary files and avoid installing packages that the runtime does not need.
+
+### 9. Remove unnecessary packages and artifacts
+
+Do not install compilers, test tools, package caches, or debugging utilities in the final runtime image unless they are required. Prefer multi-stage builds over installing and removing large toolchains in the same stage, because deleted files can still remain in earlier image layers.
+
+### 10. Measure the result
+
+Build the image and inspect its size:
+
+\`\`\`bash
+docker build -t my-backend:1.0 .
+docker image ls my-backend
+docker history my-backend:1.0
+\`\`\`
+
+Use \`docker history\` to inspect the image's layers and identify commands that contribute to its size. Compare images before and after optimization rather than assuming a technique always makes the image smaller.
+
+### 11. Quick Summary
+
+| Technique | Benefit |
+|---|---|
+| Lightweight base image | Reduces baseline image size |
+| Multi-stage build | Keeps build tools out of the runtime image |
+| \`npm ci --omit=dev\` | Excludes development-only npm dependencies |
+| \`.dockerignore\` | Prevents unnecessary files entering the build context |
+| Optimized \`COPY\` order | Improves build-cache reuse |
+| Remove unnecessary packages | Reduces image contents and attack surface |
+| \`docker image ls\` and \`docker history\` | Helps measure and investigate image size |
+
+### Interview-ready answer
+
+"I reduce Docker image size by using an appropriate lightweight base image, multi-stage builds, and only production dependencies. I add a \`.dockerignore\` file to exclude files such as local \`node_modules\`, Git history, and environment files. I also avoid unnecessary runtime packages, optimize layer caching, and measure the result with \`docker image ls\` and \`docker history\`. I verify compatibility and security rather than choosing an image only because it is small."
+
+---
