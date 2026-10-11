@@ -217,3 +217,77 @@ docker logs my-node-container
 **Interview-ready summary:**
 
 > We use Docker to package applications with their dependencies, reduce environment inconsistencies, simplify deployment, isolate workloads, and make application delivery more repeatable across development, testing, and production.
+
+
+---
+
+## Q3. What is the difference between Docker and a Virtual Machine (VM)?
+
+### 1. English Definition
+Docker runs applications in lightweight containers that share the host OS kernel (on Linux). A virtual machine runs a separate guest operating system on virtual hardware managed by a hypervisor.
+
+### 2. Hindi Definition
+Docker application ko container mein chalata hai jo Linux host ka kernel share karta hai. Virtual Machine apna alag guest operating system virtual hardware par chalati hai.
+
+### 3. Hinglish Explanation
+Maan lo aapko Node.js application run karni hai. Docker container mein application aur uski dependencies hoti hain, lekin har container ko complete OS boot nahi karna padta. VM mein guest OS bhi hota hai, jaise Ubuntu ya Windows. Isliye containers aam taur par lightweight aur jaldi start hote hain; VMs separate OS environments ke liye useful hoti hain.
+
+Note: Docker Desktop on Windows/macOS may use a Linux VM behind the scenes to run Linux containers.
+
+### 4. Practical Example / Code
+Run Node.js in a temporary container:
+
+```bash
+docker run --rm node:20 node --version
+```
+
+A VM example is an Ubuntu virtual machine created using Hyper-V, VMware, or VirtualBox, with Node.js installed inside its guest OS.
+
+### 5. Architecture Diagram
+
+```text
+Docker:
++---------------------------+
+| App A       | App B       |
+| Container   | Container   |
++---------------------------+
+| Docker Engine / Runtime   |
+| Host OS Kernel            |
++---------------------------+
+| Host Machine              |
++---------------------------+
+
+Virtual Machines:
++---------------------------+
+| App A       | App B       |
+| Libraries   | Libraries   |
+| Guest OS    | Guest OS    |
++---------------------------+
+| Hypervisor                 |
++---------------------------+
+| Host Machine              |
++---------------------------+
+```
+
+### 6. Practical Command / Configuration
+
+```bash
+docker run --rm node:20 node --version
+```
+
+For a VM, allocate virtual CPU, memory, storage, and a guest OS image in a hypervisor before installing and running the application.
+
+### 7. Summary Table
+
+| Feature | Docker Container | Virtual Machine |
+|---|---|---|
+| OS | Shares host kernel on Linux | Has its own guest OS |
+| Startup | Usually faster | Usually slower due to OS boot |
+| Resource usage | Usually lower | Usually higher |
+| Size | Typically smaller | Typically larger |
+| Isolation | Container-level isolation | Separate guest OS; different isolation boundary |
+| Best suited for | Packaging and deploying apps | Separate OS environments |
+
+**Interview-ready summary:**
+
+> Docker containers share the host OS kernel and are generally lightweight and fast to start. Virtual machines run separate guest operating systems on a hypervisor, typically using more resources while offering greater guest-OS flexibility.
