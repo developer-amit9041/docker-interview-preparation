@@ -3257,3 +3257,93 @@ docker build -t mern-backend:1.0 .
 | `docker run` | Creates and starts a container from the image |
 
 **Interview-ready answer:** We use `docker build -t IMAGE_NAME:TAG .` to build a Docker image from a Dockerfile and the specified build context. For example, `docker build -t mern-backend:1.0 .` creates an image named `mern-backend` with tag `1.0`, which can then be used to run a container.
+
+
+---
+
+## Q33. What is the difference between `docker exec` and `docker attach`?
+
+### 1. English Definition
+
+`docker exec` runs a new command inside an already-running container, while `docker attach` connects your terminal to the container's existing main process (its standard input, output, and error streams).
+
+### 2. Hindi Definition
+
+`docker exec` running container ke andar ek naya command ya shell chalata hai. `docker attach` container ke already-running main process ke input/output se terminal ko connect karta hai.
+
+### 3. Hinglish Explanation
+
+Amit bhai, main difference yeh hai:
+
+- **`docker exec`**: Container ke andar ek separate command run karna, jaise shell open karke files check karna.
+- **`docker attach`**: Container ke main process ka existing output dekhna aur, agar input enabled ho, uske saath interact karna.
+
+Example: Nginx container ke andar shell chahiye toh `docker exec -it my-nginx sh` use karo. Agar container ka main process output dekhna hai, toh `docker attach my-nginx` use kar sakte ho.
+
+**Important:** Attached terminal mein `Ctrl+C` press karna container ke main process ko interrupt kar sakta hai, aur isse container stop ho sakta hai. Sirf detach karna ho toh default key sequence `Ctrl+P`, phir `Ctrl+Q` hai, provided detach keys override nahi ki gayi hain.
+
+### 4. Practical Example / Code
+
+Start an Nginx container:
+
+```bash
+docker run -d --name my-nginx nginx
+```
+
+Run a separate command inside the running container:
+
+```bash
+docker exec my-nginx nginx -v
+```
+
+Open an interactive shell, if `sh` is available:
+
+```bash
+docker exec -it my-nginx sh
+```
+
+Attach to the container's main process streams:
+
+```bash
+docker attach my-nginx
+```
+
+For a background Nginx container, attaching may not provide an interactive shell; it connects to the main process streams. To detach without stopping the container, use `Ctrl+P` followed by `Ctrl+Q` by default.
+
+### 5. Architecture Diagram
+
+```text
+                 Running container
+                 /              \\
+                /                \\
+       docker exec              docker attach
+            |                        |
+            v                        v
+  Start a separate command    Connect to existing
+  (e.g. shell or diagnostic)   main process streams
+            |                        |
+            v                        v
+   Separate command output      Main process output
+```
+
+### 6. Practical Commands / Configuration
+
+| Command | Purpose |
+|---|---|
+| `docker exec -it my-nginx sh` | Starts a separate interactive shell inside the container |
+| `docker exec my-nginx nginx -v` | Runs a one-off command inside the container |
+| `docker attach my-nginx` | Connects terminal to the main process streams |
+| `docker logs -f my-nginx` | Follows logs without attaching terminal input to the main process |
+| `Ctrl+P`, then `Ctrl+Q` | Detaches from an attached container by default without stopping it |
+
+### 7. Summary Table
+
+| Feature | `docker exec` | `docker attach` |
+|---|---|---|
+| Main purpose | Runs a new command | Connects to the existing main process |
+| Starts a separate command? | Yes | No |
+| Common use | Shell, debugging, diagnostic commands | Interacting with or viewing the main process streams |
+| Requires a running container? | Yes | Container must be running |
+| Safe way to leave session | Exit the shell/command | Default detach sequence: `Ctrl+P`, then `Ctrl+Q` |
+
+**Interview-ready answer:** `docker exec` runs a new command inside a running container, such as opening a shell for debugging. `docker attach` connects to the container's existing main process streams. Use `docker exec` when you need a separate shell or command without attaching to the main process.
