@@ -728,3 +728,114 @@ Note: The last command applies to many Linux installations. Docker Desktop on Wi
 **Interview-ready summary:**
 
 > Docker Engine is the core technology used to build and run containers. It includes the Docker daemon, REST API, and CLI, which work together to manage containerized applications.
+
+
+---
+
+## Q8. What is Docker architecture?
+
+### 1. English Definition
+
+Docker architecture is a client-server architecture in which the Docker CLI communicates with the Docker daemon through a REST API. The daemon manages Docker objects such as images, containers, networks, and volumes.
+
+### 2. Hindi Definition
+
+Docker architecture ek client-server model par based hoti hai. Docker CLI commands bhejta hai, REST API ke through request Docker daemon tak pahunchti hai, aur daemon images, containers, networks aur volumes ko manage karta hai.
+
+### 3. Hinglish Explanation
+
+Docker architecture ko request ke flow se samjho:
+
+1. Aap terminal mein command likhte ho, jaise `docker run nginx`.
+2. Docker CLI command ko Docker Engine API ke through daemon tak bhejta hai.
+3. Docker daemon required image local machine par check karta hai. Image na mile toh registry se pull kar sakta hai.
+4. Daemon container create aur start karta hai.
+5. Container application ko run karta hai.
+
+**Main components:**
+- **Docker Client (CLI):** User commands accept karta hai.
+- **Docker Daemon (`dockerd`):** Docker objects aur container lifecycle manage karta hai.
+- **Docker Registry:** Docker images store aur distribute karti hai, jaise Docker Hub.
+- **Docker Objects:** Images, containers, networks aur volumes.
+
+### 4. Practical Example / Code
+
+Run an Nginx container:
+
+```bash
+docker run -d --name my-nginx -p 8080:80 nginx
+```
+
+Docker image ko local cache mein check karega; agar zaroorat ho toh registry se pull karega, phir container start karega. Browser mein `http://localhost:8080` open karke Nginx page check kar sakte ho.
+
+Check the running container:
+
+```bash
+docker ps
+```
+
+### 5. Architecture Diagram
+
+```text
+              User / Terminal
+                     |
+                     v
+              Docker CLI
+                     |
+              REST API request
+                     |
+                     v
+             Docker Daemon
+                (dockerd)
+          _________|___________
+         |         |           |
+         v         v           v
+      Images   Containers   Networks/Volumes
+         |
+         | image pull / push
+         v
+    Docker Registry
+      (e.g. Docker Hub)
+```
+
+### 6. Practical Command / Configuration
+
+**Run a container:**
+
+```bash
+docker run -d --name my-nginx -p 8080:80 nginx
+```
+
+**List containers:**
+
+```bash
+docker ps
+```
+
+**List local images:**
+
+```bash
+docker images
+```
+
+**Inspect Docker Engine details:**
+
+```bash
+docker info
+```
+
+### 7. Summary Table
+
+| Component | Responsibility |
+|---|---|
+| Docker Client / CLI | User commands bhejta hai |
+| REST API | Client aur daemon ke beech communication |
+| Docker Daemon | Docker objects aur container lifecycle manage karta hai |
+| Docker Registry | Images store aur distribute karti hai |
+| Docker Image | Container create karne ka template |
+| Docker Container | Application run karne wala isolated environment |
+| Networks / Volumes | Container communication aur persistent data support karte hain |
+
+**Interview-ready summary:**
+
+> Docker uses a client-server architecture. The Docker CLI sends requests through the Docker Engine API to the Docker daemon, which manages images, containers, networks, and volumes and can communicate with registries to pull or push images.
