@@ -16159,3 +16159,74 @@ Same conditions ke under before/after image sizes compare karein, aur final imag
 “If a Docker image is too large, I first inspect its layers with \`docker history\`. Then I use a suitable lightweight base image, multi-stage builds, a \`.dockerignore\` file, and production-only dependencies. I copy only the required runtime files, rebuild the image, compare sizes, and test and scan the final image to ensure it remains functional and secure.”
 
 ---
+## Q176. MongoDB data disappears after a container restarts. How would you fix the issue?
+
+### 1. English Interview Definition
+MongoDB data may disappear if it is stored only in a container's writable layer or if the container is recreated without persistent storage. I would configure a Docker volume or bind mount for MongoDB's data directory, \`/data/db\`, and verify that the database container uses the expected mount.
+
+### 2. Hindi Definition
+Agar MongoDB ka data container ke andar hi store ho raha hai aur persistent volume nahi hai, toh container remove ya recreate karne par data lose ho sakta hai. Isko fix karne ke liye MongoDB ke \`/data/db\` path par Docker volume ya bind mount configure karte hain.
+
+### 3. Hinglish Explanation
+Maan lo aap MongoDB container mein users aur products save kar rahe ho. Container restart/recreate karne ke baad data nahi mil raha. Pehle check karo ki MongoDB data persistent volume mein save ho raha hai ya sirf container ke writable layer mein.
+
+**Important:** Sirf normal stop/start se container ka writable layer usually delete nahi hota. Data loss commonly tab hota hai jab container recreate/remove kiya jata hai, ya storage mount change/missing hota hai.
+
+### 4. Fix Using a Named Volume
+
+**Run MongoDB with a named volume:**
+\`\`\`bash
+docker volume create mongo_data
+
+docker run -d \
+  --name mongodb \
+  -v mongo_data:/data/db \
+  -p 27017:27017 \
+  mongo:7
+\`\`\`
+
+The named volume \`mongo_data\` stores MongoDB data separately from the container's writable layer. Removing and recreating the container while reusing this volume allows MongoDB to use the persisted files.
+
+**Check the volume and mount:**
+\`\`\`bash
+docker volume ls
+docker inspect mongodb --format '{{json .Mounts}}'
+\`\`\`
+
+### 5. Fix Using Docker Compose
+
+\`\`\`yaml
+services:
+  mongodb:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - mongo_data:/data/db
+    ports:
+      - "27017:27017"
+
+volumes:
+  mongo_data:
+\`\`\`
+
+Start the service:
+\`\`\`bash
+docker compose up -d
+docker compose ps
+docker compose logs mongodb
+\`\`\`
+
+Compose creates and reuses the named volume \`mongo_data\` for the service. Avoid running \`docker compose down -v\` if you intend to keep that Compose-managed volume, because \`-v\` removes declared named volumes.
+
+### 6. If the Data Is Still Missing, Check These Things
+1. **Confirm the mount:** Run \`docker inspect mongodb\` and verify that the volume is mounted at \`/data/db\`.
+2. **Confirm the same volume is reused:** A newly created, differently named volume starts empty.
+3. **Check logs:** Run \`docker logs mongodb\` to look for startup, permission, or storage errors.
+4. **Check the connection target:** Ensure the application is connecting to the intended MongoDB instance/database, not another container or environment.
+5. **Check destructive commands:** Avoid deleting volumes or running \`docker compose down -v\` when the data must be retained.
+6. **Back up important data:** Use database-aware backups such as \`mongodump\` where appropriate, and test restoration. A volume alone is not a backup.
+
+### 7. Interview-Ready Answer
+“If MongoDB data disappears after a container is recreated, I check whether the database directory is persisted. I mount a named Docker volume at \`/data/db\`, verify it with \`docker inspect\`, and ensure the same volume is reused after recreation. I also check MongoDB logs and the application connection string, avoid deleting volumes, and maintain separate backups for important data.”
+
+---
