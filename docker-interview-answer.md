@@ -6101,3 +6101,65 @@ docker history my-node-app:1.0
 ### Interview-ready answer
 
 “I inspect a Docker image using `docker image inspect image-name:tag` to view its metadata and configuration. I use `docker image ls` to check its size and tags, and `docker history` to understand its layer history.”
+
+
+---
+
+## Q68. What are dangling images?
+
+### 1. English Definition
+
+Dangling images are Docker images that have no tag and are not referenced by a tagged image. They often appear after rebuilding an image when the previous image loses its tag, though an untagged image is not automatically safe to delete.
+
+### 2. Hindi Definition
+
+Dangling image woh Docker image hoti hai jiske paas koi repository tag nahi hota. Ye aksar tab banti hai jab aap same image ko dobara build karte ho aur purani image ka tag naye image ko assign ho jata hai.
+
+### 3. Hinglish Explanation
+
+Maan lo aapne `my-app:latest` image build ki. Baad mein aapne usi tag ke saath image dobara build ki. Purani image ka tag hat sakta hai aur woh dangling image ke roop mein dikh sakti hai.
+
+Aisi images disk space use kar sakti hain. Lekin delete karne se pehle check karna chahiye ki image ki zaroorat toh nahi hai.
+
+### 4. Practical Commands
+
+**List dangling images only:**
+
+```bash
+docker images --filter dangling=true
+```
+
+Equivalent modern command:
+
+```bash
+docker image ls --filter dangling=true
+```
+
+**Remove dangling images:**
+
+```bash
+docker image prune
+```
+
+Docker confirmation maang sakta hai. `docker image prune -f` confirmation prompt ko skip karta hai, isliye use tabhi karein jab aap cleanup samajh kar kar rahe hon.
+
+**Remove all unused images, not just dangling ones:**
+
+```bash
+docker image prune -a
+```
+
+Caution: `-a` broader cleanup karta hai aur aisi images bhi remove kar sakta hai jo kisi existing container se associated nahi hain, even if they have tags. Zaroorat wali images ko baad mein dobara pull/build karna pad sakta hai.
+
+### 5. Example Output
+
+```text
+REPOSITORY   TAG       IMAGE ID       SIZE
+<none>       <none>    8ab12cd34ef5   120MB
+```
+
+`<none>:<none>` commonly indicates an untagged image; use the dangling filter to confirm whether Docker classifies it as dangling.
+
+### Interview-ready answer
+
+“Dangling images are untagged Docker images that are not referenced by a tagged image. They can remain after image rebuilds and consume disk space. I can list them using `docker image ls --filter dangling=true` and remove dangling images with `docker image prune`, after checking that they are no longer needed.”
