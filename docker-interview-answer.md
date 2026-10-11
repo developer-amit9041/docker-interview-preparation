@@ -4691,3 +4691,84 @@ docker image inspect mern-backend:1.0 --format '{{.Config.User}}'
 ### Interview-ready answer
 
 “The `USER` instruction specifies the user and optionally the group used for subsequent Dockerfile instructions and the container's default runtime process. Running an application as a non-root user follows the principle of least privilege and can improve container security.”
+
+
+---
+
+## Q50. What does the `VOLUME` instruction do?
+
+### 1. English Definition
+
+The `VOLUME` instruction declares a mount point intended for persistent or externally managed data in a container. Docker can create an anonymous volume for that path when a container is created without an explicit mount.
+
+### 2. Hindi Definition
+
+`VOLUME` Docker image mein ek directory declare karta hai jahan data ko container ke writable layer se alag volume ke through store kiya ja sakta hai.
+
+### 3. Hinglish Explanation
+
+Amit bhai, maan lo aapka container application ka uploaded data ya logs store karta hai. Agar data sirf container ke writable layer mein ho, toh container remove karne par woh data container ke saath delete ho sakta hai.
+
+`VOLUME` se aap ek path declare kar sakte ho jise volume mount point ke roop mein use kiya ja sake. Lekin important baat: `VOLUME` instruction akela aapke data ke liye koi named volume create ya configure nahi karta. Runtime par explicit volume mount dena zyada clear aur manageable hota hai.
+
+### 4. Practical Example
+
+Dockerfile:
+
+```dockerfile
+FROM node:22-alpine
+WORKDIR /app
+VOLUME ["/app/uploads"]
+CMD ["node", "server.js"]
+```
+
+Build image:
+
+```bash
+docker build -t mern-backend:1.0 .
+```
+
+**Recommended: explicitly create and mount a named volume**
+
+```bash
+docker volume create backend-uploads
+docker run -d --name mern-backend \
+  -v backend-uploads:/app/uploads \
+  -p 5000:5000 mern-backend:1.0
+```
+
+The named volume `backend-uploads` stores the data separately from the container's writable layer. Removing the container does not automatically remove this named volume.
+
+You can inspect it:
+
+```bash
+docker volume ls
+docker volume inspect backend-uploads
+```
+
+### 5. How It Works
+
+```text
+Application writes uploaded files
+             |
+             v
+       /app/uploads
+             |
+             v
+       Named Docker Volume
+             |
+             v
+Data can remain after container removal
+```
+
+### 6. Important Points
+
+- `VOLUME` declares a mount point in the image.
+- It does not itself specify a named volume or host directory.
+- Use `-v volume-name:/container/path` or `--mount` to explicitly attach a volume.
+- A volume has a lifecycle separate from a container; remove it explicitly when the data is no longer needed.
+- For important production data, plan backups and choose an appropriate storage solution.
+
+### Interview-ready answer
+
+“The `VOLUME` instruction declares a mount point for data that should be stored outside the container's writable layer. Docker can create an anonymous volume for the declared path if no explicit mount is provided. In practice, I prefer explicitly mounting a named volume with `-v volume-name:/path` so the data lifecycle is easier to manage.”
