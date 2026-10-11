@@ -4245,3 +4245,83 @@ Docker automatically extracts supported local tar archives into the destination 
 ### Interview-ready answer
 
 “Both `COPY` and `ADD` copy files into a Docker image. `ADD` has extra features, such as automatically extracting supported local tar archives and handling remote URL sources in supported cases. I generally use `COPY` for ordinary file copying because its behavior is simpler and more predictable.”
+
+
+---
+
+## Q44. What does the `WORKDIR` instruction do?
+
+### 1. English Definition
+
+The `WORKDIR` instruction sets the working directory for subsequent Dockerfile instructions such as `RUN`, `COPY`, `ADD`, and `CMD`. If the directory does not exist, Docker creates it.
+
+### 2. Hindi Definition
+
+`WORKDIR` container image ke andar working directory set karta hai. Iske baad aane wali instructions, jaise `COPY` aur `RUN`, generally isi directory ke relative kaam karti hain.
+
+### 3. Hinglish Explanation
+
+Amit bhai, maan lo aap chahte ho ki aapka Node.js backend container ke andar `/app` folder mein rahe. Aap likhoge:
+
+```dockerfile
+WORKDIR /app
+```
+
+Ab iske baad:
+
+```dockerfile
+COPY package*.json ./
+RUN npm ci
+COPY . .
+```
+
+Ye commands `/app` working directory ko use karengi. `WORKDIR` na lagane par relative paths kisi doosri current directory ke according resolve ho sakte hain, isliye explicit directory set karna zyada clear hai.
+
+### 4. Practical Example: MERN Backend
+
+```dockerfile
+FROM node:22-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci
+
+COPY . .
+
+CMD ["node", "server.js"]
+```
+
+Build and run:
+
+```bash
+docker build -t mern-backend:1.0 .
+docker run --rm mern-backend:1.0
+```
+
+Assumption: the project includes a valid `package-lock.json` and `server.js`.
+
+### 5. How WORKDIR Works
+
+```text
+WORKDIR /app
+     |
+     v
+Current working directory = /app
+     |
+     +--> COPY package*.json ./
+     +--> RUN npm ci
+     +--> COPY . .
+     +--> CMD ["node", "server.js"]
+```
+
+### 6. Important Points
+
+- If the specified directory does not exist, Docker creates it.
+- Relative paths in later instructions are resolved from the current working directory.
+- Multiple `WORKDIR` instructions can be used; relative paths are resolved relative to the previous working directory.
+- `WORKDIR` does not copy your local project into the image; use `COPY` or `ADD` for that.
+
+### Interview-ready answer
+
+“The `WORKDIR` instruction sets the working directory for subsequent Dockerfile instructions, including `RUN`, `COPY`, and `CMD`. Docker creates the directory if it does not exist. For example, `WORKDIR /app` makes `/app` the working directory for subsequent instructions.”
