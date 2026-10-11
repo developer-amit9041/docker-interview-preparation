@@ -3742,3 +3742,120 @@ Dockerfile stored in Git
 ### Interview-ready answer
 
 “We use a Dockerfile to automate and standardize Docker image creation. It documents the application's base image, dependencies, files, and startup command, making builds easier to repeat across development, testing, and production. It also integrates well with version control and CI/CD pipelines.”
+
+
+---
+
+## Q38. What is the basic structure of a Dockerfile?
+
+### 1. English Definition
+
+A Dockerfile is made up of a sequence of instructions, usually written one per line. These instructions specify the base image, working directory, files to copy, build-time commands, metadata, and the default command to run when a container starts.
+
+### 2. Hindi Definition
+
+Dockerfile mein instructions line-by-line likhe hote hain. Har instruction image banane ya container start hone ke process ka ek specific part define karta hai.
+
+### 3. Hinglish Explanation
+
+Amit bhai, ek basic Dockerfile mein commonly ye steps hote hain:
+
+1. `FROM` — base image choose karo.
+2. `WORKDIR` — container ke andar working folder set karo.
+3. `COPY` — required files copy karo.
+4. `RUN` — image build hote waqt dependencies install karo.
+5. `EXPOSE` — application ka intended port document karo.
+6. `CMD` — container start hone par default command set karo.
+
+Har Dockerfile mein ye saare instructions hona compulsory nahi hai. Instructions application ki requirement ke hisaab se choose kiye jaate hain.
+
+### 4. Practical Example: Node.js / MERN Backend
+
+Project structure:
+
+```text
+mern-backend/
+├── Dockerfile
+├── .dockerignore
+├── package.json
+├── package-lock.json
+└── server.js
+```
+
+**Basic Dockerfile:**
+
+```dockerfile
+# 1. Choose a base image
+FROM node:22-alpine
+
+# 2. Set the working directory
+WORKDIR /app
+
+# 3. Copy dependency manifests
+COPY package*.json ./
+
+# 4. Install dependencies during build
+RUN npm ci
+
+# 5. Copy application source code
+COPY . .
+
+# 6. Document the app's port
+EXPOSE 5000
+
+# 7. Set the default startup command
+CMD ["node", "server.js"]
+```
+
+Build and run:
+
+```bash
+docker build -t mern-backend:1.0 .
+docker run -d --name mern-backend-container -p 5000:5000 mern-backend:1.0
+```
+
+This example assumes a committed `package-lock.json` and a `server.js` that listens on port 5000.
+
+### 5. How Docker Processes the Structure
+
+```text
+Dockerfile
+   |
+   v
+FROM       -> Select base image
+   |
+WORKDIR    -> Set working directory
+   |
+COPY       -> Add dependency files
+   |
+RUN        -> Install dependencies
+   |
+COPY       -> Add application source
+   |
+EXPOSE     -> Document intended port
+   |
+CMD        -> Default command at container start
+```
+
+Build instructions such as `RUN` execute while building the image. `CMD` defines the default command for container startup. `EXPOSE` documents a port but does not publish it to the host; use `-p` with `docker run` to publish a port.
+
+### 6. Common Instructions
+
+| Instruction | Purpose |
+|---|---|
+| `FROM` | Selects the base image |
+| `WORKDIR` | Sets the working directory |
+| `COPY` | Copies files into the image |
+| `ADD` | Copies files and supports additional source handling, such as local tar extraction |
+| `RUN` | Executes commands during image build |
+| `ENV` | Sets environment variables in the image |
+| `ARG` | Defines build-time variables |
+| `EXPOSE` | Documents the container port |
+| `CMD` | Sets the default command/arguments |
+| `ENTRYPOINT` | Configures the main executable |
+| `USER` | Sets the user for subsequent build steps and runtime by default |
+| `WORKDIR` | Sets the current directory for later instructions |
+
+### 7. Interview-ready answer
+
+“A Dockerfile consists of line-by-line instructions that define how to build a Docker image. A basic Node.js Dockerfile commonly uses `FROM`, `WORKDIR`, `COPY`, `RUN`, `EXPOSE`, and `CMD`. Docker executes build instructions to create the image, while `CMD` specifies the default command when a container starts.”
