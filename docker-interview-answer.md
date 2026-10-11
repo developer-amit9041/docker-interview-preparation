@@ -3032,3 +3032,112 @@ User runs: docker pull nginx
 | `docker run nginx` | Creates and starts a container |
 
 **Interview-ready answer:** Use `docker pull IMAGE_NAME[:TAG]` to download an image from a container registry to your local machine. For example, `docker pull nginx` downloads the default Nginx tag. Pulling an image does not itself create or start a container.
+
+
+---
+
+## Q31. How do you push a Docker image?
+
+### 1. English Definition
+
+The `docker push` command uploads a tagged Docker image from your local machine to a container registry such as Docker Hub. You generally need permission to push to the destination repository.
+
+### 2. Hindi Definition
+
+Local machine par bani Docker image ko Docker Hub ya kisi doosri container registry mein upload karne ke liye `docker push` command use karte hain.
+
+### 3. Hinglish Explanation
+
+Amit bhai, maan lo aapne apne Node.js backend ki image `mern-backend:1.0` banayi. Ab aap chahte ho ki team ya AWS server us image ko download kar sake. Pehle registry mein login karo, image ko apne repository name se tag karo, phir push karo.
+
+- `docker login` → registry mein authenticate karta hai.
+- `docker tag` → existing image ko registry-compatible repository name aur tag deta hai.
+- `docker push` → image ke required layers aur manifest registry mein upload karta hai.
+
+**Important:** `docker push` image upload karta hai, container ko run ya deploy nahi karta. Credentials aur registry repository permissions sahi hone chahiye.
+
+### 4. Practical Example / Code
+
+Suppose your Docker Hub username is `mydockeruser` and you have built a local image named `mern-backend:1.0`.
+
+Build the image (run in the folder containing your Dockerfile):
+
+```bash
+docker build -t mern-backend:1.0 .
+```
+
+Log in:
+
+```bash
+docker login
+```
+
+Tag the image for your Docker Hub repository:
+
+```bash
+docker tag mern-backend:1.0 mydockeruser/mern-backend:1.0
+```
+
+Push the tagged image:
+
+```bash
+docker push mydockeruser/mern-backend:1.0
+```
+
+On another machine, download it:
+
+```bash
+docker pull mydockeruser/mern-backend:1.0
+```
+
+Replace `mydockeruser` with your actual Docker Hub username and ensure you can push to that repository.
+
+### 5. Architecture Diagram
+
+```text
+Dockerfile + application
+          |
+          v
+ docker build -t mern-backend:1.0 .
+          |
+          v
+    Local Docker image
+          |
+          v
+docker tag ... mydockeruser/mern-backend:1.0
+          |
+          v
+       docker login
+          |
+          v
+docker push mydockeruser/mern-backend:1.0
+          |
+          v
+ Docker Hub / container registry
+          |
+          v
+Other machine: docker pull ...
+```
+
+### 6. Practical Commands / Configuration
+
+| Command | Purpose |
+|---|---|
+| `docker build -t mern-backend:1.0 .` | Builds a local image |
+| `docker login` | Authenticates to the registry |
+| `docker tag mern-backend:1.0 mydockeruser/mern-backend:1.0` | Tags the image for the target repository |
+| `docker push mydockeruser/mern-backend:1.0` | Pushes the image to Docker Hub |
+| `docker images` | Lists locally available images |
+| `docker pull mydockeruser/mern-backend:1.0` | Downloads the pushed image |
+
+### 7. Summary Table
+
+| Command | Action |
+|---|---|
+| `docker build` | Creates an image locally |
+| `docker login` | Signs in to a registry |
+| `docker tag` | Assigns a repository name and tag |
+| `docker push` | Uploads an image to a registry |
+| `docker pull` | Downloads an image from a registry |
+
+**Interview-ready answer:** To push a Docker image, first authenticate with `docker login`, tag the local image for the target registry using `docker tag`, and upload it with `docker push REPOSITORY:TAG`. For example, `docker push mydockeruser/mern-backend:1.0` uploads that tagged image to Docker Hub if you have permission.
