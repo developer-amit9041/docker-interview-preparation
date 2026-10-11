@@ -15841,3 +15841,74 @@ This example assumes the MongoDB image includes \`mongosh\` and that the applica
 “I would first check the container status and logs, then verify the MongoDB URI, hostname, port, credentials, and shared Docker network. In Docker Compose, the backend should usually connect to MongoDB using its service name, such as \`mongodb\`, rather than \`localhost\`. I would test DNS and TCP connectivity from the backend container, confirm MongoDB is ready, and check firewall or Atlas allowlist rules for external databases.”
 
 ---
+## Q172. A Docker container exits immediately after starting. How would you find the cause?
+
+### 1. English Interview Definition
+If a Docker container exits immediately, I would inspect its exit code, logs, startup command, and configuration to identify why its main process terminated. Containers normally run only while their primary process is running, unless a restart policy or orchestrator starts it again.
+
+### 2. Hindi Definition
+Agar Docker container start hote hi exit ho raha hai, toh hum uska status, exit code, logs, Dockerfile ka \`CMD\`/\`ENTRYPOINT\`, environment variables aur application errors check karenge.
+
+### 3. Hinglish Explanation
+Maan lo aapka Node.js backend container start hota hai aur turant band ho jata hai. Common reasons ho sakte hain:
+- Application crash ho gayi, jaise missing environment variable ya MongoDB connection error.
+- \`CMD\` mein wrong file path ya command hai.
+- Required configuration ya dependency missing hai.
+- Main process finish ho gaya; Docker container background mein automatically alive nahi rehta.
+
+### 4. Step-by-Step Debugging
+
+**Step 1: Check container status and exit code**
+\`\`\`bash
+docker ps -a
+docker inspect <container_name> --format '{{.State.Status}} {{.State.ExitCode}} {{.State.Error}}'
+\`\`\`
+Exit code \`0\` often means the main process finished successfully; a non-zero code often indicates an error, but the code alone does not identify the root cause.
+
+**Step 2: Read the container logs**
+\`\`\`bash
+docker logs <container_name>
+docker logs --tail 100 <container_name>
+\`\`\`
+Look for stack traces, missing configuration, failed connections, permission errors, and invalid commands.
+
+**Step 3: Check the startup command**
+\`\`\`bash
+docker inspect <container_name> --format '{{json .Config.Entrypoint}} {{json .Config.Cmd}}'
+\`\`\`
+Verify the Dockerfile's \`CMD\` and \`ENTRYPOINT\`, the working directory, script path, and executable permissions. For a Node.js application, confirm the entry point exists and the start script is valid.
+
+**Step 4: Run the image interactively for diagnosis**
+\`\`\`bash
+docker run --rm -it --entrypoint sh <image_name>
+\`\`\`
+Inside the shell, inspect files and configuration, and manually run the application command. This overrides the image entrypoint for debugging; it may not reproduce the original runtime environment unless you pass the same environment variables, mounts, and network settings.
+
+**Step 5: Verify environment and dependencies**
+\`\`\`bash
+docker inspect <container_name> --format '{{json .Config.Env}}'
+\`\`\`
+Check required environment variables, database hostname/port, credentials, mounted files, and network configuration. Be careful not to expose secrets when inspecting or sharing output.
+
+**Step 6: Check resource and runtime issues**
+\`\`\`bash
+docker inspect <container_name> --format '{{.State.OOMKilled}}'
+docker events --since 10m
+\`\`\`
+If \`OOMKilled\` is \`true\`, the container was killed due to memory pressure. Docker events can provide additional lifecycle information.
+
+### 5. Quick Checklist
+- [ ] Check \`docker ps -a\` and the exit code.
+- [ ] Read \`docker logs\`.
+- [ ] Validate \`CMD\`, \`ENTRYPOINT\`, working directory, and file paths.
+- [ ] Verify environment variables and required mounted files.
+- [ ] Check dependency/network readiness, permissions, and memory termination.
+- [ ] Reproduce the command interactively, then rebuild and retest after fixing the root cause.
+
+### 6. Important Note About Restart Policies
+A restart policy such as \`--restart=always\` may restart a container after its process exits, but it does not fix the underlying bug. Diagnose the root cause first; repeated restarts can hide useful symptoms or create a restart loop.
+
+### 7. Interview-Ready Answer
+“I would start with \`docker ps -a\` and inspect the exit code, then use \`docker logs <container>\` to find the application error. Next, I would verify the Dockerfile's \`CMD\` and \`ENTRYPOINT\`, working directory, environment variables, mounted files, and dependency connectivity. I would also check whether the container was OOM-killed and run the image interactively if needed to isolate the issue.”
+
+---
