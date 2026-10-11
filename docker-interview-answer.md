@@ -9034,3 +9034,79 @@ The Compose `environment` section sets container environment variables directly;
 ### Interview-ready answer
 
 “In Docker Compose, `environment` is used to pass environment variables into a container at runtime. For example, I can pass `MONGO_URI` and `NODE_ENV` to a Node.js backend and read them using `process.env.MONGO_URI` and `process.env.NODE_ENV`. This keeps configuration separate from application code, but sensitive secrets should not be committed to source control.”
+
+
+---
+
+## Q109. What does `volumes` mean in Docker Compose?
+
+### 1. English Definition
+
+In Docker Compose, `volumes` configures storage mounts for services. Volumes can persist data beyond a container's lifecycle or share files between the host and a container.
+
+### 2. Hindi Definition
+
+Docker Compose mein `volumes` ka use container ke data ko persist karne ya host aur container ke beech files share karne ke liye hota hai.
+
+### 3. Hinglish Explanation
+
+Maan lo MongoDB container mein users ka data save ho raha hai. Agar data sirf container ki writable layer mein ho aur aap container remove kar do, toh woh data lost ho sakta hai. Named volume use karne se database data container se independently persist ho sakta hai.
+
+Volumes code ko local machine se container mein mount karne ke liye bhi use ho sakte hain, jise bind mount kehte hain.
+
+### 4. Practical Example: Persist MongoDB Data
+
+```yaml
+services:
+  mongodb:
+    image: mongo:8
+    volumes:
+      - mongo-data:/data/db
+
+volumes:
+  mongo-data:
+```
+
+- Service ke andar `mongo-data:/data/db` named volume ko MongoDB ke data directory se mount karta hai.
+- Top-level `volumes:` section declares the named volume.
+
+Start MongoDB:
+
+```bash
+docker compose up -d
+```
+
+Stop and remove the containers:
+
+```bash
+docker compose down
+```
+
+The named volume is retained by default, so recreating the service can reuse the stored database data. Avoid `docker compose down -v` if you need to retain Compose-managed named volumes.
+
+### 5. Bind Mount Example
+
+To mount a host directory into a container:
+
+```yaml
+services:
+  backend:
+    image: my-backend-image
+    volumes:
+      - ./backend:/app
+```
+
+Here, the host's `./backend` directory is mounted at `/app` inside the container. This is often useful for local development. The host path must exist or be handled as intended by your Compose configuration.
+
+### 6. Named Volume vs Bind Mount
+
+| Feature | Named volume | Bind mount |
+|---|---|---|
+| Source | Managed by Docker | Explicit host path |
+| Typical use | Database and persistent application data | Source code and host files |
+| Host path control | Docker manages the storage location | You choose the path |
+| Lifecycle | Separate from container lifecycle | Uses files in the host directory |
+
+### Interview-ready answer
+
+“In Docker Compose, `volumes` defines storage mounts for services. Named volumes are commonly used to persist data such as MongoDB files independently of a container, while bind mounts are useful for sharing host files or source code with a container. This helps prevent data loss when containers are recreated.”
