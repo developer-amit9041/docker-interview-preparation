@@ -2933,3 +2933,102 @@ Nginx application
 | `-P` | Publishes exposed ports to dynamically assigned host ports |
 
 **Interview-ready answer:** Use the `-p` or `--publish` option with `docker run` to map a host port to a container port, for example, `docker run -d -p 8080:80 nginx`. The Dockerfile instruction `EXPOSE 80` documents the intended container port but does not publish it on its own.
+
+
+---
+
+## Q30. How do you pull a Docker image?
+
+### 1. English Definition
+
+The `docker pull` command downloads a Docker image from a container registry, such as Docker Hub, to the local machine. You can specify an image tag to pull a particular version.
+
+### 2. Hindi Definition
+
+Docker registry, jaise Docker Hub, se image ko apne local system par download karne ke liye `docker pull` command use karte hain.
+
+### 3. Hinglish Explanation
+
+Amit bhai, maan lo aapko apne project ke liye Nginx ya Node.js ki image chahiye, lekin woh local machine par available nahi hai. Aap registry se image pull kar sakte ho.
+
+Example:
+
+```bash
+docker pull nginx
+```
+
+By default, agar tag specify nahi kiya gaya, toh Docker aam taur par `latest` tag use karta hai. Specific version chahiye toh tag mention karo, jaise `nginx:1.27` (agar woh tag registry mein available ho).
+
+**Important:** `docker pull` sirf image download karta hai; container create ya start nahi karta. Container run karne ke liye `docker run` use karo.
+
+### 4. Practical Example / Code
+
+Pull the default Nginx image:
+
+```bash
+docker pull nginx
+```
+
+Pull a specific tag:
+
+```bash
+docker pull nginx:1.27
+```
+
+Check locally available images:
+
+```bash
+docker images
+```
+
+Create and start a container from the downloaded image:
+
+```bash
+docker run -d --name my-nginx -p 8080:80 nginx
+```
+
+The exact tag availability may change; choose a tag that exists in the registry and is suitable for your project.
+
+### 5. Architecture Diagram
+
+```text
+User runs: docker pull nginx
+             |
+             v
+         Docker CLI
+             |
+             v
+        Docker daemon
+             |
+             v
+   Contact container registry
+          (e.g., Docker Hub)
+             |
+             v
+     Download image layers
+             |
+             v
+    Store image locally
+```
+
+### 6. Practical Commands / Configuration
+
+| Command | Purpose |
+|---|---|
+| `docker pull nginx` | Pulls the default Nginx image tag |
+| `docker pull nginx:1.27` | Pulls a specified Nginx tag, if available |
+| `docker pull node:22` | Pulls the Node.js image with tag 22 |
+| `docker images` | Lists local images after pulling |
+| `docker image inspect nginx` | Shows details about a local image |
+| `docker run nginx` | Creates and starts a container from an image |
+
+### 7. Summary Table
+
+| Command | Action |
+|---|---|
+| `docker pull nginx` | Downloads an image |
+| `docker pull nginx:1.27` | Downloads a specific tag |
+| `docker images` | Lists local images |
+| `docker run nginx` | Creates and starts a container |
+
+**Interview-ready answer:** Use `docker pull IMAGE_NAME[:TAG]` to download an image from a container registry to your local machine. For example, `docker pull nginx` downloads the default Nginx tag. Pulling an image does not itself create or start a container.
