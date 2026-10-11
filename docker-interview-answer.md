@@ -13864,3 +13864,97 @@ Open \`http://localhost:8080\` to test the application.
 "We use multi-stage builds to separate building an application from running it. For example, I build a React app using Node.js and then copy only the compiled static files into an Nginx image. This keeps build tools and development dependencies out of the final image, often reducing image size, improving transfer times, and reducing the production attack surface."
 
 ---
+## Q148. What is the Docker build cache?
+
+### 1. English Interview Definition
+
+The Docker build cache stores the results of previous Dockerfile build steps so Docker can reuse them when the relevant instructions and inputs have not changed. This avoids repeating unnecessary work and makes subsequent image builds faster.
+
+### 2. Hindi Definition
+
+Docker build cache ek mechanism hai jo pehle execute kiye gaye Dockerfile steps ke results ko reuse karta hai, agar un steps ki instructions aur required inputs change nahi hue hain. Isse baar-baar poora build process execute karne ki zaroorat nahi padti.
+
+### 3. Hinglish Explanation
+
+Maan lo aap Node.js application ki image build kar rahe ho. Dockerfile mein ye steps hain:
+
+1. Node.js base image select karna.
+2. \`package.json\` aur \`package-lock.json\` copy karna.
+3. \`npm ci\` se dependencies install karna.
+4. Application source code copy karna.
+
+Agar aap sirf \`server.js\` change karte ho aur dependency files same rehti hain, toh Docker pehle ke cached dependency-installation step ko reuse kar sakta hai. Isse build time bach sakta hai.
+
+**Important:** Cache tabhi reuse hota hai jab Docker determine kare ki relevant instruction aur uske inputs same hain. Har build mein har layer automatically reuse nahi hoti.
+
+### 4. Practical Dockerfile example
+
+\`\`\`dockerfile
+FROM node:22-alpine
+WORKDIR /app
+
+# Copy dependency manifests first
+COPY package*.json ./
+RUN npm ci --omit=dev
+
+# Copy application code after installing dependencies
+COPY . .
+
+CMD ["node", "server.js"]
+\`\`\`
+
+Why this order helps:
+
+- If only application source files change, Docker may reuse the dependency installation cache.
+- If \`package.json\` or \`package-lock.json\` changes, Docker generally needs to rerun the dependency installation step.
+- Changes to an earlier step can invalidate the cache for later dependent steps.
+
+Use a supported Node.js version compatible with your application.
+
+### 5. Build and observe the cache
+
+Build the image:
+
+\`\`\`bash
+docker build -t my-backend:1.0 .
+\`\`\`
+
+Build it again without changing the inputs:
+
+\`\`\`bash
+docker build -t my-backend:1.0 .
+\`\`\`
+
+Docker may report cached steps as \`CACHED\` or \`Using cache\`, depending on the builder and output format.
+
+To rebuild without reusing the regular build cache:
+
+\`\`\`bash
+docker build --no-cache -t my-backend:1.0 .
+\`\`\`
+
+\`--no-cache\` disables reuse of cached build steps for that build. It does not necessarily refresh the base image; use \`--pull\` when you also want Docker to check for a newer version of the referenced base image.
+
+### 6. Best practices for build-cache efficiency
+
+1. Put relatively stable steps, such as copying dependency manifests and installing dependencies, before frequently changing source files.
+2. Use a \`.dockerignore\` file to keep irrelevant files out of the build context.
+3. Keep dependency manifests and lockfiles consistent.
+4. Avoid changing early Dockerfile steps unnecessarily.
+5. In CI/CD, configure build-cache reuse where appropriate, while ensuring cache integrity and access controls.
+
+### 7. Quick Summary
+
+| Situation | Typical cache behavior |
+|---|---|
+| Rebuild with unchanged instructions and inputs | Cache may be reused |
+| Only source code changes after dependency installation | Earlier dependency layer may be reused |
+| Dependency manifest changes | Dependency installation usually reruns |
+| An earlier layer changes | Later dependent layers may need rebuilding |
+| Build with \`--no-cache\` | Cached build steps are not reused |
+
+### Interview-ready answer
+
+"Docker build cache stores results of previous build steps and reuses them when the relevant instructions and inputs have not changed. I optimize caching by copying \`package.json\` and the lockfile before application source code, so a source-code change does not usually require reinstalling dependencies. This reduces build time. I use \`docker build --no-cache\` when I need to test a build without reusing cached steps."
+
+---
