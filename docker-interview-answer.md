@@ -13958,3 +13958,94 @@ docker build --no-cache -t my-backend:1.0 .
 "Docker build cache stores results of previous build steps and reuses them when the relevant instructions and inputs have not changed. I optimize caching by copying \`package.json\` and the lockfile before application source code, so a source-code change does not usually require reinstalling dependencies. This reduces build time. I use \`docker build --no-cache\` when I need to test a build without reusing cached steps."
 
 ---
+## Q149. How do you set a memory limit for a Docker container?
+
+### 1. English Interview Definition
+
+You can set a memory limit for a Docker container using the \`--memory\` or \`-m\` option with \`docker run\`. This restricts the amount of memory the container can use and helps prevent a single container from exhausting the host's available memory.
+
+### 2. Hindi Definition
+
+Docker container ki memory limit set karne ke liye \`docker run\` command mein \`--memory\` ya \`-m\` option use karte hain. Isse container ke memory usage ko limit kiya ja sakta hai aur host machine ko memory exhaustion se bachane mein madad milti hai.
+
+### 3. Hinglish Explanation
+
+Maan lo aapki Node.js application Docker container mein chal rahi hai. Agar application bahut zyada RAM use karne lage, toh host server ke doosre containers bhi affect ho sakte hain.
+
+Isliye hum container ko ek memory limit dete hain. Example: \`512m\` ka matlab lagbhag 512 MiB memory limit.
+
+### 4. Set the memory limit using \`docker run\`
+
+Run a container with a 512 MiB memory limit:
+
+\`\`\`bash
+docker run -d \
+  --name backend \
+  --memory=512m \
+  my-backend:1.0
+\`\`\`
+
+You can use the shorter option:
+
+\`\`\`bash
+docker run -d -m 512m --name backend my-backend:1.0
+\`\`\`
+
+Docker enforces the memory limit through the container runtime and host kernel. If the container reaches its limit and cannot allocate more memory, processes may fail or be terminated by an out-of-memory (OOM) event.
+
+### 5. Verify memory usage
+
+Check current container resource usage:
+
+\`\`\`bash
+docker stats backend
+\`\`\`
+
+Inspect the configured memory limit:
+
+\`\`\`bash
+docker inspect backend --format '{{.HostConfig.Memory}}'
+\`\`\`
+
+For this example, the configured value is reported in bytes (512 MiB = 536870912 bytes).
+
+### 6. Set memory limits in Docker Compose
+
+For a typical non-Swarm Compose deployment, use the service's supported container resource setting:
+
+\`\`\`yaml
+services:
+  backend:
+    image: my-backend:1.0
+    mem_limit: 512m
+\`\`\`
+
+Compose resource settings can differ by deployment mode and Compose version. For Swarm services, resource limits are specified under the service's \`deploy.resources.limits\` configuration, for example:
+
+\`\`\`yaml
+services:
+  backend:
+    image: my-backend:1.0
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+\`\`\`
+
+Check the behavior of the Compose implementation and deployment target you use.
+
+### 7. Memory limit vs memory reservation
+
+| Setting | Meaning |
+|---|---|
+| \`--memory=512m\` | Sets a hard memory limit for the container |
+| \`--memory-reservation=256m\` | Sets a softer memory reservation/pressure threshold; it is not a hard cap |
+| \`docker stats\` | Shows current resource usage, including memory |
+
+Choose a limit based on testing and observed usage. A limit that is too low can cause OOM kills or application failures.
+
+### Interview-ready answer
+
+"I set a Docker container's memory limit using the \`--memory\` or \`-m\` option with \`docker run\`, for example \`docker run -d --memory=512m my-backend:1.0\`. I verify the configured limit with \`docker inspect\` and monitor actual usage with \`docker stats\`. In Docker Compose, I configure the appropriate memory limit for the deployment mode. This helps control resource consumption, but the limit must be sized carefully to avoid out-of-memory failures."
+
+---
