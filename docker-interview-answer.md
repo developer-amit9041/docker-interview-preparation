@@ -9181,3 +9181,72 @@ The backend connects to MongoDB using hostname `mongodb` and port `27017` on the
 ### Interview-ready answer
 
 “In Docker Compose, `networks` defines how services connect and communicate. Services attached to the same network can typically reach one another using service names. For example, a Node.js backend can connect to MongoDB using `mongodb:27017` without publishing MongoDB's port to the host. Networks also help isolate groups of services.”
+
+
+---
+
+## Q111. What does `depends_on` do?
+
+### 1. English Definition
+
+In Docker Compose, `depends_on` specifies service dependencies and helps control the order in which services are started and stopped. By default, it does not guarantee that a dependency is fully ready to accept connections.
+
+### 2. Hindi Definition
+
+Docker Compose mein `depends_on` se hum batate hain ki ek service doosri service par depend karti hai. Isse services ka startup order control kiya ja sakta hai.
+
+### 3. Hinglish Explanation
+
+Maan lo Node.js backend ko MongoDB chahiye. Compose file mein backend ke andar `depends_on: mongodb` likhne se Compose MongoDB service ko backend se pehle start karne ka order rakhega.
+
+Lekin **MongoDB container start ho jana aur MongoDB connections accept karne ke liye ready hona alag baat hai**. Default `depends_on` readiness guarantee nahi karta.
+
+### 4. Basic Example
+
+```yaml
+services:
+  backend:
+    image: my-backend-image
+    depends_on:
+      - mongodb
+
+  mongodb:
+    image: mongo:8
+```
+
+Compose starts the `mongodb` service before starting `backend`, but the backend may still attempt to connect before MongoDB is ready.
+
+### 5. Wait for a Health Check
+
+You can configure a health check and use the long-form `depends_on` condition:
+
+```yaml
+services:
+  backend:
+    image: my-backend-image
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+  mongodb:
+    image: mongo:8
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+```
+
+Here, Compose waits for MongoDB's health check to pass before starting the backend. The health-check command must exist and work in the chosen image; verify it for the exact MongoDB image/version. Application-level retry logic is still a good practice.
+
+### 6. Important Points
+
+- `depends_on` expresses dependency and startup ordering.
+- Short syntax does not wait for a service to become healthy.
+- `condition: service_healthy` can wait for a configured health check to pass.
+- Dependency ordering is not a substitute for handling runtime outages or reconnecting to a database.
+
+### Interview-ready answer
+
+“In Docker Compose, `depends_on` defines dependencies between services and controls their startup order. For example, a Node.js backend can depend on MongoDB so Compose starts MongoDB first. However, the short form does not guarantee that MongoDB is ready to accept connections; for that, we can use a health check with `condition: service_healthy` and implement connection-retry logic.”
