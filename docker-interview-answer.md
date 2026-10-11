@@ -635,3 +635,96 @@ docker container inspect node-app-1
 **Interview-ready summary:**
 
 > A Docker image is a read-only template, whereas a Docker container is a runtime instance created from that image. One image can be used to create multiple independent containers.
+
+
+---
+
+## Q7. What is Docker Engine?
+
+### 1. English Definition
+
+Docker Engine is the core containerization technology that builds and runs Docker containers. It includes the Docker daemon, a REST API, and the Docker CLI.
+
+### 2. Hindi Definition
+
+Docker Engine Docker ka core software hai jo containers ko build, create aur run karne ka kaam karta hai. Ismein Docker daemon, REST API aur Docker CLI jaise components hote hain.
+
+### 3. Hinglish Explanation
+
+Docker Engine ko Docker ka main execution system samjho. Jab aap terminal mein `docker run` command dete ho, Docker CLI request ko Docker Engine ke API ke through daemon tak pahunchata hai. Daemon image check/pull karta hai, container create karta hai aur uske lifecycle ko manage karta hai.
+
+**Main components:**
+- **Docker CLI:** Woh command-line tool jahan aap `docker run`, `docker build` jaise commands likhte ho.
+- **Docker daemon (`dockerd`):** Background service jo images, containers, networks aur volumes manage karti hai.
+- **REST API:** CLI aur daemon ke beech communication interface.
+
+### 4. Practical Example / Code
+
+Build an image:
+
+```bash
+docker build -t my-node-app .
+```
+
+Run a container:
+
+```bash
+docker run -d --name my-app -p 5000:5000 my-node-app
+```
+
+In commands ko execute karte waqt CLI Docker Engine se request karta hai; daemon image build karne ya container run karne ka kaam manage karta hai.
+
+### 5. Architecture Diagram
+
+```text
+        User / Terminal
+               |
+           Docker CLI
+               |
+        REST API request
+               |
+               v
+       Docker Daemon
+          (dockerd)
+               |
+      +--------+---------+
+      |        |         |
+    Images  Containers  Networks
+               |
+        Host OS / Kernel
+```
+
+### 6. Practical Command / Configuration
+
+**Check Docker Engine version:**
+
+```bash
+docker version
+```
+
+**Check daemon and installation details:**
+
+```bash
+docker info
+```
+
+**Check whether the Docker service is active on a typical Linux system using systemd:**
+
+```bash
+sudo systemctl status docker
+```
+
+Note: The last command applies to many Linux installations. Docker Desktop on Windows/macOS manages its engine differently.
+
+### 7. Summary Table
+
+| Component | Responsibility |
+|---|---|
+| Docker CLI | Accepts commands from the user |
+| Docker REST API | Provides the interface for communicating with the daemon |
+| Docker daemon (`dockerd`) | Manages images, containers, networks and volumes |
+| Docker Engine | Core technology that builds and runs containers |
+
+**Interview-ready summary:**
+
+> Docker Engine is the core technology used to build and run containers. It includes the Docker daemon, REST API, and CLI, which work together to manage containerized applications.
