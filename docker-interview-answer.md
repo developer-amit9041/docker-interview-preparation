@@ -14952,3 +14952,106 @@ docker service ps backend
 “Horizontal scaling means adding or removing application instances or servers to handle changing workloads. For example, we can scale a Node.js service from one replica to five and distribute requests across them. It can improve capacity and resilience, provided load balancing, shared state, and downstream dependencies are designed for multiple instances.”
 
 ---
+## Q161. What is a rolling update in container deployments?
+
+### 1. English Interview Definition
+A rolling update is a deployment strategy that gradually replaces running application instances with a new version instead of replacing all instances at once. It can reduce downtime by keeping some instances available during the rollout, provided capacity, readiness checks, and traffic routing are configured correctly.
+
+### 2. Hindi Definition
+Rolling update ek deployment strategy hai jisme application ke purane containers ko ek-ek karke ya batches mein naye version se replace kiya jata hai, taaki poori application ko ek saath stop na karna pade.
+
+### 3. Hinglish Explanation
+Maan lo aapke Node.js backend ki 4 replicas version \`v1\` par chal rahi hain aur aapko \`v2\` deploy karna hai. Rolling update mein deployment system gradually purani replicas ko new version se replace karta hai. Is dauraan kuch replicas traffic handle karti reh sakti hain.
+
+Rolling update downtime ko reduce kar sakta hai, lekin zero downtime guarantee nahi karta. Application compatibility, readiness/health checks, available capacity, and traffic routing important hain.
+
+### 4. Simple Diagram
+
+\`\`\`text
+Before:
+[v1] [v1] [v1] [v1]
+
+During rollout:
+[v2] [v1] [v1] [v1]
+[v2] [v2] [v1] [v1]
+[v2] [v2] [v2] [v1]
+
+After:
+[v2] [v2] [v2] [v2]
+\`\`\`
+
+### 5. Kubernetes Rolling Update Example
+
+A Deployment can use a rolling update strategy:
+\`\`\`yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+spec:
+  replicas: 4
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+        - name: backend
+          image: my-backend:2.0
+          ports:
+            - containerPort: 3000
+\`\`\`
+
+- \`maxSurge: 1\`: rollout ke dauraan desired replicas se ek extra Pod tak allow karta hai.
+- \`maxUnavailable: 0\`: rollout ke dauraan desired count se kam available replicas allow nahi karta; is setting ke liye cluster mein extra capacity honi chahiye.
+- Readiness probes should be configured so Kubernetes can determine when a new Pod is ready to receive traffic.
+
+Apply and monitor:
+\`\`\`bash
+kubectl apply -f deployment.yaml
+kubectl rollout status deployment/backend
+kubectl rollout history deployment/backend
+\`\`\`
+
+### 6. Docker Swarm Rolling Update Example
+
+Create or update a service with an update policy:
+\`\`\`bash
+docker service update \
+  --image my-backend:2.0 \
+  --update-parallelism 1 \
+  --update-delay 10s \
+  backend
+\`\`\`
+
+- \`--update-parallelism 1\`: ek time par ek task update karta hai.
+- \`--update-delay 10s\`: successive update batches ke beech delay rakhta hai.
+- Check progress with \`docker service ps backend\`.
+
+Swarm update behavior also depends on the service's update and failure settings. Ensure the new image is available to the cluster.
+
+### 7. Advantages and Risks
+
+**Advantages**
+- Can reduce deployment downtime.
+- Gradually introduces a new version.
+- Allows progress and health to be observed between batches.
+- Can support rollback procedures, depending on the platform and configuration.
+
+**Risks / considerations**
+- Old and new versions may run simultaneously, so API and database changes should be backward-compatible during the rollout.
+- Insufficient capacity or failing readiness checks can stall the rollout.
+- A rolling update alone does not guarantee safe database migrations or zero downtime.
+
+### 8. Interview-Ready Answer
+“A rolling update gradually replaces old application instances with a new version in batches instead of stopping all instances at once. It helps reduce downtime and lets us monitor the rollout. In Kubernetes, we configure a Deployment's rolling update strategy; in Docker Swarm, we can control update parallelism and delay with \`docker service update\`. Readiness checks, capacity, and backward compatibility are essential.”
+
+---
