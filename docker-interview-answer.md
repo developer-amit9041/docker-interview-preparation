@@ -4772,3 +4772,88 @@ Data can remain after container removal
 ### Interview-ready answer
 
 “The `VOLUME` instruction declares a mount point for data that should be stored outside the container's writable layer. Docker can create an anonymous volume for the declared path if no explicit mount is provided. In practice, I prefer explicitly mounting a named volume with `-v volume-name:/path` so the data lifecycle is easier to manage.”
+
+
+---
+
+## Q51. Why should unnecessary multiple `RUN` instructions be avoided?
+
+### 1. English Definition
+
+Unnecessary multiple `RUN` instructions should be avoided because each instruction can create an additional image layer, increasing image size and build overhead. Combining related commands into one `RUN` instruction can reduce layers and allow temporary files or package caches to be removed in the same layer.
+
+### 2. Hindi Definition
+
+Dockerfile mein bina zaroorat bahut saare `RUN` instructions nahi likhne chahiye, kyunki har `RUN` se aam taur par ek nayi image layer banti hai. Related commands ko combine karne se image lean reh sakti hai aur build zyada efficient ho sakta hai.
+
+### 3. Hinglish Explanation
+
+Maan lo humein packages install karne hain aur uske baad package manager ka cache delete karna hai.
+
+Agar install aur cleanup alag-alag `RUN` mein karoge, toh install wali layer mein cache ka data save ho sakta hai. Baad wali layer mein cache delete hone ke baad bhi pehli layer ka data image ke andar reh sakta hai. Isliye related commands ko **ek hi `RUN` instruction** mein combine karke cleanup karna better hai.
+
+Lekin har command ko zabardasti ek hi line mein daalna bhi zaroori nahi. Related commands combine karo, aur readability maintain rakho.
+
+### 4. Practical Example
+
+**Less efficient Dockerfile:**
+
+```dockerfile
+FROM node:22-alpine
+
+WORKDIR /app
+
+RUN apk update
+RUN apk add --no-cache curl
+RUN npm install
+```
+
+Yahan multiple `RUN` instructions hain. Har instruction extra layer/build step create kar sakta hai. Note: Alpine par `apk add --no-cache` use karne se package index cache persist karne ki zaroorat nahi hoti, isliye example mein `apk update` alag se generally unnecessary hai.
+
+**More efficient Dockerfile:**
+
+```dockerfile
+FROM node:22-alpine
+
+WORKDIR /app
+
+RUN apk add --no-cache curl
+```
+
+Agar multiple related shell commands ko combine karna ho:
+
+```dockerfile
+RUN command-one \\
+    && command-two \\
+    && command-three
+```
+
+Real project mein commands ko unke actual purpose ke hisaab se likho; example ke placeholder commands ko literal commands ki tarah run nahi karna hai.
+
+### 5. Node.js / MERN Example
+
+```dockerfile
+FROM node:22-alpine
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci
+
+COPY . .
+CMD ["npm", "start"]
+```
+
+Yeh pattern dependency installation ko application source copy karne se alag rakhta hai. Isse agar sirf source code change hota hai aur `package.json`/lockfile same rehte hain, toh Docker dependency-install layer ko cache se reuse kar sakta hai. Har `RUN` ko combine karna hi goal nahi hai—**layer count, cache reuse, cleanup, aur readability** ka balance important hai.
+
+### 6. Important Points
+
+- Each `RUN` instruction generally creates an image layer.
+- Unnecessary layers image ko larger ya build ko less efficient bana sakti hain.
+- Related commands ko `&&` ke saath combine kar sakte ho.
+- Temporary files/cache ko usi `RUN` mein clean karo jahan woh create hue, taaki unwanted data image layer mein persist na kare.
+- Docker build cache useful hai; dependency installation jaise steps ko stable inputs ke saath alag rakhna caching improve kar sakta hai.
+- Sirf layer count kam karne ke liye Dockerfile ko unreadable mat banao.
+
+### Interview-ready answer
+
+“Unnecessary multiple `RUN` instructions should be avoided because each instruction generally creates an image layer and may add image size or build overhead. I combine related commands and perform cleanup in the same `RUN` instruction, while keeping steps separate when it improves build-cache reuse and readability.”
