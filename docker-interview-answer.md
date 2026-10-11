@@ -6818,3 +6818,67 @@ docker stop nginx-background
 ### Interview-ready answer
 
 “Detached mode, enabled with `docker run -d`, runs a container in the background and returns control of the terminal. I can check its status with `docker ps` and view its output with `docker logs`. Detached mode does not guarantee the container stays running if its main process exits.”
+
+
+---
+
+## Q78. What does interactive mode (`-it`) mean?
+
+### 1. English Definition
+
+The `-it` option combines `-i` (keep standard input open) and `-t` (allocate a pseudo-terminal). It is commonly used to interact with a container through a terminal, for example, to open a shell.
+
+### 2. Hindi Definition
+
+Docker mein `-it` do options ka combination hai: `-i` input open rakhta hai aur `-t` terminal allocate karta hai. Dono milkar container ke andar interactive commands chalane mein help karte hain.
+
+### 3. Hinglish Explanation
+
+Maan lo aap Alpine Linux container ke andar jaakar commands manually execute karna chahte ho. `-it` use karne se aapko interactive shell mil sakta hai, jahan aap commands type kar sakte ho aur output dekh sakte ho.
+
+- `-i`: standard input open rakhta hai.
+- `-t`: pseudo-terminal allocate karta hai.
+
+### 4. Practical Commands
+
+**Start an interactive Alpine shell:**
+
+```bash
+docker run --rm -it alpine sh
+```
+
+Ab container ke andar commands run kar sakte ho:
+
+```bash
+pwd
+ls
+cat /etc/os-release
+exit
+```
+
+`exit` se shell band ho jayega. Is example mein `--rm` ke karan container exit hone par automatically remove ho jayega.
+
+**Open a shell in an already-running container:**
+
+```bash
+docker exec -it my-app sh
+```
+
+Agar image mein Bash installed hai, toh `sh` ki jagah `bash` use kar sakte ho:
+
+```bash
+docker exec -it my-app bash
+```
+
+### 5. Difference Between `-it` and `-d`
+
+| Option | Meaning | Typical use |
+|---|---|---|
+| `-i` | Keep standard input open | Accept input |
+| `-t` | Allocate a pseudo-terminal | Interactive terminal session |
+| `-it` | Combine input and terminal | Shell or interactive CLI |
+| `-d` | Run detached in the background | Background service |
+
+### Interview-ready answer
+
+“Docker's `-it` option combines `-i`, which keeps standard input open, and `-t`, which allocates a pseudo-terminal. I use `docker run -it alpine sh` to open an interactive shell in a new container, or `docker exec -it container-name sh` to open one in an existing running container.”
