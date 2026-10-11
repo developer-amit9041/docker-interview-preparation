@@ -14147,3 +14147,76 @@ Compose behavior can vary by deployment mode and version, so confirm which confi
 "I set a Docker container's CPU limit using the \`--cpus\` option, for example \`docker run -d --cpus=1 my-backend:1.0\`. This limits the container to CPU time equivalent to one CPU, rather than reserving a dedicated core. I monitor usage with \`docker stats\`, inspect the configured quota when needed, and choose a limit based on workload measurements. In Compose or Swarm, I configure the corresponding CPU resource limit for the deployment mode."
 
 ---
+## Q151. How do you monitor Docker container resource usage?
+
+### 1. English Interview Definition
+Docker container resource usage can be monitored using \`docker stats\`, which displays real-time CPU, memory, network I/O, block I/O, and process information for running containers. For deeper troubleshooting, use \`docker inspect\`, host monitoring tools, and monitoring platforms such as Prometheus and Grafana.
+
+### 2. Hindi Definition
+Docker container ke resource usage ko monitor karne ke liye hum \`docker stats\` command use karte hain. Isse pata chalta hai ki container kitna CPU, memory, network aur disk I/O use kar raha hai.
+
+### 3. Hinglish Explanation
+Maan lo aapka MERN application Docker container mein run ho raha hai. Agar application slow ho jaye, toh \`docker stats\` se check kar sakte ho ki Node.js container zyada RAM ya CPU toh use nahi kar raha.
+
+### 4. Practical Example
+
+**Step 1: Check all running containers**
+\`\`\`bash
+docker ps
+\`\`\`
+
+**Step 2: Monitor resource usage in real time**
+\`\`\`bash
+docker stats
+\`\`\`
+
+Example output:
+\`\`\`text
+CONTAINER ID   NAME       CPU %   MEM USAGE / LIMIT   MEM %   NET I/O       BLOCK I/O
+a1b2c3d4       backend    12.5%   180MiB / 512MiB     35.2%   2.1MB / 1MB  10MB / 4MB
+\`\`\`
+
+The values above are illustrative. Key columns:
+- **CPU %:** Current CPU usage.
+- **MEM USAGE / LIMIT:** Memory currently used and the memory limit.
+- **MEM %:** Percentage of the container's memory limit being used.
+- **NET I/O:** Data received and transmitted over the network.
+- **BLOCK I/O:** Data read from and written to block devices.
+- **PIDs:** Number of processes in the container.
+
+**Step 3: Monitor a specific container**
+\`\`\`bash
+docker stats backend
+\`\`\`
+
+**Step 4: Show a one-time snapshot instead of continuous updates**
+\`\`\`bash
+docker stats --no-stream
+\`\`\`
+
+**Step 5: Inspect configured resource limits**
+\`\`\`bash
+docker inspect backend --format '{{.HostConfig.Memory}}'
+docker inspect backend --format '{{.HostConfig.NanoCpus}}'
+\`\`\`
+These commands show the configured memory limit in bytes and CPU quota representation, respectively. A value of \`0\` generally means no explicit limit is configured for that field.
+
+### 5. Monitoring Multiple Containers
+\`\`\`bash
+docker stats backend frontend mongodb
+\`\`\`
+This monitors only the named containers. Use \`docker stats --all\` to include stopped containers in the list where supported; stopped containers do not have live resource consumption to report.
+
+### 6. Production Monitoring
+For production systems, teams may combine Docker metrics with:
+- **Prometheus:** Collects and stores metrics.
+- **Grafana:** Visualizes metrics in dashboards and alerts.
+- **cAdvisor:** Exposes container resource metrics.
+- **Cloud monitoring:** Services such as Amazon CloudWatch can collect host/container metrics when configured.
+
+Use alerts for sustained high CPU, memory pressure, restarts, or approaching configured limits. \`docker stats\` is useful for quick checks, but it is not by itself a long-term monitoring or alerting system.
+
+### 7. Interview-Ready Answer
+“We can monitor Docker container resource usage using \`docker stats\`. It shows real-time CPU, memory, network I/O, block I/O, and process counts. For a specific container, we can run \`docker stats <container-name>\`; in production, we can use tools such as Prometheus and Grafana for dashboards and alerts.”
+
+---
