@@ -1607,3 +1607,113 @@ docker logs web
 **Interview-ready summary:**
 
 > Docker CLI sends requests to the Docker daemon through the Engine API. The daemon obtains the image, configures the container's filesystem, isolation, networking, and resource controls, then starts the application process. On Linux, namespaces and cgroups provide key isolation and resource-management mechanisms.
+
+
+---
+
+## Q16. How do you run a Docker container?
+
+### 1. English Definition
+
+You can run a Docker container using the `docker run` command followed by an image name. Docker creates a container from the image and starts its configured process.
+
+### 2. Hindi Definition
+
+Docker container run karne ke liye `docker run` command ke saath image ka naam dete hain. Docker us image se container create karke uska configured process start karta hai.
+
+### 3. Hinglish Explanation
+
+Sabse simple command hai:
+
+`docker run nginx`
+
+Agar Nginx image local machine par available nahi hai, Docker use registry se pull kar sakta hai. Uske baad container create karke Nginx start karta hai.
+
+Common options:
+- `-d`: container ko background mein run karta hai.
+- `--name`: container ka custom naam set karta hai.
+- `-p HOST_PORT:CONTAINER_PORT`: host port ko container port par publish karta hai.
+- `--rm`: container exit hone ke baad automatically remove karta hai.
+
+### 4. Practical Example / Code
+
+**Run Nginx in the foreground:**
+
+```bash
+docker run nginx
+```
+
+**Run it in the background and publish port 8080:**
+
+```bash
+docker run -d --name my-nginx -p 8080:80 nginx
+```
+
+Open `http://localhost:8080` to view the Nginx page if the container starts successfully.
+
+**Run a temporary container and remove it when it exits:**
+
+```bash
+docker run --rm hello-world
+```
+
+### 5. Architecture Diagram
+
+```text
+       docker run nginx
+              |
+              v
+        Docker CLI
+              |
+        Docker Daemon
+              |
+       Check / pull image
+              |
+       Create container
+              |
+       Start container process
+              |
+              v
+        Running container
+```
+
+### 6. Practical Command / Configuration
+
+**Check running containers:**
+
+```bash
+docker ps
+```
+
+**Check all containers, including stopped ones:**
+
+```bash
+docker ps -a
+```
+
+**View logs:**
+
+```bash
+docker logs my-nginx
+```
+
+**Stop the container:**
+
+```bash
+docker stop my-nginx
+```
+
+### 7. Summary Table
+
+| Command / Option | Purpose |
+|---|---|
+| `docker run nginx` | Creates and starts a container from the Nginx image |
+| `-d` | Runs in detached/background mode |
+| `--name my-nginx` | Sets the container name |
+| `-p 8080:80` | Publishes host port 8080 to container port 80 |
+| `--rm` | Removes the container after it exits |
+| `docker ps` | Lists running containers |
+
+**Interview-ready summary:**
+
+> A Docker container is run using `docker run IMAGE_NAME`. Docker obtains the image if needed, creates a container, and starts its configured process. Options such as `-d`, `--name`, and `-p` control how the container runs.
