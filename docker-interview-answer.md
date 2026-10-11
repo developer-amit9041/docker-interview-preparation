@@ -4081,3 +4081,90 @@ Exec form avoids an extra shell process and generally makes signal handling more
 ### Interview-ready answer
 
 “The `CMD` instruction defines the default command or arguments executed when a container starts. For example, `CMD ["node", "server.js"]` starts a Node.js server. The command can generally be overridden by arguments passed to `docker run`, unless an `ENTRYPOINT` changes how those arguments are handled.”
+
+
+---
+
+## Q42. What does the `ENTRYPOINT` instruction do?
+
+### 1. English Definition
+
+The `ENTRYPOINT` instruction configures the main executable that runs when a container starts. With the exec form, arguments supplied to `docker run` are passed to the entrypoint, unless the entrypoint is overridden.
+
+### 2. Hindi Definition
+
+`ENTRYPOINT` batata hai ki container start hote hi kaunsa main program execute hona chahiye. `docker run` ke baad diye gaye arguments aam taur par us program ko pass hote hain.
+
+### 3. Hinglish Explanation
+
+Amit bhai, maan lo aap chahte ho ki aapka container hamesha Node.js program ko run kare. Aap likh sakte ho:
+
+```dockerfile
+ENTRYPOINT ["node", "server.js"]
+```
+
+Ab command:
+
+```bash
+docker run my-node-app
+```
+
+default mein `node server.js` chalati hai.
+
+`ENTRYPOINT` ka useful feature ye hai ki container ko arguments dekar uske main program ko extra arguments pass kar sakte ho. Lekin agar aap `docker run my-node-app --version` chalate ho, toh effective command `node server.js --version` hogi; iska matlab ye nahi ki woh automatically `node --version` ban jayegi.
+
+### 4. Practical Example
+
+**Dockerfile:**
+
+```dockerfile
+FROM node:22-alpine
+WORKDIR /app
+COPY server.js .
+ENTRYPOINT ["node", "server.js"]
+CMD ["--help"]
+```
+
+Run without extra arguments:
+
+```bash
+docker build -t my-node-app .
+docker run --rm my-node-app
+```
+
+The default command is `node server.js --help` because `CMD` supplies default arguments to the exec-form `ENTRYPOINT`. For an actual Express server, replace the sample `CMD` argument with whatever the application expects.
+
+Pass different arguments:
+
+```bash
+docker run --rm my-node-app --version
+```
+
+This runs `node server.js --version`; the Node script receives `--version` as an argument.
+
+### 5. ENTRYPOINT Forms
+
+**Exec form (recommended for most cases):**
+
+```dockerfile
+ENTRYPOINT ["node", "server.js"]
+```
+
+**Shell form:**
+
+```dockerfile
+ENTRYPOINT node server.js
+```
+
+Exec form generally provides more predictable signal handling. Shell form runs through a shell and can affect how signals reach the application.
+
+### 6. Important Points
+
+- `ENTRYPOINT` configures the main executable for the container.
+- With exec-form `ENTRYPOINT`, `CMD` commonly provides default arguments.
+- Arguments passed after the image name to `docker run` replace the default `CMD` arguments.
+- You can override an entrypoint with `docker run --entrypoint <command> ...`.
+
+### Interview-ready answer
+
+“The `ENTRYPOINT` instruction configures the main executable that runs when a container starts. In exec form, arguments passed to `docker run` are appended to the entrypoint command, while `CMD` can provide default arguments. This is useful when a container is designed to run a particular application or tool.”
