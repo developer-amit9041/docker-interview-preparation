@@ -14882,3 +14882,73 @@ This changes the Deployment's desired replica count. Kubernetes autoscaling requ
 “We scale Docker services by changing the desired number of replicas. In Docker Swarm, we can use \`docker service scale backend=5\` or \`docker service update --replicas 5 backend\`. In Docker Compose, we can use \`docker compose up -d --scale backend=3\` when the service supports multiple instances. We also ensure load balancing, available resources, and application state are handled correctly.”
 
 ---
+## Q160. What is horizontal scaling?
+
+### 1. English Interview Definition
+Horizontal scaling, also called scaling out or scaling in, means increasing or decreasing the number of application instances or machines that handle a workload. In a containerized application, this often means running more or fewer replicas of a service to share traffic and workload.
+
+### 2. Hindi Definition
+Horizontal scaling ka matlab hai resources badhane ke liye existing server ko bada karne ke bajaye additional instances ya servers add karna; load kam hone par instances reduce bhi kar sakte hain.
+
+### 3. Hinglish Explanation
+Maan lo aapka Node.js backend ek container par run ho raha hai. Traffic badhne par aap same backend image ke 3 ya 5 replicas run kar dete ho. Load balancer ya orchestrator requests ko available replicas tak route karne mein help karta hai. Isko horizontal scaling, ya scale out, kehte hain.
+
+- **Scale out:** Instances increase karna, jaise 1 se 5 replicas.
+- **Scale in:** Instances decrease karna, jaise 5 se 2 replicas.
+
+### 4. Simple Diagram
+
+\`\`\`text
+Before (1 replica)
+        Requests
+            |
+      [Backend 1]
+
+After horizontal scaling (3 replicas)
+        Requests
+            |
+      [Load Balancer]
+       /     |     \\
+      v      v      v
+ [Backend 1][Backend 2][Backend 3]
+\`\`\`
+
+The diagram is conceptual; actual traffic routing depends on the chosen platform and networking configuration.
+
+### 5. Docker Swarm Example
+
+Create a service with one replica:
+\`\`\`bash
+docker service create --name backend --replicas 1 my-backend:1.0
+\`\`\`
+
+Scale out to three replicas:
+\`\`\`bash
+docker service scale backend=3
+\`\`\`
+
+Check the tasks:
+\`\`\`bash
+docker service ps backend
+\`\`\`
+
+### 6. Horizontal vs. Vertical Scaling
+
+| Feature | Horizontal scaling | Vertical scaling |
+|---|---|---|
+| Method | Add/remove instances or machines | Increase/decrease resources on an existing instance |
+| Example | 1 backend replica → 5 replicas | 1 CPU → 2 CPUs for a container |
+| Capacity | Can distribute work across instances | Limited by the capacity of the instance/host |
+| Complexity | Needs suitable routing and distributed-state handling | Often simpler, but may require a restart or downtime |
+| Resilience | Can improve availability when spread across failure domains | A single instance can remain a single point of failure |
+
+### 7. Important Considerations
+- More replicas do not automatically mean more throughput; the app and its dependencies must support concurrent instances.
+- Configure load balancing and sufficient CPU, memory, and database connection capacity.
+- Keep session state and uploaded files in shared or external storage when necessary.
+- Horizontal scaling is different from autoscaling: scaling is the action; autoscaling is the automated adjustment of instance count based on configured metrics or rules.
+
+### 8. Interview-Ready Answer
+“Horizontal scaling means adding or removing application instances or servers to handle changing workloads. For example, we can scale a Node.js service from one replica to five and distribute requests across them. It can improve capacity and resilience, provided load balancing, shared state, and downstream dependencies are designed for multiple instances.”
+
+---
