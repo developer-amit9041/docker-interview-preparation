@@ -7851,3 +7851,50 @@ docker network inspect mern-network
 ### Interview-ready answer
 
 “A Docker bridge network is a virtual network that connects containers on the same Docker host. I commonly use a user-defined bridge network for a MERN application so the backend can communicate with MongoDB using its container name, without publishing the database port to the host.”
+
+
+---
+
+## Q93. What is host networking?
+
+### 1. English Definition
+
+Host networking is a Docker network mode in which a container shares the host's network namespace instead of using a separate, isolated container network namespace. On supported Linux systems, the container uses the host's network interfaces directly, and port publishing with `-p` is unnecessary and ignored in host mode.
+
+### 2. Hindi Definition
+
+Host networking mein container host machine ka network namespace share karta hai. Isliye container ke liye alag network isolation aur normal port mapping ki zaroorat nahi hoti.
+
+### 3. Hinglish Explanation
+
+Normally, Docker bridge network par container ka apna network setup hota hai, aur host se service access karne ke liye aksar `-p` se port publish karte hain.
+
+Host mode mein, supported Linux systems par container host ke network interfaces aur ports use karta hai. Agar application port 8080 par listen kar rahi hai, toh woh host ke port 8080 par available ho sakti hai. Agar host par wahi port pehle se use ho raha hai, toh port conflict ho sakta hai.
+
+### 4. Practical Example (Linux)
+
+```bash
+docker run --rm --network host nginx
+```
+
+Nginx normally port 80 par listen karta hai. Supported Linux host par ise host ke port 80 par access kiya ja sakta hai, provided port free hai and firewall/settings allow access.
+
+Host mode mein `-p 8080:80` add karne se port mapping nahi hoti; published-port options ignored hote hain.
+
+### 5. Bridge vs Host Networking
+
+| Feature | Bridge | Host |
+|---|---|---|
+| Network namespace | Separate container network | Shares host network namespace on supported Linux |
+| Port publishing | Often used for host access | Not needed; `-p` is ignored |
+| Network isolation | More isolation | Less isolation |
+| Port conflicts | Host port mapping can conflict | Application can conflict directly with host ports |
+| Common use | Most single-host app containers | Specific performance or network-access requirements |
+
+### 6. Important Platform Note
+
+Host networking behaves differently by platform. It is native on Linux. Docker Desktop support depends on Docker Desktop version and settings, and it is not identical to Linux behavior in every environment.
+
+### 7. Interview-ready answer
+
+“Host networking allows a Docker container to share the host's network namespace instead of having an isolated container network. On supported Linux systems, the container uses host network interfaces directly, so port publishing with `-p` is unnecessary. It can reduce network isolation and cause port conflicts, so I use it only when required.”
