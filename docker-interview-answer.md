@@ -10173,3 +10173,183 @@ services:
 
 “I implement volume persistence in Docker Compose by mounting a named volume at the application's data directory. For MongoDB, I use `mongo-data:/data/db` and declare `mongo-data` in the top-level `volumes` section. Data survives container removal or recreation as long as the volume is retained. I avoid `docker compose down -v` when I need to preserve the data.”
 
+---
+
+## Q121. How do you Dockerize a MERN application?
+
+### 1. English Definition
+
+Dockerizing a MERN application means packaging the React frontend and Node.js/Express backend into Docker images and running the application services, including MongoDB, with Docker containers and Docker Compose. This helps the application run consistently across development, testing, and deployment environments.
+
+### 2. Hindi Definition
+
+MERN application ko Dockerize karne ka matlab hai React frontend, Node.js/Express backend aur MongoDB database ko Docker containers ke through run karne ke liye configure karna, taaki application different environments mein consistently work kare.
+
+### 3. Hinglish Explanation
+
+Bhai, normally MERN project mein frontend, backend aur MongoDB ko alag-alag configure aur run karna padta hai. Docker ki help se:
+
+- React frontend ki image build karte hain.
+- Node.js/Express backend ki image build karte hain.
+- MongoDB ko container mein run karte hain.
+- Docker Compose se services manage karte hain.
+- Named volume se MongoDB data persist karte hain.
+
+Is tarah application ko ek command se start kiya ja sakta hai.
+
+### 4. Example Project Structure
+
+```text
+mern-app/
+├── compose.yaml
+├── .env
+├── .gitignore
+├── backend/
+│   ├── Dockerfile
+│   ├── package.json
+│   └── server.js
+└── frontend/
+    ├── Dockerfile
+    ├── package.json
+    ├── src/
+    └── public/
+```
+
+### 5. Backend Dockerfile
+
+Create `backend/Dockerfile`:
+
+```dockerfile
+FROM node:22-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+EXPOSE 5000
+CMD ["npm", "start"]
+```
+
+The backend's `package.json` should define a valid `start` script. The server should listen on `0.0.0.0` or the default interface and read its port and MongoDB URI from environment variables.
+
+### 6. Frontend Dockerfile
+
+For a React app that builds static files into a `build/` directory, create `frontend/Dockerfile`:
+
+```dockerfile
+FROM node:22-alpine AS build
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+FROM nginx:alpine
+COPY --from=build /app/build /usr/share/nginx/html
+EXPOSE 80
+```
+
+If your React toolchain outputs `dist/` (for example, a typical Vite setup), change the COPY source to `/app/dist`. For a single-page app, configure Nginx fallback routing as needed.
+
+### 7. Docker Compose Configuration
+
+Create `compose.yaml` in the project root:
+
+```yaml
+services:
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+  backend:
+    build: ./backend
+    environment:
+      PORT: "5000"
+      MONGO_URI: mongodb://mongodb:27017/myapp
+    depends_on:
+      - mongodb
+
+  mongodb:
+    image: mongo:8
+    volumes:
+      - mongo-data:/data/db
+
+volumes:
+  mongo-data:
+```
+
+This is a minimal example. The backend must use `process.env.MONGO_URI`. The hostname `mongodb` is the Compose service name and is resolvable from the backend container; it is not normally resolvable directly by the user's browser.
+
+### 8. Build and Run
+
+From the project root, run:
+
+```bash
+docker compose up --build -d
+```
+
+Check the containers:
+
+```bash
+docker compose ps
+```
+
+View logs:
+
+```bash
+docker compose logs -f
+```
+
+Open the frontend at `http://localhost:3000`. If the frontend makes API requests, configure a browser-accessible API URL or use a reverse proxy such as Nginx to forward `/api` requests to the backend.
+
+Stop the application:
+
+```bash
+docker compose down
+```
+
+The named MongoDB volume is retained by default. Avoid `docker compose down -v` if you need to preserve its data.
+
+### 9. Architecture Diagram
+
+```text
+                 User's Browser
+                       |
+                       v
+              React Frontend (Nginx)
+                localhost:3000
+                       |
+                 /api requests
+                       v
+              Node.js + Express
+                 port 5000
+                       |
+                 MONGO_URI
+                       v
+                 MongoDB
+                 port 27017
+                       |
+                       v
+              Named volume
+               mongo-data
+```
+
+All Compose services can communicate over the default Compose network using service names. For production, add appropriate authentication, secrets management, TLS, health checks, backups, and network/port restrictions.
+
+### 10. Summary Table
+
+| Component | Docker setup | Purpose |
+|---|---|---|
+| React frontend | Frontend Dockerfile and image | Builds and serves the UI |
+| Node.js/Express backend | Backend Dockerfile and image | Runs APIs and business logic |
+| MongoDB | Official MongoDB image | Stores application data |
+| Docker Compose | `compose.yaml` | Manages services together |
+| Named volume | `mongo-data:/data/db` | Persists database files |
+| Compose network | Default project network | Enables service-to-service communication |
+
+### Interview-ready answer
+
+“To Dockerize a MERN application, I create separate Dockerfiles for the React frontend and Node.js/Express backend, and run MongoDB using its official image. I define all services in a Compose file, configure the backend with a MongoDB URI that uses the Compose service name, and mount a named volume for database persistence. Then I build and start the stack with `docker compose up --build -d`. For production, I also configure secrets, TLS, backups, health checks, and appropriate network access.”
+
