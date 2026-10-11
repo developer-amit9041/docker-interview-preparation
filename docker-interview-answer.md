@@ -17174,3 +17174,325 @@ docker rm -f react-app
 
 `Dockerfile → Multi-stage Build → dist/ → Nginx → Port Mapping → Browser`
 
+# Q183. How would you create a Dockerfile for a Node.js/Express backend?
+
+## 1. English Definition
+
+A Dockerfile for a Node.js/Express backend defines the instructions required to package the backend application, its dependencies, and runtime configuration into a Docker image. It allows the application to run consistently across development, testing, and production environments.
+
+## 2. Easy Hinglish Explanation
+
+Maan lo tumne MERN stack ka backend banaya hai, jisme Node.js aur Express use ho rahe hain.
+
+Normally backend run karne ke liye tum apne system par Node.js install karte ho, dependencies install karte ho aur `npm start` run karte ho.
+
+Docker mein hum ek **Dockerfile** banate hain jo ye kaam automate karti hai:
+
+1. Node.js ki image use karta hai.
+2. Container ke andar working directory banata hai.
+3. `package.json` aur `package-lock.json` copy karta hai.
+4. Dependencies install karta hai.
+5. Backend ka source code copy karta hai.
+6. Application ko start karta hai.
+
+Flow:
+
+```text
+Node.js / Express Source Code
+          ↓
+       Dockerfile
+          ↓
+      Docker Image
+          ↓
+   Running Container
+          ↓
+    Express API Server
+```
+
+## 3. Example Node.js/Express Project
+
+Assume karte hain ki project structure ye hai:
+
+```text
+backend/
+├── src/
+│   └── server.js
+├── package.json
+├── package-lock.json
+├── Dockerfile
+└── .dockerignore
+```
+
+Example `package.json`:
+
+```json
+{
+  "name": "mern-backend",
+  "version": "1.0.0",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "express": "^5.1.0"
+  }
+}
+```
+
+Example `src/server.js`:
+
+```javascript
+const express = require("express");
+
+const app = express();
+const PORT = process.env.PORT || 5000;
+
+app.use(express.json());
+
+app.get("/", (req, res) => {
+  res.json({
+    message: "Node.js backend is running inside Docker!"
+  });
+});
+
+app.get("/api/users", (req, res) => {
+  res.json([
+    { id: 1, name: "Amit" },
+    { id: 2, name: "Rahul" }
+  ]);
+});
+
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Server running on port ${PORT}`);
+});
+```
+
+**Important:** `0.0.0.0` par listen karna zaroori hai taaki container ke bahar se published port ke through application tak pahunch sake. Sirf `localhost` par bind karne se external access fail ho sakta hai.
+
+## 4. Create the Dockerfile
+
+Create `backend/Dockerfile`:
+
+```dockerfile
+# Use an official Node.js image
+FROM node:22-alpine
+
+# Set production environment
+ENV NODE_ENV=production
+
+# Set working directory
+WORKDIR /app
+
+# Copy dependency files first for better layer caching
+COPY package*.json ./
+
+# Install production dependencies only
+RUN npm ci --omit=dev
+
+# Copy application source code and assign ownership
+COPY --chown=node:node . .
+
+# Run as a non-root user
+USER node
+
+# Document the application's port
+EXPOSE 5000
+
+# Start the Express application
+CMD ["node", "src/server.js"]
+```
+
+### Dockerfile ko step by step samjho
+
+| Instruction | Kya kaam karti hai? |
+|---|---|
+| `FROM node:22-alpine` | Node.js aur Alpine Linux wali base image use karta hai. |
+| `ENV NODE_ENV=production` | Application ko production environment batata hai. |
+| `WORKDIR /app` | Container ki working directory set karta hai. |
+| `COPY package*.json ./` | Dependency manifest files copy karta hai. |
+| `RUN npm ci --omit=dev` | Lock file ke according sirf production dependencies install karta hai. |
+| `COPY --chown=node:node . .` | Source code copy karta hai aur files ka owner `node` set karta hai. |
+| `USER node` | Application ko non-root user se run karta hai. |
+| `EXPOSE 5000` | Intended container port document karta hai. |
+| `CMD [...]` | Container start hone par Express server run karta hai. |
+
+### `COPY package*.json` pehle kyun likhte hain?
+
+Agar tum sirf `server.js` mein code change karte ho aur dependency files same rehti hain, toh Docker cached dependency-installation layer reuse kar sakta hai. Isse build faster ho sakta hai.
+
+**Note:** `npm ci` ke liye `package-lock.json` present hona chahiye.
+
+## 5. Create the .dockerignore File
+
+Create `backend/.dockerignore`:
+
+```text
+node_modules
+.git
+.env
+.env.*
+!.env.example
+npm-debug.log
+logs
+coverage
+```
+
+- `node_modules`: Local machine ke installed packages copy nahi honge.
+- `.git`: Git metadata copy nahi hoga.
+- `.env` and `.env.*`: Environment files build context se exclude hongi.
+- `coverage`: Test coverage output copy nahi hoga.
+
+Secrets ko image ya source control mein store mat karo. `.dockerignore` risk reduce karti hai, lekin secrets-management ka replacement nahi hai.
+
+## 6. Build the Docker Image
+
+Terminal mein backend directory open karo:
+
+```bash
+cd backend
+docker build -t mern-backend:v1 .
+```
+
+Yahan `-t mern-backend:v1` image ka naam aur tag set karta hai, aur `.` current directory ko build context banata hai.
+
+Image verify karo:
+
+```bash
+docker images
+```
+
+## 7. Run the Docker Container
+
+```bash
+docker run -d --name node-backend -p 5000:5000 mern-backend:v1
+```
+
+- `-d`: Container ko background mein run karta hai.
+- `--name node-backend`: Container ka naam set karta hai.
+- `-p 5000:5000`: Host port 5000 ko container port 5000 se map karta hai.
+
+Browser ya Postman mein test karo:
+
+- `http://localhost:5000/`
+- `http://localhost:5000/api/users`
+
+Expected response:
+
+```json
+{
+  "message": "Node.js backend is running inside Docker!"
+}
+```
+
+## 8. Check Logs and Debug Errors
+
+Container running hai ya nahi:
+
+```bash
+docker ps
+```
+
+Container logs:
+
+```bash
+docker logs node-backend
+docker logs -f node-backend
+```
+
+Container ke andar shell open karne ke liye:
+
+```bash
+docker exec -it node-backend sh
+```
+
+Container stop aur remove karne ke liye:
+
+```bash
+docker rm -f node-backend
+```
+
+Agar host port 5000 pehle se use ho raha hai, toh doosra host port map kar sakte ho:
+
+```bash
+docker run -d --name node-backend -p 5001:5000 mern-backend:v1
+```
+
+Ab host par `http://localhost:5001/` open karo.
+
+## 9. Connect the Backend to MongoDB
+
+Example Mongoose connection:
+
+```javascript
+const mongoose = require("mongoose");
+
+mongoose
+  .connect(process.env.MONGODB_URI)
+  .then(() => console.log("MongoDB connected"))
+  .catch((err) => console.error("MongoDB connection failed:", err));
+```
+
+Local testing ke liye environment variable pass kar sakte ho:
+
+```bash
+docker run -d \
+  --name node-backend \
+  -p 5000:5000 \
+  -e MONGODB_URI="your-mongodb-connection-string" \
+  mern-backend:v1
+```
+
+Production mein credentials ko command history ya source code mein expose mat karo; secure secrets-management mechanism use karo.
+
+**Docker Compose ke andar:** Agar MongoDB service ka naam `mongo` hai, toh connection string mein `localhost` ki jagah service hostname use karo:
+
+```text
+mongodb://mongo:27017/myapp
+```
+
+Yeh tab kaam karega jab backend aur MongoDB same Docker network par hon aur service `mongo` naam se accessible ho.
+
+## 10. Common Interview Follow-up Questions
+
+**Q. Kya `EXPOSE 5000` port automatically public kar deta hai?**
+
+Nahi. `EXPOSE` port document karta hai. Host se access ke liye `-p 5000:5000` jaisi port mapping chahiye.
+
+**Q. `npm install` aur `npm ci` mein kya difference hai?**
+
+`npm ci` lock file ke according clean, predictable dependency installation ke liye use hota hai. Docker aur CI/CD builds mein yeh commonly preferred hai.
+
+**Q. `USER node` kyun use kiya?**
+
+Security ke liye. Non-root user se application chalane par container compromise hone ki situation mein kuch risks reduce ho sakte hain.
+
+**Q. Kya Node.js backend ke liye multi-stage build zaroori hai?**
+
+Nahi. Simple JavaScript backend ke liye single-stage Dockerfile sufficient ho sakti hai. TypeScript, transpilation ya additional build tools wale backend mein multi-stage build useful hoti hai.
+
+**Q. Code change ho toh kya karna hoga?**
+
+Image rebuild karke container recreate karna hoga. Production mein unique version tags use karna useful hai:
+
+```bash
+docker build -t mern-backend:v2 .
+docker rm -f node-backend
+docker run -d --name node-backend -p 5000:5000 mern-backend:v2
+```
+
+## 11. Interview-Ready Answer
+
+“I would create a Dockerfile using an official Node.js Alpine image as the base image. I would set the working directory, copy the package files, install production dependencies using `npm ci --omit=dev`, and then copy the application source code. I would run the application as a non-root user, document the application port using `EXPOSE`, and start the Express server using `CMD`. I would also create a `.dockerignore` file to exclude unnecessary files and environment files. Finally, I would build the Docker image, run a container with the required port mapping, and verify the application using its API endpoints and container logs.”
+
+## 12. Quick Revision
+
+- **Base image:** Node.js runtime provide karti hai.
+- **WORKDIR:** Container ki working directory set karta hai.
+- **npm ci:** Lock file ke according dependencies install karta hai.
+- **USER node:** Application ko non-root user se run karta hai.
+- **EXPOSE:** Intended container port document karta hai.
+- **Port mapping:** Host se container ke Express server tak traffic pahunchati hai.
+- **MongoDB:** Compose network mein service name se connect kiya ja sakta hai.
+
+`Dockerfile → Node.js Image → Install Dependencies → Copy Code → Run Express → Publish Port → Test API`
+
