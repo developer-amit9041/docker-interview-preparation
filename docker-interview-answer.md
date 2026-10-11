@@ -13454,3 +13454,75 @@ This gives the container access to the host's Docker API through the mounted soc
 "The Docker socket is the communication endpoint between Docker clients and the Docker daemon, commonly located at \`/var/run/docker.sock\` on Linux. When I run commands such as \`docker ps\`, the CLI sends requests to the daemon through this socket. Mounting the socket into a container is risky because it can grant that container extensive control over the host's Docker environment, so I avoid it unless absolutely necessary."
 
 ---
+## Q144. Why is exposing the Docker socket risky?
+
+### 1. English Interview Definition
+
+Exposing the Docker socket is risky because it can grant a process or container powerful access to the Docker daemon. An attacker who gains that access may create privileged containers, mount host directories, access sensitive files, or potentially take control of the host system.
+
+### 2. Hindi Definition
+
+Docker socket expose karna risky hai kyunki isse kisi container ya process ko Docker daemon par powerful control mil sakta hai. Agar attacker ko ye access mil gaya, toh woh containers create karke host machine ke sensitive data tak pahunchne ki koshish kar sakta hai.
+
+### 3. Hinglish Explanation
+
+Maan lo aapki MERN application ka backend container normal API requests handle karta hai. Agar aap us container mein \`/var/run/docker.sock\` mount kar dete ho, toh container Docker daemon ko commands bhej sakta hai.
+
+Agar attacker backend ko compromise kar leta hai aur uske paas Docker socket ka usable access hai, toh woh:
+
+- Naya container create kar sakta hai.
+- Host directories ko container mein mount karne ki koshish kar sakta hai.
+- Sensitive files ya application secrets access kar sakta hai.
+- Host system par control gain karne ki koshish kar sakta hai.
+
+**Important:** Socket mount karna apne aap mein har case mein host compromise nahi karta, lekin unrestricted Docker API access ko aksar host-level security risk maana jata hai.
+
+### 4. Example of risky configuration
+
+\`\`\`bash
+docker run -d \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  my-backend:1.0
+\`\`\`
+
+This mounts the host's Docker socket inside the container. If the application does not need Docker API access, remove this mount.
+
+### 5. How can this lead to host compromise?
+
+\`\`\`text
+Host Docker socket mounted into container
+                  |
+                  v
+Container process can access Docker API
+                  |
+                  v
+Attacker compromises that process
+                  |
+                  v
+Attacker sends Docker API requests
+                  |
+                  v
+May create a privileged container or mount host paths
+                  |
+                  v
+Potential access to host files and system control
+\`\`\`
+
+The exact impact depends on daemon permissions, Docker configuration, host protections, and the API operations available. On typical rootful Docker installations, the risk is especially serious.
+
+### 6. Security best practices
+
+1. Do not mount \`/var/run/docker.sock\` into ordinary application containers.
+2. If Docker API access is essential, use a carefully restricted proxy or another architecture that exposes only required operations.
+3. Restrict access to the Docker daemon and socket permissions; do not make the socket world-writable.
+4. Run application containers as non-root and remove unnecessary Linux capabilities.
+5. Monitor Docker daemon access and audit suspicious container creation or host mounts.
+6. Prefer isolated build agents or dedicated infrastructure for workloads that must control Docker.
+
+A non-root user inside a container does not make an unrestricted Docker socket mount safe.
+
+### 7. Interview-ready answer
+
+"Exposing the Docker socket is risky because it can give a container powerful control over the Docker daemon. If an attacker compromises that container, they may create privileged containers or mount host directories and potentially access the host system. I avoid mounting the Docker socket into application containers, restrict daemon access, and use a narrowly scoped alternative when Docker API access is genuinely required."
+
+---
