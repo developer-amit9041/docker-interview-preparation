@@ -6944,3 +6944,65 @@ The container image must define a health check for `.State.Health` to be present
 ### Interview-ready answer
 
 “A Docker health check periodically tests whether the application inside a container is working correctly. I configure it with the Dockerfile `HEALTHCHECK` instruction or Compose health-check settings, then inspect the result as starting, healthy, or unhealthy. A health check reports status; it does not automatically repair the application or restart the container by itself.”
+
+
+---
+
+## Q80. What does the `HEALTHCHECK` instruction do?
+
+### 1. English Definition
+
+The Dockerfile `HEALTHCHECK` instruction defines a command that Docker runs periodically to test whether the application inside a container is functioning correctly. Docker records the result as `starting`, `healthy`, or `unhealthy`.
+
+### 2. Hindi Definition
+
+`HEALTHCHECK` Dockerfile ki instruction hai jo Docker ko batati hai ki container ke andar application ko regular intervals par kaise check karna hai.
+
+### 3. Hinglish Explanation
+
+Container ka status `Up` hone ka matlab sirf itna hai ki uska main process chal raha hai. Isse ye confirm nahi hota ki application requests ka sahi response de rahi hai.
+
+`HEALTHCHECK` ek configured command ko baar-baar run karta hai. Command successful hoti hai toh container healthy report hota hai; failures configured retries tak pahunch jaayen toh unhealthy report hota hai. Ye instruction khud se container ko restart ya application ko repair nahi karta.
+
+### 4. Practical Dockerfile Example
+
+Assume Node.js app port 3000 par chalti hai, `/health` endpoint implement karti hai, aur image mein `curl` installed hai:
+
+```dockerfile
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+  CMD curl -fsS http://localhost:3000/health || exit 1
+```
+
+- `--interval=30s`: checks ke beech ka interval.
+- `--timeout=3s`: ek check ka maximum duration.
+- `--start-period=10s`: application startup ke liye grace period.
+- `--retries=3`: required consecutive failures before unhealthy status.
+- `CMD`: health-check command run karta hai.
+
+Endpoint ko success par successful exit code return karna chahiye. `curl` installed na ho ya endpoint missing ho, toh health check fail ho sakta hai.
+
+### 5. Check the Health Status
+
+```bash
+docker ps
+docker inspect --format='{{.State.Health.Status}}' my-app
+```
+
+Detailed health-check results:
+
+```bash
+docker inspect --format='{{json .State.Health}}' my-app
+```
+
+### 6. Health Check vs Container Status
+
+| Status | Meaning |
+|---|---|
+| `starting` | Startup grace period ya initial checks chal rahe hain |
+| `healthy` | Recent health checks successful hain |
+| `unhealthy` | Configured consecutive checks fail hue hain |
+| `running` / `Up` | Main container process chal raha hai; health alag concept hai |
+
+### Interview-ready answer
+
+“The Dockerfile `HEALTHCHECK` instruction configures a command that Docker runs periodically to test application health. Docker records the result as starting, healthy, or unhealthy based on the check results and retry settings. It reports health but does not itself restart or repair an unhealthy container.”
