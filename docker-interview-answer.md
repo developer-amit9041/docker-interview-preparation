@@ -8818,3 +8818,73 @@ The named volume is retained by default. Use `docker compose down -v` only if yo
 ### Interview-ready answer
 
 “To run multiple containers with Docker Compose, I define each service in a `compose.yaml` file and run `docker compose up -d`. Compose starts the configured services and sets up their required networking. I can check them with `docker compose ps`, view logs with `docker compose logs`, and stop the stack with `docker compose down`.”
+
+
+---
+
+## Q106. What does `services` mean in Docker Compose?
+
+### 1. English Definition
+
+In Docker Compose, `services` is the top-level YAML section where you define the application's components that Compose should run, such as a frontend, backend, database, or cache. Each service specifies how its container or containers should be configured.
+
+### 2. Hindi Definition
+
+Docker Compose mein `services` woh section hai jahan hum define karte hain ki application mein kaun-kaun se components chalenge, jaise React frontend, Node.js backend aur MongoDB database.
+
+### 3. Hinglish Explanation
+
+Maan lo MERN application hai. Ismein `backend` aur `mongodb` do services ho sakti hain. Har service ke andar aap image ya build path, ports, environment variables, volumes aur doosri settings define kar sakte ho.
+
+**Service aur container exactly same cheez nahi hain:** service ek configuration/definition hai; Compose us definition ke basis par ek ya multiple containers create kar sakta hai, depending on how it is configured or scaled.
+
+### 4. Practical Example
+
+```yaml
+services:
+  backend:
+    image: my-backend-image
+    ports:
+      - "5000:5000"
+    environment:
+      MONGO_URI: mongodb://mongodb:27017/myapp
+    depends_on:
+      - mongodb
+
+  mongodb:
+    image: mongo:8
+    volumes:
+      - mongo-data:/data/db
+
+volumes:
+  mongo-data:
+```
+
+In this file:
+
+- `services`: starts the section containing service definitions.
+- `backend`: defines the Node.js backend service.
+- `mongodb`: defines the MongoDB service.
+- `ports`: publishes the backend's container port on the host.
+- `environment`: passes the MongoDB connection string to the backend.
+- `volumes`: persists MongoDB data independently of the container's writable layer.
+
+Start the services:
+
+```bash
+docker compose up -d
+```
+
+Check the services:
+
+```bash
+docker compose ps
+```
+
+### 5. Important Point
+
+On Compose's default project network, services can usually reach each other using their service names. For example, the backend uses hostname `mongodb` to connect to the MongoDB service. The backend must still handle database readiness and connection failures.
+
+### Interview-ready answer
+
+“In Docker Compose, `services` is the top-level section used to define the components of an application, such as a frontend, backend, and database. Each service contains its configuration, including its image or build, ports, environment variables, networks, and volumes. Docker Compose uses these definitions to create and manage the required containers.”
