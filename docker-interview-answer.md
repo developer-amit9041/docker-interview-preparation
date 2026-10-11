@@ -14220,3 +14220,94 @@ Use alerts for sustained high CPU, memory pressure, restarts, or approaching con
 “We can monitor Docker container resource usage using \`docker stats\`. It shows real-time CPU, memory, network I/O, block I/O, and process counts. For a specific container, we can run \`docker stats <container-name>\`; in production, we can use tools such as Prometheus and Grafana for dashboards and alerts.”
 
 ---
+## Q152. How do you optimize a Docker image?
+
+### 1. English Interview Definition
+Docker image optimization means reducing image size, build time, and unnecessary components while keeping the application secure and functional. Common techniques include using a suitable lightweight base image, multi-stage builds, a \`.dockerignore\` file, efficient layer ordering, and installing only production dependencies.
+
+### 2. Hindi Definition
+Docker image optimize karne ka matlab hai image ka size aur build time kam karna, aur unnecessary files aur packages ko remove karna—bina application ki functionality ko break kiye.
+
+### 3. Hinglish Explanation
+Maan lo aapka Node.js backend image 1 GB ki hai. Ismein development dependencies, source files, cache ya unnecessary tools ho sakte hain. Hum multi-stage build, \`.dockerignore\`, lightweight base image aur production-only dependencies use karke image ko chhota aur efficient bana sakte hain.
+
+### 4. Main Optimization Techniques
+
+**1. Use a suitable lightweight base image**
+\`\`\`dockerfile
+FROM node:22-alpine
+WORKDIR /app
+\`\`\`
+Alpine images can be smaller, but check compatibility with native Node.js modules and required system libraries. Use a supported, patched base image rather than choosing only by size.
+
+**2. Use a multi-stage build**
+Build tools and development dependencies can stay in the build stage, while the final stage contains only what is needed to run the application.
+
+\`\`\`dockerfile
+FROM node:22-alpine AS build
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+FROM node:22-alpine AS production
+WORKDIR /app
+ENV NODE_ENV=production
+COPY package*.json ./
+RUN npm ci --omit=dev && npm cache clean --force
+COPY --from=build /app/dist ./dist
+CMD ["node", "dist/server.js"]
+\`\`\`
+This is an illustrative Node.js build example. Adjust the build output, entry point, and runtime files to match your application; some apps need additional assets or runtime dependencies.
+
+**3. Add a \`.dockerignore\` file**
+\`\`\`dockerignore
+node_modules
+.git
+.env
+npm-debug.log
+coverage
+.DS_Store
+\`\`\`
+This prevents unnecessary files and local secrets from being sent in the Docker build context. Do not exclude files that the Dockerfile actually needs.
+
+**4. Install only production dependencies**
+\`\`\`dockerfile
+RUN npm ci --omit=dev
+\`\`\`
+Use this in the final runtime stage. If the application needs TypeScript compilation or another build tool, keep those dependencies in the build stage.
+
+**5. Optimize layer caching**
+Copy dependency manifests before application source code:
+\`\`\`dockerfile
+COPY package*.json ./
+RUN npm ci
+COPY . .
+\`\`\`
+When only source code changes, Docker may reuse the dependency-install layer. Cache reuse depends on whether the layer's inputs and build instructions remain unchanged.
+
+**6. Avoid unnecessary files and commands**
+- Do not copy local \`node_modules\`, Git history, test artifacts, or build output that is not needed at runtime.
+- Combine related package-install and cleanup commands in the same \`RUN\` instruction when appropriate, so package-manager caches are not retained in earlier image layers.
+- Prefer explicit \`COPY\` paths over copying the entire repository into the final image.
+- Do not put secrets in image layers or build arguments; use an appropriate secrets mechanism.
+
+### 5. Check Image Size
+
+\`\`\`bash
+docker image ls
+docker history my-backend:1.0
+docker build -t my-backend:1.0 .
+\`\`\`
+- \`docker image ls\` shows image sizes.
+- \`docker history\` helps identify large image layers.
+- Compare the image before and after changes, using the same build conditions.
+
+### 6. Important Distinction
+A smaller image is not automatically a more secure image. Use maintained base images, apply security updates, scan images, and avoid removing runtime libraries the application needs. Also, \`docker build --no-cache\` disables cached build layers; it does not by itself guarantee an updated base image. Use \`docker build --pull\` to check for a newer base image.
+
+### 7. Interview-Ready Answer
+“I optimize Docker images by using a suitable lightweight base image, multi-stage builds, a \`.dockerignore\` file, and production-only dependencies. I also order Dockerfile instructions to improve layer caching and remove unnecessary files from the final image. Finally, I compare image sizes with \`docker image ls\` and inspect layers with \`docker history\`, while keeping the image secure and functional.”
+
+---
