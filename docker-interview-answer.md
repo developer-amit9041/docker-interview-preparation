@@ -3447,3 +3447,97 @@ Process is forcefully terminated
 | Typical use | Normal shutdown/deployment | Unresponsive container or urgent termination |
 
 **Interview-ready answer:** `docker stop` sends `SIGTERM` first and gives the container time to shut down gracefully; if it does not exit before the timeout, Docker sends `SIGKILL`. `docker kill` sends `SIGKILL` by default and terminates the process immediately. Use `docker stop` for normal shutdown and `docker kill` when forceful termination is needed.
+
+
+---
+
+## Q35. What is the difference between `docker rm` and `docker rmi`?
+
+### 1. English Definition
+
+- **`docker rm`** removes one or more Docker containers.
+- **`docker rmi`** removes one or more Docker images.
+
+### 2. Hindi Definition
+
+- **`docker rm`** ka use container ko remove/delete karne ke liye hota hai.
+- **`docker rmi`** ka use Docker image ko remove/delete karne ke liye hota hai.
+
+### 3. Hinglish Explanation
+
+Amit bhai, image ko application ka **template/package** samjho, aur container ko us image se bana hua **running ya stopped instance**.
+
+Example: aapke paas `mern-backend:1.0` image hai. Us image se `backend-container` container banaya hai.
+
+- Container delete karna hai: `docker rm backend-container`
+- Image delete karni hai: `docker rmi mern-backend:1.0`
+
+Usually, a running container ko normal `docker rm` se remove nahi kar sakte. Pehle use stop karo, ya explicitly force remove karo. Image ko remove karne mein bhi problem aa sakti hai agar koi container us image ko use kar raha ho.
+
+### 4. Practical Example / Code
+
+Check containers and images:
+
+```bash
+docker ps -a
+docker images
+```
+
+Stop and remove a container:
+
+```bash
+docker stop backend-container
+docker rm backend-container
+```
+
+Remove an image:
+
+```bash
+docker rmi mern-backend:1.0
+```
+
+Force-remove a container (use carefully):
+
+```bash
+docker rm -f backend-container
+```
+
+Force-remove an image (use carefully; it does not automatically remove containers using it):
+
+```bash
+docker rmi -f mern-backend:1.0
+```
+
+### 5. Simple Diagram
+
+```text
+Docker Image: mern-backend:1.0
+        |
+        | docker run
+        v
+Container: backend-container
+
+docker rm  ---> removes the container
+docker rmi ---> removes the image
+```
+
+### 6. Practical Commands
+
+| Command | Purpose |
+|---|---|
+| `docker rm backend-container` | Remove a stopped container |
+| `docker rm -f backend-container` | Force-remove a container, including a running one |
+| `docker rmi mern-backend:1.0` | Remove an image |
+| `docker images` | List local images |
+| `docker ps -a` | List all containers, including stopped ones |
+
+### 7. Summary Table
+
+| Feature | `docker rm` | `docker rmi` |
+|---|---|---|
+| Removes | Container | Image |
+| Works with | Container name or ID | Image name/tag or ID |
+| Common use | Clean up unused containers | Clean up unused images |
+| Typical prerequisite | Container should be stopped unless force-removing | Image must not be in use by containers, unless removal conditions are resolved |
+
+**Interview-ready answer:** `docker rm` removes containers, while `docker rmi` removes images. A container is an instance created from an image, so removing a container does not automatically delete its image, and removing an image does not mean a container is removed.
