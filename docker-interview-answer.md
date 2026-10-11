@@ -7226,3 +7226,74 @@ The host directory `/opt/mongo-data` must exist and have suitable permissions. O
 ### Interview-ready answer
 
 “To preserve data after deleting a container, I store it in a Docker named volume or a bind mount instead of the container's writable layer. I can then remove and recreate the container and reattach the same storage. For example, I mount a named volume at MongoDB's `/data/db` directory. I also maintain backups because volumes alone do not protect against accidental deletion or data corruption.”
+
+
+---
+
+## Q84. What is the difference between a Docker volume and a bind mount?
+
+### 1. English Definition
+
+A Docker volume is storage managed by Docker, while a bind mount maps a specific file or directory from the host machine into a container. Both can persist data beyond a container's lifetime, but they differ in how storage is located and managed.
+
+### 2. Hindi Definition
+
+Docker volume ka storage Docker manage karta hai, jabki bind mount mein hum host machine ka specific folder ya file container ke andar mount karte hain.
+
+### 3. Hinglish Explanation
+
+Maan lo aap MERN project par kaam kar rahe ho:
+
+- **Volume:** MongoDB ka data persist karne ke liye Docker-managed named volume use kar sakte ho.
+- **Bind mount:** Development ke time apne laptop ka project folder container ke andar mount kar sakte ho, taaki code changes container mein visible hon.
+
+Dono container ke writable layer se alag host storage use kar sakte hain, lekin volume ka location Docker manage karta hai aur bind mount ka source path aap specify karte ho.
+
+### 4. Comparison Table
+
+| Feature | Docker volume | Bind mount |
+|---|---|---|
+| Storage location | Docker-managed location | Host ka specified path |
+| Path select karna | Usually Docker manages it | User specifies source path |
+| Container delete hone par data | Retained if volume is not deleted | Host files retained if not deleted |
+| Common use | Database and persistent application data | Local development files, configuration, host-managed files |
+| Host path dependency | Application generally need not know host path | Host path must be available |
+| Portability | Usually easier to configure consistently across hosts | Depends on host directory structure and permissions |
+
+### 5. Practical Example: Docker Volume
+
+Create a volume:
+
+```bash
+docker volume create mongo-data
+```
+
+Run MongoDB with it:
+
+```bash
+docker run -d --name mongodb -v mongo-data:/data/db mongo:8
+```
+
+Here, Docker manages the named volume `mongo-data`.
+
+### 6. Practical Example: Bind Mount
+
+On Linux/macOS, mount a host directory into a container:
+
+```bash
+docker run --rm -it \
+  --mount type=bind,source="$(pwd)",target=/app \
+  -w /app node:22-alpine sh
+```
+
+This mounts the current host directory at `/app` inside the container. On Windows or Docker Desktop, use a valid host path and ensure it is accessible to Docker.
+
+### 7. Which One Should You Use?
+
+- Use a **named volume** for persistent database data and Docker-managed application storage.
+- Use a **bind mount** when the container needs direct access to a specific host file or directory, such as source code during development.
+- Both need appropriate permissions and backup practices for important data.
+
+### Interview-ready answer
+
+“A Docker volume is managed by Docker, whereas a bind mount maps a specific host path into a container. I usually use named volumes for persistent database data, such as MongoDB files, and bind mounts when I want to share local source code or configuration files with a container during development.”
