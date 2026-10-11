@@ -11920,3 +11920,189 @@ Use a deliberate deployment and rollback process rather than blindly rebuilding 
 
 ---
 
+## Q133. How do you use Nginx in front of a Dockerized MERN application?
+
+### 1. English Definition
+
+Nginx can sit in front of a Dockerized MERN application as a reverse proxy and web server. It can serve the built React files, forward API requests to the Node.js/Express backend, terminate HTTPS when configured, and provide a single public entry point for the application.
+
+### 2. Hindi Definition
+
+Nginx ko MERN application ke aage reverse proxy aur web server ki tarah use karte hain. Ye React ki static files serve kar sakta hai aur API requests ko Docker network ke through Node.js/Express backend tak forward kar sakta hai.
+
+### 3. Hinglish Explanation
+
+Bhai, browser ko frontend aur backend ke alag-alag internal container addresses directly dene ke bajay hum Nginx ko public entry point bana sakte hain.
+
+- User website open karta hai, toh Nginx React ki static files serve karta hai.
+- User \`/api/users\` request karta hai, toh Nginx request backend service ko forward karta hai.
+- Backend MongoDB se Docker Compose ke internal network par communicate karta hai.
+- HTTPS certificate Nginx ya AWS load balancer par configure kiya ja sakta hai.
+
+Isse public side par generally sirf Nginx ke ports 80/443 expose karne hote hain. Backend aur database ko public ports dene ki zaroorat nahi hoti.
+
+### 4. Architecture Diagram
+
+\`\`\`text
+                 Browser / Internet
+                         |
+                      HTTP/HTTPS
+                         |
+                         v
+                 Nginx container
+                 /              \\
+        Static React files     /api/* proxy
+                                   |
+                                   v
+                          Node.js / Express
+                                   |
+                                   v
+                              MongoDB
+                         (private Compose network)
+\`\`\`
+
+### 5. Example Project Structure
+
+\`\`\`text
+mern-app/
+├── compose.yaml
+├── frontend/
+│   ├── Dockerfile
+│   ├── nginx.conf
+│   └── src/
+└── backend/
+    ├── Dockerfile
+    └── ...
+\`\`\`
+
+In this example, Nginx is bundled into the frontend image to serve React and proxy API requests. This is one common pattern; another is to run a dedicated Nginx reverse-proxy container in front of separate frontend and backend containers.
+
+### 6. Nginx Configuration
+
+Create \`frontend/nginx.conf\`:
+
+\`\`\`nginx
+server {
+    listen 80;
+    server_name _;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /api/ {
+        proxy_pass http://backend:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+\`\`\`
+
+Explanation:
+- \`root\` points to the built React files copied into the Nginx image.
+- \`try_files ... /index.html\` supports client-side React Router routes.
+- \`location /api/\` forwards API requests to the Compose service named \`backend\`.
+- \`proxy_pass http://backend:5000;\` preserves the \`/api/...\` URI suffix in this configuration. Ensure the backend routes match this path convention.
+
+### 7. Frontend Dockerfile Example
+
+For a Vite React app whose build output is \`dist\`:
+
+\`\`\`dockerfile
+FROM node:22-alpine AS build
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+FROM nginx:alpine
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /app/dist /usr/share/nginx/html
+EXPOSE 80
+\`\`\`
+
+For Create React App, the build directory is typically \`build\`, so adjust the final \`COPY\` source accordingly. Keep the Nginx configuration in the frontend build context as shown.
+
+### 8. Docker Compose Example
+
+\`\`\`yaml
+services:
+  frontend:
+    build: ./frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    environment:
+      PORT: "5000"
+      MONGO_URI: mongodb://mongodb:27017/myapp
+    expose:
+      - "5000"
+    depends_on:
+      - mongodb
+    restart: unless-stopped
+
+  mongodb:
+    image: mongo:8
+    volumes:
+      - mongo-data:/data/db
+    restart: unless-stopped
+
+volumes:
+  mongo-data:
+\`\`\`
+
+Compose places the services on a shared network by default. Nginx can resolve \`backend\` by service name, and the backend can resolve \`mongodb\`. In this configuration, only the frontend/Nginx service publishes a host port; backend and MongoDB are not directly published to the host.
+
+### 9. Start and Test
+
+\`\`\`bash
+docker compose up --build -d
+docker compose ps
+docker compose logs -f frontend
+docker compose logs -f backend
+\`\`\`
+
+Open \`http://localhost\` when running locally. The browser can request the API with a relative path:
+
+\`\`\`js
+fetch("/api/users");
+\`\`\`
+
+The browser talks to Nginx; Nginx forwards that request to the backend. Browser-side code should not try to resolve the Docker-internal hostname \`backend\`.
+
+### 10. HTTPS and Production Notes
+
+- For public production traffic, configure HTTPS certificates at Nginx or terminate TLS at an AWS load balancer.
+- Allow only required public ports in the firewall/security group.
+- Keep MongoDB private, configure authentication, and maintain backups.
+- Add health checks, logs, request-size/time-out settings, and monitoring as appropriate.
+- If running Nginx in a dedicated proxy container, attach it to the same Docker network as the services it must reach.
+
+### 11. Summary Table
+
+| Nginx feature | Benefit |
+|---|---|
+| Static file serving | Delivers the built React frontend |
+| Reverse proxy | Forwards API requests to Express |
+| Single public entry point | Avoids exposing internal service ports directly |
+| HTTPS termination | Can handle TLS certificates when configured |
+| SPA fallback | Supports client-side React Router URLs |
+
+### Interview-ready answer
+
+“I use Nginx in front of a Dockerized MERN application as a web server and reverse proxy. Nginx serves the built React files and forwards requests such as /api/users to the Node.js/Express service by using the Docker Compose service name, for example backend:5000. The backend communicates with MongoDB over the internal Docker network. I expose only the required public ports, configure HTTPS at Nginx or a load balancer, and keep the database private.”
+
+---
+
