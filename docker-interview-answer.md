@@ -5233,3 +5233,106 @@ Node.js source code + package files
 ### Interview-ready answer
 
 “To containerize a Node.js application, I create a Dockerfile with a suitable Node.js base image, set the working directory, copy the package manifests, install dependencies, and copy the application source. I then build the image with `docker build` and run it with `docker run -p` to publish the application port. I also use a `.dockerignore` file, avoid baking secrets into the image, and run the app as a non-root user.”
+
+
+---
+
+## Q56. How is a Docker image created?
+
+### 1. English Definition
+
+A Docker image is commonly created by writing a Dockerfile and running the `docker build` command. Docker processes the build instructions, uses the specified base image and build context, and produces an image made up of reusable layers.
+
+### 2. Hindi Definition
+
+Docker image banane ke liye hum usually ek `Dockerfile` banate hain aur `docker build` command chalate hain. Docker us file ki instructions follow karke application aur uski required dependencies ki image create karta hai.
+
+### 3. Hinglish Explanation
+
+Maan lo aapke paas Node.js application hai. Docker ko batana hota hai ki kaunsi Node.js image use karni hai, files kahan copy karni hain aur dependencies kaise install karni hain. Ye instructions hum Dockerfile mein likhte hain.
+
+Phir `docker build` command se Docker image create karta hai. Baad mein isi image se ek ya multiple containers run kiye ja sakte hain.
+
+### 4. Practical Example
+
+Project structure:
+
+```text
+my-node-app/
+├── server.js
+├── package.json
+├── package-lock.json
+├── Dockerfile
+└── .dockerignore
+```
+
+Example `Dockerfile`:
+
+```dockerfile
+FROM node:22-alpine
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
+COPY . .
+CMD ["node", "server.js"]
+```
+
+Build the image from the project root:
+
+```bash
+docker build -t my-node-app:1.0 .
+```
+
+- `docker build`: image build karta hai.
+- `-t my-node-app:1.0`: image ka naam aur tag set karta hai.
+- `.`: current directory ko build context banata hai.
+
+Check that the image was created:
+
+```bash
+docker image ls
+```
+
+Run a container from the image:
+
+```bash
+docker run --name my-node-container my-node-app:1.0
+```
+
+Ye example assume karta hai ki `server.js` aur lockfile available hain aur app dependencies properly declared hain.
+
+### 5. How Image Creation Works
+
+```text
+Application source + dependencies
+                 |
+                 v
+              Dockerfile
+                 |
+                 v
+        docker build -t name:tag .
+                 |
+                 v
+        Docker build process
+       (instructions + cache)
+                 |
+                 v
+             Docker image
+                 |
+                 v
+           docker run
+                 |
+                 v
+         Running container
+```
+
+### 6. Other Ways to Create or Obtain Images
+
+- **Build from a Dockerfile:** `docker build -t app:1.0 .`
+- **Build using Buildx:** `docker buildx build -t app:1.0 .` (advanced build options ke liye).
+- **Pull an existing image:** `docker pull node:22-alpine` (registry se existing image download hoti hai; nayi image from source build nahi hoti).
+- **Commit a container:** `docker commit container-name image-name:tag` (possible hai, lekin reproducible builds ke liye Dockerfile usually better practice hai).
+
+### Interview-ready answer
+
+“A Docker image is typically created from a Dockerfile using the `docker build` command. Docker reads the instructions, processes the build context, reuses cached layers where possible, and creates a tagged image. We can then use that image to run containers with `docker run`.”
