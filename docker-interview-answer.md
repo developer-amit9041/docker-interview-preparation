@@ -3141,3 +3141,119 @@ Other machine: docker pull ...
 | `docker pull` | Downloads an image from a registry |
 
 **Interview-ready answer:** To push a Docker image, first authenticate with `docker login`, tag the local image for the target registry using `docker tag`, and upload it with `docker push REPOSITORY:TAG`. For example, `docker push mydockeruser/mern-backend:1.0` uploads that tagged image to Docker Hub if you have permission.
+
+
+---
+
+## Q32. How do you build a Docker image?
+
+### 1. English Definition
+
+The `docker build` command builds a Docker image from a Dockerfile and a build context. The image contains the application code, dependencies, and configuration instructions needed to create a container.
+
+### 2. Hindi Definition
+
+Docker image banane ke liye `docker build` command use karte hain. Is command mein Dockerfile aur build context use hota hai, jisme application code aur required files ho sakti hain.
+
+### 3. Hinglish Explanation
+
+Amit bhai, maan lo aapka Node.js backend project hai. Aap chahte ho ki application Docker container mein run ho. Iske liye pehle Dockerfile likhte hain, phir `docker build` command se image banate hain.
+
+- **Dockerfile:** Image banane ke instructions.
+- **Build context:** Files ka woh set jo Docker build process ko available hota hai; aksar current directory `.` hoti hai.
+- **Docker image:** Build ka output, jisse baad mein container create kiya ja sakta hai.
+
+### 4. Practical Example / Code
+
+Example Node.js project structure:
+
+```text
+mern-backend/
+├── Dockerfile
+├── package.json
+├── package-lock.json
+└── server.js
+```
+
+Example Dockerfile:
+
+```dockerfile
+FROM node:22
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+EXPOSE 5000
+CMD ["npm", "start"]
+```
+
+Build the image from the directory containing the Dockerfile:
+
+```bash
+docker build -t mern-backend:1.0 .
+```
+
+Meaning:
+- `-t mern-backend:1.0`: image ka name aur tag set karta hai.
+- `.`: current directory ko build context banata hai.
+
+Check the image:
+
+```bash
+docker images
+```
+
+Run a container from the image:
+
+```bash
+docker run -d --name mern-backend-container -p 5000:5000 mern-backend:1.0
+```
+
+This example assumes `package.json` has a working `start` script and the app listens on port 5000. For real projects, add a suitable `.dockerignore` file to exclude items such as `node_modules`, local environment files, and Git metadata from the build context. Avoid copying secrets into the image.
+
+### 5. Architecture Diagram
+
+```text
+Application code + dependencies
+              |
+              v
+         Dockerfile
+              |
+              v
+docker build -t mern-backend:1.0 .
+              |
+              v
+       Docker build process
+              |
+              v
+      Docker image created
+              |
+              v
+          docker run
+              |
+              v
+       Running container
+```
+
+### 6. Practical Commands / Configuration
+
+| Command | Purpose |
+|---|---|
+| `docker build -t app:1.0 .` | Builds an image and assigns a name/tag |
+| `docker build -f Dockerfile.dev -t app:dev .` | Uses a specific Dockerfile |
+| `docker images` | Lists local images |
+| `docker image inspect app:1.0` | Shows image metadata |
+| `docker run app:1.0` | Creates and starts a container from the image |
+| `docker build --no-cache -t app:1.0 .` | Builds without using cached build layers |
+
+### 7. Summary Table
+
+| Item | Purpose |
+|---|---|
+| Dockerfile | Defines image build instructions |
+| Build context | Provides files available to the build |
+| `docker build` | Builds the image |
+| `-t app:1.0` | Assigns image name and tag |
+| `docker run` | Creates and starts a container from the image |
+
+**Interview-ready answer:** We use `docker build -t IMAGE_NAME:TAG .` to build a Docker image from a Dockerfile and the specified build context. For example, `docker build -t mern-backend:1.0 .` creates an image named `mern-backend` with tag `1.0`, which can then be used to run a container.
