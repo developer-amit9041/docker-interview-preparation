@@ -10486,3 +10486,161 @@ This prevents unnecessary local files from being sent in the Docker build contex
 
 “I use a multi-stage Dockerfile for a React application. In the first stage, I use a Node.js image to install dependencies and run the production build. In the second stage, I copy the generated static files into an Nginx image to serve the frontend. This keeps the final image smaller because it does not need the Node.js build environment. I adjust the output path for the toolchain, such as build for Create React App or dist for Vite.”
 
+---
+
+## Q123. How do you create a Dockerfile for a Node.js/Express application?
+
+### 1. English Definition
+
+A Dockerfile for a Node.js/Express application defines how to create an image containing the Node.js runtime, application code, dependencies, and startup command so the API can run consistently inside a container.
+
+### 2. Hindi Definition
+
+Node.js/Express application ke Dockerfile mein instructions hoti hain jo Node.js environment set karti hain, dependencies install karti hain, application code copy karti hain aur server start karne ka command define karti hain.
+
+### 3. Hinglish Explanation
+
+Bhai, Express backend ko Docker container mein run karne ke liye hum Node.js base image use karte hain. Phir project ki dependencies install karte hain, source code copy karte hain aur npm start se server run karte hain.
+
+Dhyan rahe ki Express server ko container ke andar 0.0.0.0 par listen karna chahiye, aur port/environment variables ko configuration se read karna chahiye.
+
+### 4. Practical Example — Dockerfile
+
+Create backend/Dockerfile:
+
+```dockerfile
+FROM node:22-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci --omit=dev
+
+COPY . .
+
+ENV NODE_ENV=production
+EXPOSE 5000
+
+CMD ["npm", "start"]
+```
+
+This example assumes the project has a committed package-lock.json and a valid start script in package.json. If your app needs build tools at runtime or uses TypeScript that must be compiled, adapt the build steps accordingly.
+
+Example package.json script:
+
+```json
+{
+  "scripts": {
+    "start": "node server.js"
+  }
+}
+```
+
+Example server.js:
+
+```js
+const express = require("express");
+const app = express();
+
+const PORT = process.env.PORT || 5000;
+
+app.get("/", (req, res) => {
+  res.send("Express API is running");
+});
+
+app.listen(PORT, "0.0.0.0", () => {
+  console.log("Server listening on port " + PORT);
+});
+```
+
+### 5. Architecture Diagram
+
+```text
+Node.js base image
+       |
+       v
+Set working directory (/app)
+       |
+       v
+Copy package manifests
+       |
+       v
+Install production dependencies
+       |
+       v
+Copy application source
+       |
+       v
+Run npm start
+       |
+       v
+Express API container (port 5000)
+```
+
+### 6. Build and Run Commands
+
+Build the image from the project root:
+
+```bash
+docker build -t express-api ./backend
+```
+
+Run the container and map host port 5000 to container port 5000:
+
+```bash
+docker run --rm -p 5000:5000 -e PORT=5000 express-api
+```
+
+Test it by opening http://localhost:5000.
+
+For Docker Compose:
+
+```yaml
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "5000:5000"
+    environment:
+      PORT: "5000"
+```
+
+Start it:
+
+```bash
+docker compose up --build -d backend
+docker compose logs -f backend
+```
+
+### 7. Recommended .dockerignore
+
+Create backend/.dockerignore:
+
+```text
+node_modules
+.git
+.env
+.env.*
+npm-debug.log*
+coverage
+```
+
+Do not copy production secrets into the image. Provide runtime configuration using environment variables or a suitable secret manager.
+
+### 8. Summary Table
+
+| Instruction | Purpose |
+|---|---|
+| FROM node:22-alpine | Selects a Node.js base image |
+| WORKDIR /app | Sets the working directory |
+| COPY package*.json ./ | Copies dependency manifests |
+| RUN npm ci --omit=dev | Installs locked production dependencies |
+| COPY . . | Copies application source |
+| ENV NODE_ENV=production | Sets the runtime environment |
+| EXPOSE 5000 | Documents the expected container port |
+| CMD ["npm", "start"] | Defines the default startup command |
+
+### Interview-ready answer
+
+“To Dockerize a Node.js/Express application, I start with a Node.js base image, set a working directory, copy the package manifests, install dependencies, and copy the source code. I define the startup command with CMD, expose the application's port, and configure the server to listen on 0.0.0.0. I also use a .dockerignore file and keep secrets outside the image.”
+
