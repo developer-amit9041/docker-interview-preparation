@@ -7617,3 +7617,84 @@ Docker Compose creates and manages the named volume for the service. Avoid `dock
 ### Interview-ready answer
 
 “To persist MongoDB data in Docker, I create a named volume and mount it at `/data/db`, for example, `-v mongo-data:/data/db`. MongoDB stores its database files in that volume, so the data remains available when the container is removed and recreated, provided the volume is not deleted. I also maintain backups for production data.”
+
+
+---
+
+## Q90. What is a Docker network?
+
+### 1. English Definition
+
+A Docker network is a virtual network that allows containers to communicate with one another and, depending on the network configuration, with the host or external systems. Docker provides network drivers such as bridge, host, none, and overlay for different use cases.
+
+### 2. Hindi Definition
+
+Docker network ek virtual network hota hai jo containers ko aapas mein communicate karne deta hai. Configuration ke according containers host machine ya external systems ke saath bhi communicate kar sakte hain.
+
+### 3. Hinglish Explanation
+
+Maan lo aapke MERN project mein teen containers hain:
+- React frontend
+- Node.js/Express backend
+- MongoDB database
+
+In containers ko ek Docker network par connect kar sakte ho. Backend MongoDB ko uske container name, jaise `mongodb`, se access kar sakta hai jab dono same user-defined bridge network par hon.
+
+Frontend users ke browser mein run hota hai, isliye browser ko backend tak pahunchne ke liye backend ka accessible address/port chahiye. Sirf same Docker network par hone se user's browser directly container DNS names resolve nahi karta.
+
+### 4. Practical Example
+
+**Step 1: Network create karo**
+
+```bash
+docker network create mern-network
+```
+
+**Step 2: MongoDB container ko network par run karo**
+
+```bash
+docker run -d \
+  --name mongodb \
+  --network mern-network \
+  -v mongo-data:/data/db \
+  mongo:8
+```
+
+**Step 3: Backend container ko same network par run karo**
+
+```bash
+docker run -d \
+  --name backend \
+  --network mern-network \
+  -p 5000:5000 \
+  -e MONGO_URI=mongodb://mongodb:27017/myapp \
+  my-backend-image
+```
+
+Because both containers are on the same user-defined bridge network, the backend can resolve the MongoDB container by the name `mongodb`. Ensure the backend image and application configuration are set up to read `MONGO_URI`.
+
+**Step 4: Network inspect karo**
+
+```bash
+docker network ls
+docker network inspect mern-network
+```
+
+### 5. Common Docker Network Drivers
+
+| Driver | Purpose |
+|---|---|
+| `bridge` | Default choice for communication between containers on one Docker host; user-defined bridges provide container-name DNS |
+| `host` | Container shares the host's network namespace on supported Linux setups |
+| `none` | Disables normal container networking |
+| `overlay` | Connects services across multiple Docker hosts, commonly in Swarm |
+
+### 6. Important Points
+
+- Containers on the same user-defined bridge network can communicate using container names.
+- Publishing a port with `-p` makes a container port accessible through the host; it is not generally required for container-to-container communication on the same network.
+- Keep databases off publicly exposed ports unless external access is explicitly required and properly secured.
+
+### Interview-ready answer
+
+“A Docker network is a virtual network that enables containers to communicate with each other and, when configured, with external systems. For example, in a MERN application, I can connect the backend and MongoDB containers to the same user-defined bridge network so the backend can connect to MongoDB using its container name.”
