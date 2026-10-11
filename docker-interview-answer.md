@@ -2520,3 +2520,117 @@ User runs: docker images
 | `docker pull nginx` | Downloads an image; it does not list images |
 
 **Interview-ready answer:** Use `docker images` or `docker image ls` to list Docker images available locally. The output includes the repository, tag, image ID, creation information, and size. It does not list every image available in a remote registry.
+
+
+---
+
+## Q25. How do you remove a Docker image?
+
+### 1. English Definition
+
+The `docker rmi` command removes one or more Docker images from the local host. Its modern equivalent is `docker image rm`. An image may not be removable while it is referenced by existing containers; those dependencies may need to be removed first.
+
+### 2. Hindi Definition
+
+Local system se Docker image remove karne ke liye `docker rmi` ya `docker image rm` command use karte hain. Agar kisi existing container ko woh image use karne ke liye reference kiya gaya hai, toh image remove karne se pehle us dependency ko handle karna pad sakta hai.
+
+### 3. Hinglish Explanation
+
+Amit bhai, image aur container alag cheezein hain:
+
+- **Image:** Application ka template.
+- **Container:** Image se bana instance.
+
+Example: Agar aapke local system par Nginx image hai aur aap use remove karna chahte ho:
+
+```bash
+docker rmi nginx
+```
+
+Agar image kisi existing container ke through referenced hai, toh Docker image removal reject kar sakta hai. Zaroorat ho toh container ko stop karke remove karo, phir image remove karo. Dhyan rahe, container remove karne se uske writable layer ka data lose ho sakta hai.
+
+### 4. Practical Example / Code
+
+List local images:
+
+```bash
+docker images
+```
+
+Check whether a container uses the image:
+
+```bash
+docker ps -a
+```
+
+If the container is no longer needed, stop and remove it:
+
+```bash
+docker stop my-nginx
+docker rm my-nginx
+```
+
+Remove the image:
+
+```bash
+docker rmi nginx
+```
+
+Equivalent modern command:
+
+```bash
+docker image rm nginx
+```
+
+Verify the result:
+
+```bash
+docker images
+```
+
+### 5. Architecture Diagram
+
+```text
+docker rmi nginx
+       |
+       v
+  Docker daemon
+       |
+       v
+Check image references
+       |
+       v
+Can the image be removed?
+       |
+   Yes | No
+       |  \\
+       v   v
+ Remove   Resolve container
+ image    references first
+       |
+       v
+Image no longer listed locally
+```
+
+### 6. Practical Commands / Configuration
+
+| Command | Purpose |
+|---|---|
+| `docker rmi nginx` | Removes a local image by repository/tag |
+| `docker image rm nginx` | Modern equivalent to remove an image |
+| `docker rmi <image_id>` | Removes an image by ID |
+| `docker images` | Lists local images |
+| `docker ps -a` | Lists all containers that may reference an image |
+| `docker image prune` | Removes dangling images |
+| `docker image prune -a` | Removes images not referenced by any container; review carefully before confirming |
+
+### 7. Summary Table
+
+| Command | Action |
+|---|---|
+| `docker rmi nginx` | Removes a local image |
+| `docker image rm nginx` | Same image-removal operation |
+| `docker image prune` | Removes dangling images |
+| `docker image prune -a` | Removes images not used by any container |
+
+**Interview-ready answer:** Use `docker rmi IMAGE_NAME` or `docker image rm IMAGE_NAME` to remove a local Docker image. If a container references the image, Docker may require you to remove that dependency first. Be careful with prune commands because they can remove multiple images.
