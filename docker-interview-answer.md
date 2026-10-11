@@ -6469,3 +6469,55 @@ docker cp my-app:/app/reports ./reports
 ### Interview-ready answer
 
 “I use `docker cp` to copy files and directories between the host and a Docker container. For example, `docker cp ./config.json my-app:/app/config.json` copies a host file into the container. The command works with both running and stopped containers.”
+
+
+---
+
+## Q73. How do you copy files from a container to the host machine?
+
+### 1. English Definition
+
+Use the `docker cp` command to copy files or directories from a Docker container to the host machine. It works whether the container is running or stopped.
+
+### 2. Hindi Definition
+
+Docker container ke andar se file ya folder apni host machine par copy karne ke liye `docker cp` command use karte hain.
+
+### 3. Hinglish Explanation
+
+Maan lo aapki Node.js application container ke andar `/app/logs/app.log` file create karti hai aur aap us log ko laptop par dekhna chahte ho. Aap container ka naam ya ID aur file ka path dekar `docker cp` use kar sakte ho.
+
+### 4. Practical Commands
+
+**Copy a file from container to the current host directory:**
+
+```bash
+docker cp my-app:/app/logs/app.log ./app.log
+```
+
+**Copy a directory from container to host:**
+
+```bash
+docker cp my-app:/app/reports ./reports
+```
+
+**Use the container ID instead of its name:**
+
+```bash
+docker cp a1b2c3d4e5f6:/app/output.json ./output.json
+```
+
+In these examples:
+- `my-app` or `a1b2c3d4e5f6` is the container name or ID.
+- The path before the space is the source path inside the container.
+- The path after the space is the destination on the host.
+
+### 5. Important Notes
+
+- `docker cp` works with running and stopped containers.
+- The destination parent directory on the host should exist when required.
+- If you need ongoing file sharing rather than a one-time copy, consider a bind mount or volume.
+
+### Interview-ready answer
+
+“I use `docker cp` to copy files from a container to the host machine. For example, `docker cp my-app:/app/logs/app.log ./app.log` copies the container's log file into the current host directory. This works with both running and stopped containers.”
