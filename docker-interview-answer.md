@@ -6594,3 +6594,96 @@ Here, host port `3000` forwards to container port `3000`. Containers on the same
 ### Interview-ready answer
 
 “Container networking enables Docker containers to communicate with each other, the host, and external networks. Docker supports drivers such as bridge, host, none, and overlay. In a typical application, I create a user-defined bridge network so the backend can reach the database by its container name, and I publish only the ports that need host access.”
+
+
+---
+
+## Q75. How do you pass environment variables to a container?
+
+### 1. English Definition
+
+You can pass environment variables to a Docker container using the `-e` or `--env` option with `docker run`, an environment file with `--env-file`, or the `environment` section in Docker Compose.
+
+### 2. Hindi Definition
+
+Docker container ko environment variables dene ke liye `docker run -e`, `--env-file`, ya Docker Compose ki `environment` configuration use kar sakte hain.
+
+### 3. Hinglish Explanation
+
+Maan lo Node.js application ko `NODE_ENV`, `PORT`, aur database connection string chahiye. In values ko code mein hardcode karne ke bajay container start karte waqt pass kar sakte ho. Application inhe `process.env` se read kar sakti hai.
+
+### 4. Practical Methods
+
+**Method 1: Pass a single variable with `-e`**
+
+```bash
+docker run -d --name my-app -e NODE_ENV=production my-node-app:1.0
+```
+
+**Method 2: Pass multiple variables**
+
+```bash
+docker run -d --name my-app \
+  -e NODE_ENV=production \
+  -e PORT=3000 \
+  my-node-app:1.0
+```
+
+**Method 3: Use an environment file**
+
+Create a file named `.env.container`:
+
+```text
+NODE_ENV=production
+PORT=3000
+```
+
+Then run:
+
+```bash
+docker run -d --name my-app --env-file .env.container my-node-app:1.0
+```
+
+Keep environment files containing secrets out of version control. Avoid putting passwords or tokens directly in shell history; use an appropriate secrets-management solution for sensitive production values.
+
+**Method 4: Docker Compose**
+
+```yaml
+services:
+  app:
+    image: my-node-app:1.0
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+```
+
+### 5. Read Variables in Node.js
+
+```javascript
+const port = process.env.PORT || 3000;
+const env = process.env.NODE_ENV || "development";
+
+console.log(`Environment: ${env}`);
+app.listen(port);
+```
+
+### 6. Check a Container's Environment
+
+```bash
+docker exec my-app printenv
+```
+
+This displays the environment visible inside the container. Be careful: output can expose secrets, so don't share it without reviewing the values.
+
+### 7. Quick Comparison
+
+| Method | Best use |
+|---|---|
+| `docker run -e KEY=value` | A few variables for one container |
+| `docker run --env-file FILE` | Several variables stored in a file |
+| Compose `environment` | Variables defined in Compose configuration |
+| Secrets manager / Docker secrets where supported | Sensitive credentials and tokens |
+
+### Interview-ready answer
+
+“I pass environment variables to Docker containers using `docker run -e KEY=value`, `--env-file`, or the `environment` section in Docker Compose. In a Node.js application, I access them through `process.env`. I avoid hardcoding secrets in the image or committing sensitive environment files to source control.”
