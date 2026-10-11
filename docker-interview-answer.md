@@ -6687,3 +6687,65 @@ This displays the environment visible inside the container. Be careful: output c
 ### Interview-ready answer
 
 “I pass environment variables to Docker containers using `docker run -e KEY=value`, `--env-file`, or the `environment` section in Docker Compose. In a Node.js application, I access them through `process.env`. I avoid hardcoding secrets in the image or committing sensitive environment files to source control.”
+
+
+---
+
+## Q76. How do you run a container in the background?
+
+### 1. English Definition
+
+Use the detached-mode option `-d` (or `--detach`) with `docker run` to start a container in the background and return control of the terminal.
+
+### 2. Hindi Definition
+
+Docker container ko background mein run karne ke liye `docker run` command ke saath `-d` ya `--detach` option use karte hain.
+
+### 3. Hinglish Explanation
+
+Agar aap `docker run nginx` chalate ho, toh Docker foreground mein container ke output ko terminal par dikhata hai. Agar aap `-d` use karte ho, toh container background mein run hota hai aur terminal prompt wapas mil jata hai.
+
+### 4. Practical Commands
+
+**Run an Nginx container in the background:**
+
+```bash
+docker run -d --name my-nginx -p 8080:80 nginx
+```
+
+- `-d`: detached/background mode
+- `--name my-nginx`: container ka naam
+- `-p 8080:80`: host port 8080 ko container port 80 se map karta hai
+- `nginx`: image name
+
+**Check whether it is running:**
+
+```bash
+docker ps
+```
+
+**View its logs:**
+
+```bash
+docker logs my-nginx
+```
+
+**Follow logs continuously:**
+
+```bash
+docker logs -f my-nginx
+```
+
+**Stop the container:**
+
+```bash
+docker stop my-nginx
+```
+
+### 5. Important Note
+
+Detached mode terminal se container ko separate karta hai; it does not guarantee that the container will keep running. Agar container ka main process exit ho jata hai, toh container bhi stop ho jayega.
+
+### Interview-ready answer
+
+“I run a Docker container in the background using `docker run -d image-name`. The `-d` or `--detach` option starts the container without keeping the terminal attached. I use `docker ps` to check its status and `docker logs` to inspect its output.”
