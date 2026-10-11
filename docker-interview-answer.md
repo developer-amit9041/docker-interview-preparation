@@ -4857,3 +4857,93 @@ Yeh pattern dependency installation ko application source copy karne se alag rak
 ### Interview-ready answer
 
 “Unnecessary multiple `RUN` instructions should be avoided because each instruction generally creates an image layer and may add image size or build overhead. I combine related commands and perform cleanup in the same `RUN` instruction, while keeping steps separate when it improves build-cache reuse and readability.”
+
+
+---
+
+## Q52. How do you optimize a Dockerfile?
+
+### 1. English Definition
+
+A Dockerfile is optimized by reducing unnecessary image layers and dependencies, using build cache effectively, choosing a suitable small base image, copying only required files, using multi-stage builds where appropriate, and excluding irrelevant files with `.dockerignore`.
+
+### 2. Hindi Definition
+
+Dockerfile optimize karne ka matlab hai image ka size kam rakhna, build ko fast banana, unnecessary files aur dependencies ko image mein jaane se rokna, aur production image ko secure aur efficient banana.
+
+### 3. Hinglish Explanation
+
+MERN/Node.js project mein Docker image ko optimize karne ke liye kuch important practices follow karte hain:
+
+1. **Suitable base image choose karo:** Project ke liye suitable official image use karo, jaise `node:22-alpine`, agar uski compatibility aur requirements fit hoti hain.
+2. **`.dockerignore` use karo:** `node_modules`, `.git`, local logs aur secrets jaise files build context se exclude karo. Secrets ko image mein copy nahi karna chahiye.
+3. **Dependency files pehle copy karo:** `package.json` aur lockfile ko pehle copy karke dependencies install karo. Isse source code change hone par dependency layer cache se reuse ho sakti hai.
+4. **Production dependencies rakho:** Production runtime mein dev dependencies ki zaroorat na ho toh unhe final image se exclude karo.
+5. **Multi-stage build use karo:** Build tools aur temporary files ko final runtime image se alag rakho, jab application ke liye yeh approach suitable ho.
+6. **Related commands combine aur cleanup karo:** Temporary package cache ko usi `RUN` instruction mein clean karo jahan woh create hua.
+7. **Non-root user use karo:** Application ko possible ho toh root ke bajay non-root user se run karo.
+8. **Image inspect karo:** Image size, layers aur vulnerabilities ko regularly check karo.
+
+### 4. Practical Node.js / MERN Example
+
+**`.dockerignore`**
+
+```text
+node_modules
+.git
+.env
+npm-debug.log*
+coverage
+```
+
+`.env` ko exclude karna important hai taaki local secrets build context se image build ke liye na bheje jaayen. Runtime secrets ko environment configuration ya secrets manager se securely provide karo.
+
+**Example Dockerfile (single-stage, suitable for a simple Node.js runtime):**
+
+```dockerfile
+FROM node:22-alpine
+
+WORKDIR /app
+
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
+
+COPY --chown=node:node . .
+
+ENV NODE_ENV=production
+USER node
+
+EXPOSE 5000
+
+CMD ["node", "server.js"]
+```
+
+Is example mein assume kiya gaya hai ki project mein `package-lock.json` aur `server.js` hain, aur application port 5000 par listen karti hai. Apne project ke hisaab se file names aur port adjust karo. Agar build process ko dev dependencies chahiye, toh multi-stage build use karke build tools ko final image se exclude karna better ho sakta hai.
+
+### 5. Build and Inspect
+
+```bash
+docker build -t mern-backend:optimized .
+docker image ls
+docker history mern-backend:optimized
+```
+
+- `docker image ls`: image ka size dekho.
+- `docker history`: image ki layers aur unke size ka overview dekho.
+
+### 6. Optimization Checklist
+
+| Practice | Benefit |
+|---|---|
+| Small, compatible base image | Image size reduce ho sakta hai |
+| `.dockerignore` | Unnecessary files build context mein nahi jaati |
+| Dependency files first | Build cache reuse improve hota hai |
+| Multi-stage build | Build tools final image se exclude ho sakte hain |
+| Production-only dependencies | Runtime image lean hoti hai |
+| Non-root user | Container security improve hoti hai |
+| Same-layer cleanup | Temporary data image mein persist hone se bach sakta hai |
+| Image scanning | Known vulnerabilities identify karne mein help milti hai |
+
+### Interview-ready answer
+
+“I optimize a Dockerfile by using a suitable minimal base image, adding a `.dockerignore` file, copying dependency manifests before source code to improve cache reuse, installing only required production dependencies, and using multi-stage builds when appropriate. I also avoid unnecessary files, run the application as a non-root user, and inspect image size and vulnerabilities.”
