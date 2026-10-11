@@ -16417,3 +16417,84 @@ Compose creates a default network for the application, allowing the backend to r
 “I would first check that both containers are running and attached to a shared Docker network. Then I would verify the target service name, container port, application bind address, and logs. For example, a Node.js container connecting to MongoDB in Compose should usually use \`mongodb://mongodb:27017/...\`, not \`localhost\`. I would also check service readiness, credentials, and network access rules.”
 
 ---
+## Q179. Docker image builds are very slow. How would you optimize them?
+
+### 1. English Interview Definition
+I optimize slow Docker builds by improving layer caching, ordering Dockerfile instructions efficiently, reducing the build context with \`.dockerignore\`, using BuildKit cache mounts where appropriate, and avoiding unnecessary dependencies and build steps. I also inspect build output to identify which step is taking the most time.
+
+### 2. Hindi Definition
+Agar Docker image build hone mein bahut time lag raha hai, toh hum Docker cache ko effectively use karte hain, unnecessary files ko build context se exclude karte hain, dependencies ko smart order mein install karte hain aur slow build steps identify karte hain.
+
+### 3. Hinglish Explanation
+Maan lo Node.js application build karte waqt har baar \`npm ci\` ko dobara run hone mein 2 minutes lagte hain, chahe sirf ek source file change hui ho. Agar hum pehle \`package.json\` aur lockfile copy karke dependencies install karein, phir source code copy karein, toh sirf source change hone par Docker dependency layer ko reuse kar sakta hai.
+
+### 4. Main Optimization Techniques
+
+**1. Order Dockerfile instructions for cache reuse**
+Less efficient:
+\`\`\`dockerfile
+COPY . .
+RUN npm ci
+\`\`\`
+
+Better:
+\`\`\`dockerfile
+COPY package*.json ./
+RUN npm ci
+COPY . .
+\`\`\`
+Dependency-install layer can be reused when package manifests and the install instruction's other inputs have not changed.
+
+**2. Use a \`.dockerignore\` file**
+\`\`\`dockerignore
+node_modules
+.git
+coverage
+.env
+dist
+build
+npm-debug.log
+\`\`\`
+Exclude only files that the Docker build does not need. If \`dist\` or \`build\` is required as an input, do not ignore it; if Docker generates it during the build, excluding a local copy may be appropriate.
+
+**3. Use BuildKit cache mounts for package managers**
+For npm, with BuildKit enabled:
+\`\`\`dockerfile
+# syntax=docker/dockerfile:1
+FROM node:22-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN --mount=type=cache,target=/root/.npm npm ci
+COPY . .
+\`\`\`
+The cache mount can preserve downloaded npm package data between builds without baking that cache into the final image layer. Ensure the cache path matches the user/package manager in the build stage.
+
+**4. Use multi-stage builds when appropriate**
+Separate compile/test steps from the final runtime image. This primarily reduces the final image and keeps runtime contents lean; it can also make build stages easier to organize, but does not automatically make every build faster.
+
+**5. Avoid unnecessary build work**
+- Use \`npm ci\` with a committed lockfile for predictable dependency installation.
+- Avoid copying large test artifacts, local dependencies, or Git history into the build context.
+- Run only the necessary build steps in each stage.
+- Pin build inputs appropriately and avoid invalidating cached layers unnecessarily.
+- Use parallelism or remote build cache in CI when supported by your builder and workflow.
+
+### 5. Diagnose Which Step Is Slow
+
+Build with plain progress output:
+\`\`\`bash
+docker build --progress=plain -t my-backend:1.0 .
+\`\`\`
+
+BuildKit can show which steps execute and which are cached. Compare repeated builds after changing only source code. If a step is unexpectedly rerunning, inspect the files and arguments it depends on.
+
+To check whether a fresh base image should be checked:
+\`\`\`bash
+docker build --pull -t my-backend:1.0 .
+\`\`\`
+Use \`--no-cache\` only when you intentionally want to rebuild without cached layers; it usually makes the build slower and is not the default optimization.
+
+### 6. Interview-Ready Answer
+“To optimize slow Docker builds, I first identify the slow build step using plain build output. I then order instructions to maximize cache reuse, copy dependency manifests before source files, add a suitable \`.dockerignore\`, and use BuildKit cache mounts for package downloads. I also remove unnecessary build work and use multi-stage builds where appropriate. I avoid disabling the cache unless there is a specific reason.”
+
+---
