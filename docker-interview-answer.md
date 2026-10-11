@@ -10080,3 +10080,96 @@ backend.env
 
 “Docker Compose lets us manage environment variables using `.env` files, the `environment` and `env_file` options, and shell variables. Compose can resolve variables in the configuration and pass them to containers, where a Node.js application accesses them through `process.env`. I keep sensitive values out of Git and use a proper secret-management solution in production.”
 
+---
+
+## Q120. How do you implement volume persistence in Docker Compose?
+
+### 1. English Definition
+
+Volume persistence in Docker Compose means mounting a Docker-managed volume or a host directory into a container so application data can survive container removal or recreation.
+
+### 2. Hindi Definition
+
+Docker Compose mein volume persistence se container ka data uske lifecycle se alag store hota hai. Isliye container remove ya recreate hone ke baad bhi data available reh sakta hai, jab tak volume delete na ho.
+
+### 3. Hinglish Explanation
+
+Bhai, MERN project mein MongoDB ka data container ke andar store hota hai. Agar data sirf container ki writable layer mein ho aur container remove kar diya jaye, toh data lose ho sakta hai. Isliye hum named volume ko MongoDB ke data directory par mount karte hain.
+
+### 4. Practical Example / Code
+
+```yaml
+services:
+  mongodb:
+    image: mongo:8
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+volumes:
+  mongo-data:
+```
+
+Yahan `mongo-data` named volume hai aur `/data/db` MongoDB ka data directory hai.
+
+### 5. Architecture Diagram
+
+```text
+Docker Compose
+      |
+      v
+MongoDB container
+      |
+      v
+/data/db  <---- mount ---->  mongo-data named volume
+                                  |
+                                  v
+                         Data survives container
+                         removal/recreation
+```
+
+### 6. Practical Commands
+
+Start the service:
+
+```bash
+docker compose up -d
+```
+
+List Docker volumes:
+
+```bash
+docker volume ls
+```
+
+Stop and remove containers while keeping the named volume:
+
+```bash
+docker compose down
+```
+
+The named volume is retained by default. Avoid `docker compose down -v` if you need to keep Compose-managed named volumes, because `-v` removes them and can delete persisted data.
+
+### 7. Named Volume vs Bind Mount
+
+| Feature | Named Volume | Bind Mount |
+|---|---|---|
+| Storage location | Managed by Docker | A specific host path |
+| Common use | Database persistence | Sharing source files during development |
+| Example | `mongo-data:/data/db` | `./backend:/app` |
+
+Bind mount example:
+
+```yaml
+services:
+  backend:
+    build: ./backend
+    volumes:
+      - ./backend:/app
+```
+
+### Interview-ready answer
+
+“I implement volume persistence in Docker Compose by mounting a named volume at the application's data directory. For MongoDB, I use `mongo-data:/data/db` and declare `mongo-data` in the top-level `volumes` section. Data survives container removal or recreation as long as the volume is retained. I avoid `docker compose down -v` when I need to preserve the data.”
+
