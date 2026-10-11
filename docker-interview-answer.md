@@ -8735,3 +8735,86 @@ Compose reads the YAML file and manages the defined services together. Docker st
 ### Interview-ready answer
 
 “Docker is used to build and run containers, while Docker Compose is used to define and manage multi-container applications using a YAML file. For example, I can use Docker commands to run a Node.js container and MongoDB container individually, or use Docker Compose to configure and start both services together with `docker compose up -d`. Compose works with Docker; it does not replace it.”
+
+
+---
+
+## Q105. How do you run multiple containers using Docker Compose?
+
+### 1. English Definition
+
+To run multiple containers using Docker Compose, define each application service in a Compose YAML file and run `docker compose up`. Compose creates or uses the required resources and starts the configured services.
+
+### 2. Hindi Definition
+
+Docker Compose se multiple containers run karne ke liye hum `compose.yaml` file mein har service define karte hain, phir `docker compose up -d` command chalate hain.
+
+### 3. Hinglish Explanation
+
+Maan lo MERN application mein Node.js backend aur MongoDB database hain. Dono services ko YAML file mein define kar do. Compose unke containers start karega aur default project network par services ko service name se communicate karne dega.
+
+### 4. Step-by-step Example
+
+**Step 1: Create `compose.yaml`**
+
+```yaml
+services:
+  backend:
+    image: my-backend-image
+    ports:
+      - "5000:5000"
+    environment:
+      MONGO_URI: mongodb://mongodb:27017/myapp
+    depends_on:
+      - mongodb
+
+  mongodb:
+    image: mongo:8
+    volumes:
+      - mongo-data:/data/db
+
+volumes:
+  mongo-data:
+```
+
+**Step 2: Start all configured services**
+
+Run this command from the directory containing the Compose file:
+
+```bash
+docker compose up -d
+```
+
+The `-d` option runs the containers in detached mode, so the terminal is returned to you.
+
+**Step 3: Check the services**
+
+```bash
+docker compose ps
+```
+
+**Step 4: View logs**
+
+```bash
+docker compose logs -f
+```
+
+**Step 5: Stop and remove the containers**
+
+```bash
+docker compose down
+```
+
+The named volume is retained by default. Use `docker compose down -v` only if you intentionally want to remove Compose-managed named volumes too.
+
+### 5. Important Points
+
+- Each entry under `services` describes a service; Compose typically creates a container for each service instance.
+- Compose creates a default project network unless configured otherwise.
+- Services on that network can generally reach each other by service name, so the backend can connect to MongoDB using hostname `mongodb`.
+- `depends_on` helps control startup order, but it does not by itself guarantee that MongoDB is ready to accept connections.
+- The image name must exist locally or be available from a registry; alternatively, use `build:` to build an image from a Dockerfile.
+
+### Interview-ready answer
+
+“To run multiple containers with Docker Compose, I define each service in a `compose.yaml` file and run `docker compose up -d`. Compose starts the configured services and sets up their required networking. I can check them with `docker compose ps`, view logs with `docker compose logs`, and stop the stack with `docker compose down`.”
