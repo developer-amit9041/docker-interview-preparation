@@ -6882,3 +6882,65 @@ docker exec -it my-app bash
 ### Interview-ready answer
 
 “Docker's `-it` option combines `-i`, which keeps standard input open, and `-t`, which allocates a pseudo-terminal. I use `docker run -it alpine sh` to open an interactive shell in a new container, or `docker exec -it container-name sh` to open one in an existing running container.”
+
+
+---
+
+## Q79. What is a container health check?
+
+### 1. English Definition
+
+A container health check is a mechanism that periodically runs a configured test to determine whether an application inside a container is functioning correctly. Docker reports the result as `starting`, `healthy`, or `unhealthy` when a health check is configured.
+
+### 2. Hindi Definition
+
+Container health check ek mechanism hai jo time-to-time test karke check karta hai ki container ke andar application sahi se kaam kar rahi hai ya nahi.
+
+### 3. Hinglish Explanation
+
+Sirf container ka `running` hona ye guarantee nahi karta ki application properly kaam kar rahi hai. Example ke liye, Node.js container running ho sakta hai, lekin API hang ho gayi ho ya health endpoint response na de raha ho.
+
+Health check ek command ya test ko regular interval par run karta hai. Test successful ho toh container `healthy` aur baar-baar fail hone par `unhealthy` report ho sakta hai. Health check khud se application ko automatically fix ya restart nahi karta.
+
+### 4. Practical Dockerfile Example
+
+Agar aapki Node.js application `/health` endpoint expose karti hai aur image mein `curl` installed hai, toh:
+
+```dockerfile
+FROM node:22-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+  CMD curl -fsS http://localhost:3000/health || exit 1
+
+CMD ["node", "server.js"]
+```
+
+The application must actually implement `/health`, and `curl` must be installed in the image. Otherwise the health check will fail even if the app process is running.
+
+### 5. Important HEALTHCHECK Options
+
+| Option | Meaning |
+|---|---|
+| `--interval=30s` | Time between checks |
+| `--timeout=3s` | Maximum time for a check |
+| `--start-period=10s` | Startup grace period |
+| `--retries=3` | Consecutive failures before marking unhealthy |
+
+### 6. Inspect Health Status
+
+```bash
+docker ps
+docker inspect --format='{{.State.Health.Status}}' my-app
+docker inspect --format='{{json .State.Health}}' my-app
+```
+
+The container image must define a health check for `.State.Health` to be present.
+
+### Interview-ready answer
+
+“A Docker health check periodically tests whether the application inside a container is working correctly. I configure it with the Dockerfile `HEALTHCHECK` instruction or Compose health-check settings, then inspect the result as starting, healthy, or unhealthy. A health check reports status; it does not automatically repair the application or restart the container by itself.”
