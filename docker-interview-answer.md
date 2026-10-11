@@ -15604,3 +15604,125 @@ Docker alone does not guarantee high availability, security, or zero downtime; t
 “In production, Docker packages an application and its dependencies into a versioned image that can run consistently across environments. We build and test the image in CI/CD, scan it, push it to a registry, and deploy it with secure runtime configuration, resource limits, health checks, logging, and monitoring. For larger systems, we use an orchestration platform to manage replicas, updates, and recovery.”
 
 ---
+## Q169. How is Docker used in a CI/CD pipeline?
+
+### 1. English Interview Definition
+Docker is used in CI/CD pipelines to package an application and its dependencies into a consistent, versioned image. The pipeline can test the code, build and scan the image, push it to a container registry, and deploy that image to a target environment.
+
+### 2. Hindi Definition
+CI/CD pipeline mein Docker ka use application aur uski dependencies ki image banane ke liye hota hai. Pipeline code test karti hai, image build aur scan kar sakti hai, registry mein push karti hai, aur phir server ya container platform par deploy karti hai.
+
+### 3. Hinglish Explanation
+Maan lo aap MERN application develop kar rahe ho aur GitHub par code push karte ho. CI/CD pipeline automatically tests run kar sakti hai, Docker image build kar sakti hai, vulnerabilities scan kar sakti hai, image ko registry mein push kar sakti hai, aur approved branch ya release par deployment kar sakti hai.
+
+Isse development, testing aur production mein same versioned artifact use karna easy hota hai. Deployment strategy aur approvals pipeline ke configuration par depend karte hain.
+
+### 4. Typical Docker CI/CD Workflow
+
+\`\`\`text
+Developer pushes code
+        |
+        v
+CI pipeline starts
+        |
+        v
+Install dependencies + run tests
+        |
+        v
+Build Docker image
+        |
+        v
+Scan image / apply quality checks
+        |
+        v
+Push tagged image to registry
+        |
+        v
+Deploy image to server / orchestrator
+        |
+        v
+Health checks + monitor / rollback if needed
+\`\`\`
+
+### 5. Important Pipeline Stages
+1. **Source control:** Code change is pushed to GitHub or GitLab.
+2. **Continuous Integration (CI):** Install dependencies, lint, and run unit/integration tests.
+3. **Image build:** Build the Docker image using the Dockerfile.
+4. **Security and quality checks:** Scan the image and dependencies; enforce policies where configured.
+5. **Registry push:** Tag the image with a unique version, such as a commit SHA, and push it to Docker Hub, Amazon ECR, or another registry.
+6. **Continuous Delivery/Deployment (CD):** Deploy the same tested image to staging or production, with approvals where required.
+7. **Verification:** Run health checks, monitor logs and metrics, and roll back to a known-good version if the release fails and rollback is supported.
+
+### 6. Example Commands
+
+\`\`\`bash
+# Run application tests (project-specific command)
+npm ci
+npm test
+
+# Build a versioned image
+docker build -t my-backend:1.0.0 .
+
+# Run a local smoke test (example)
+docker run --rm -p 3000:3000 my-backend:1.0.0
+
+# Tag the image for a registry
+docker tag my-backend:1.0.0 my-registry.example.com/my-backend:1.0.0
+
+# Authenticate securely, then push
+docker login my-registry.example.com
+docker push my-registry.example.com/my-backend:1.0.0
+\`\`\`
+
+In an automated pipeline, use the CI provider's secret store or workload identity for registry authentication; do not hard-code credentials in source code or Dockerfiles. The registry hostname and image names above are examples.
+
+### 7. Simple GitHub Actions Example
+
+\`\`\`yaml
+name: Build and Test Docker Image
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          tags: my-backend:test
+\`\`\`
+
+This is a minimal build example, not a complete production release pipeline. Add project-specific test steps, image scanning, registry login and push, protected-environment approvals, and deployment steps as required. For a pull request, pipelines commonly validate the image without publishing a production release.
+
+### 8. Benefits of Docker in CI/CD
+- **Consistency:** The same image can be promoted between environments.
+- **Reproducibility:** Versioned images make releases easier to identify and repeat.
+- **Portability:** The image can run wherever a compatible container runtime is available.
+- **Automation:** Builds, checks, publishing, and deployment can be triggered automatically.
+- **Rollback support:** A previous known-good image can be redeployed if the deployment platform and release process support it.
+- **Security checks:** Images can be scanned before they are released.
+
+### 9. Best Practices
+- Use unique, traceable image tags such as a commit SHA; avoid relying only on mutable \`latest\`.
+- Scan images and keep base images and dependencies patched.
+- Keep secrets out of images, source control, and build logs.
+- Use least-privilege registry and deployment credentials.
+- Promote the same tested image between environments instead of rebuilding different artifacts for each environment.
+- Add health checks, deployment verification, monitoring, and a rollback plan.
+
+### 10. Interview-Ready Answer
+“Docker is used in CI/CD to package an application and its dependencies into a versioned image. The pipeline runs tests, builds and scans the image, pushes it to a registry, and deploys it to the target environment. This makes releases more consistent and repeatable, and versioned images help with traceability and rollback.”
+
+---
