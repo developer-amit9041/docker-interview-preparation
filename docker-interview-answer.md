@@ -15136,3 +15136,101 @@ Compose can also use \`depends_on\` with \`condition: service_healthy\` to wait 
 “Container health checks are important because a running container does not always mean its application is working correctly. Health checks detect unresponsive or failing applications, improve monitoring, and help deployment or orchestration systems make safer traffic and recovery decisions. In Docker, we can define a \`HEALTHCHECK\` in the Dockerfile and inspect the status with \`docker inspect\`.”
 
 ---
+## Q163. How do you manage Docker logging?
+
+### 1. English Interview Definition
+Docker logging is managed by configuring how container output is captured, stored, rotated, and collected. By default, Docker captures a container's standard output (\`stdout\`) and standard error (\`stderr\`); the configured logging driver determines where and how those logs are handled.
+
+### 2. Hindi Definition
+Docker logging ka matlab hai containers ke logs ko collect, store, view aur manage karna, taaki application errors aur runtime issues ko troubleshoot kar sakein.
+
+### 3. Hinglish Explanation
+Maan lo aapka Node.js backend Docker container mein run ho raha hai. Agar API error de rahi hai, toh container ke logs check karke error message aur application behavior samajh sakte ho. Docker mein logs dekhne ke liye \`docker logs\` command use karte hain.
+
+### 4. View Container Logs
+
+**Show logs:**
+\`\`\`bash
+docker logs backend
+\`\`\`
+
+**Follow logs live:**
+\`\`\`bash
+docker logs -f backend
+\`\`\`
+
+**Show the last 100 lines:**
+\`\`\`bash
+docker logs --tail 100 backend
+\`\`\`
+
+**Show timestamps:**
+\`\`\`bash
+docker logs -t backend
+\`\`\`
+
+**Show recent logs from the last 10 minutes:**
+\`\`\`bash
+docker logs --since 10m backend
+\`\`\`
+
+These commands work when the container's logging driver supports reading logs through the Docker API; logging behavior differs by driver.
+
+### 5. Configure Log Rotation
+
+For Docker Engine using the \`json-file\` driver, configure size and file-count limits to avoid unbounded log growth. Example in \`/etc/docker/daemon.json\`:
+
+\`\`\`json
+{
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "10m",
+    "max-file": "3"
+  }
+}
+\`\`\`
+
+After changing daemon configuration, validate the JSON and restart Docker during an appropriate maintenance window. These defaults apply to newly created containers; existing containers generally need to be recreated to pick up changed logging configuration.
+
+Alternatively, set options for one container:
+\`\`\`bash
+docker run -d \
+  --name backend \
+  --log-driver json-file \
+  --log-opt max-size=10m \
+  --log-opt max-file=3 \
+  my-backend:1.0
+\`\`\`
+
+### 6. Docker Compose Logging Example
+
+\`\`\`yaml
+services:
+  backend:
+    image: my-backend:1.0
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+\`\`\`
+
+### 7. Logging Drivers and Centralized Logging
+Docker supports logging drivers such as \`json-file\`, \`local\`, \`journald\`, and remote drivers including \`syslog\` and \`fluentd\`, depending on the environment and Docker configuration.
+
+For production:
+- Use log rotation or a driver with suitable retention behavior.
+- Consider centralized collection, for example Fluent Bit or Fluentd sending logs to a log platform.
+- Include timestamps, severity, request IDs, and structured fields where useful.
+- Avoid logging passwords, access tokens, payment details, or other sensitive data.
+- Monitor log volume and access permissions.
+
+### 8. Important Notes
+- \`docker logs\` mainly shows what the container process writes to \`stdout\` and \`stderr\`; an application that writes only to an internal file may need additional configuration.
+- Logging-driver choice affects retention, performance, and whether \`docker logs\` can retrieve the output.
+- Logs help troubleshooting but do not replace metrics, traces, or alerting.
+
+### 9. Interview-Ready Answer
+“We manage Docker logging by collecting container output from stdout and stderr, viewing it with commands such as \`docker logs\`, and configuring a logging driver and log rotation. In production, we often forward logs to a centralized platform, use structured logging, and avoid recording secrets or sensitive data.”
+
+---
