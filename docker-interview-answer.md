@@ -2834,3 +2834,102 @@ docker exec -it my-nginx sh
 | `bash` | Opens Bash when installed |
 
 **Interview-ready answer:** The `docker exec` command runs a new command inside an already-running container. For example, `docker exec -it my-nginx sh` opens an interactive shell when the container has `sh` available. Unlike `docker run`, it does not create a new container.
+
+
+---
+
+## Q29. How do you expose or map a container port?
+
+### 1. English Definition
+
+You publish a container port to make a containerized application's port accessible through the Docker host, typically using the `-p` or `--publish` option with `docker run`. The Dockerfile `EXPOSE` instruction documents the port an application is intended to listen on, but does not publish it by itself.
+
+### 2. Hindi Definition
+
+Container ke andar chal rahi application ko host machine ke port ke through access karne ke liye `docker run -p` use karte hain. Dockerfile mein `EXPOSE` likhne se port document hota hai, lekin port automatically host par publish nahi hota.
+
+### 3. Hinglish Explanation
+
+Amit bhai, maan lo aapka Nginx container ke andar port `80` par run ho raha hai. Host machine ke browser se use access karne ke liye port mapping kar sakte ho:
+
+```bash
+docker run -d --name my-nginx -p 8080:80 nginx
+```
+
+Iska meaning:
+
+- `8080` = host machine ka port.
+- `80` = container ke andar application ka port.
+- `-p 8080:80` = host port 8080 ko container port 80 se map karta hai.
+
+Ab browser mein `http://localhost:8080` open kar sakte ho, provided port 8080 available hai aur container successfully running hai.
+
+**Important difference:**
+- `EXPOSE 80` in a Dockerfile: port ka documentation/metadata.
+- `-p 8080:80` at runtime: actual port publishing/mapping.
+
+### 4. Practical Example / Code
+
+Run Nginx with host port 8080 mapped to container port 80:
+
+```bash
+docker run -d --name my-nginx -p 8080:80 nginx
+```
+
+Open:
+
+```text
+http://localhost:8080
+```
+
+Example Dockerfile:
+
+```dockerfile
+FROM nginx
+EXPOSE 80
+```
+
+The `EXPOSE 80` instruction documents that the image's service is intended to listen on port 80. To publish that port when running the container, still use `-p`, for example:
+
+```bash
+docker run -d -p 8080:80 my-nginx-image
+```
+
+### 5. Architecture Diagram
+
+```text
+Browser / Client
+      |
+      v
+Host machine: port 8080
+      |
+      | Docker port mapping (-p 8080:80)
+      v
+Container: port 80
+      |
+      v
+Nginx application
+```
+
+### 6. Practical Commands / Configuration
+
+| Command / Instruction | Purpose |
+|---|---|
+| `docker run -p 8080:80 nginx` | Publishes host port 8080 to container port 80 |
+| `docker run -p 80:80 nginx` | Maps host port 80 to container port 80 |
+| `docker run -p 127.0.0.1:8080:80 nginx` | Publishes the port only on host loopback |
+| `docker run -P nginx` | Publishes ports declared with `EXPOSE` to dynamically assigned host ports |
+| `EXPOSE 80` | Documents the container port in a Dockerfile; does not publish it by itself |
+| `docker port my-nginx` | Shows published port mappings for a container |
+
+### 7. Summary Table
+
+| Term | Meaning |
+|---|---|
+| Container port | Port where the application listens inside the container |
+| Host port | Port used to access the service through the Docker host |
+| `-p HOST:CONTAINER` | Publishes/maps a specific host port to a container port |
+| `EXPOSE` | Documents an intended container port; does not publish it by itself |
+| `-P` | Publishes exposed ports to dynamically assigned host ports |
+
+**Interview-ready answer:** Use the `-p` or `--publish` option with `docker run` to map a host port to a container port, for example, `docker run -d -p 8080:80 nginx`. The Dockerfile instruction `EXPOSE 80` documents the intended container port but does not publish it on its own.
