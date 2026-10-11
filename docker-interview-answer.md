@@ -8888,3 +8888,65 @@ On Compose's default project network, services can usually reach each other usin
 ### Interview-ready answer
 
 “In Docker Compose, `services` is the top-level section used to define the components of an application, such as a frontend, backend, and database. Each service contains its configuration, including its image or build, ports, environment variables, networks, and volumes. Docker Compose uses these definitions to create and manage the required containers.”
+
+
+---
+
+## Q107. What does `ports` mean in Docker Compose?
+
+### 1. English Definition
+
+In Docker Compose, `ports` specifies port mappings that publish a service's container port to a port on the Docker host, allowing clients outside the container network to access the service through the published host port.
+
+### 2. Hindi Definition
+
+Docker Compose mein `ports` ka use container ke port ko host machine ke port se map karne ke liye hota hai, taaki host ya bahar ka client us service ko access kar sake.
+
+### 3. Hinglish Explanation
+
+Maan lo Node.js application container ke andar port `5000` par run ho rahi hai. Compose file mein `"5000:5000"` likhne ka matlab hai: host ka port 5000, container ke port 5000 ko forward karega.
+
+Format:
+
+`HOST_PORT:CONTAINER_PORT`
+
+### 4. Practical Example
+
+```yaml
+services:
+  backend:
+    image: my-backend-image
+    ports:
+      - "5000:5000"
+```
+
+Start the service:
+
+```bash
+docker compose up -d
+```
+
+If the application is listening on port 5000 inside the container, you can typically access it from the Docker host at:
+
+`http://localhost:5000`
+
+You can also map a different host port:
+
+```yaml
+ports:
+  - "8080:5000"
+```
+
+Here, host port 8080 forwards to container port 5000, so use `http://localhost:8080` on the host.
+
+### 5. Important Points
+
+- The format is `HOST_PORT:CONTAINER_PORT`.
+- The application must actually listen on the container port, commonly on `0.0.0.0` inside the container for external access.
+- `ports` publishes a port; `expose` documents/makes a container port available to connected services without publishing it to the host.
+- Containers on the same Compose network can generally communicate using service names and container ports without publishing those ports to the host.
+- Published ports may be reachable from other machines depending on the host's network and firewall configuration. Avoid exposing sensitive services unnecessarily.
+
+### Interview-ready answer
+
+“In Docker Compose, `ports` publishes a container port to the Docker host using the format `HOST_PORT:CONTAINER_PORT`. For example, `"5000:5000"` allows me to access an application listening on container port 5000 through `http://localhost:5000` on the host.”
