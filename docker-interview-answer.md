@@ -7951,3 +7951,84 @@ Inside the container, commands requiring external network access, such as downlo
 ### Interview-ready answer
 
 “The Docker none network driver disables normal container networking, typically leaving only the loopback interface. I use it for workloads that do not need network access and should run without a normal Docker network connection.”
+
+
+---
+
+## Q95. How does container-to-container communication work?
+
+### 1. English Definition
+
+Container-to-container communication allows containers to exchange network traffic through a shared Docker network. On a user-defined bridge network, Docker provides DNS resolution so a container can usually reach another container by its name and the destination service's listening port.
+
+### 2. Hindi Definition
+
+Container-to-container communication ka matlab hai ek Docker container ka doosre container ki service se network ke through connect hona. Agar dono user-defined bridge network par hain, toh container name aur service port use karke communicate kar sakte hain.
+
+### 3. Hinglish Explanation
+
+Maan lo MERN application mein:
+- Node.js backend container ka naam `backend` hai.
+- MongoDB container ka naam `mongodb` hai.
+- Dono `mern-network` par connected hain.
+
+Backend MongoDB se is URI ke through connect kar sakta hai:
+
+```text
+mongodb://mongodb:27017/myapp
+```
+
+Yahan `mongodb` hostname container name hai, aur `27017` MongoDB ka port hai. Dono same user-defined bridge network par hone ki wajah se Docker DNS hostname resolve kar sakta hai.
+
+### 4. Practical Example
+
+**Step 1: Network create karo**
+
+```bash
+docker network create mern-network
+```
+
+**Step 2: MongoDB run karo**
+
+```bash
+docker volume create mongo-data
+
+docker run -d \
+  --name mongodb \
+  --network mern-network \
+  -v mongo-data:/data/db \
+  mongo:8
+```
+
+**Step 3: Backend ko same network par run karo**
+
+```bash
+docker run -d \
+  --name backend \
+  --network mern-network \
+  -e MONGO_URI=mongodb://mongodb:27017/myapp \
+  my-backend-image
+```
+
+The backend application must read `process.env.MONGO_URI` (or its equivalent configuration) and connect using that URI.
+
+**Step 4: Network membership verify karo**
+
+```bash
+docker network inspect mern-network
+```
+
+### 5. Do We Need to Publish Ports?
+
+For communication between containers on the same user-defined bridge network, you generally do **not** need to publish the destination port with `-p`. Publish a port when a service must be reached through the Docker host, for example by a browser or an external client.
+
+### 6. Common Issues
+
+- Containers are not attached to the same network.
+- The destination application is not running or listening on the expected port.
+- The wrong hostname or port is used.
+- Credentials, firewall rules, or application configuration prevent the connection.
+
+### Interview-ready answer
+
+“Containers communicate over a shared Docker network. On a user-defined bridge network, Docker DNS lets one container reach another using its container name, for example, a Node.js backend connecting to MongoDB at `mongodb:27017`. Port publishing with `-p` is generally needed for host or external access, not for container-to-container communication on that network.”
