@@ -1266,3 +1266,111 @@ docker login
 **Interview-ready summary:**
 
 > Docker Hub is a cloud-based container registry used to find, store, and share Docker images. Developers can pull existing images or push their own images for use on other machines and servers.
+
+
+---
+
+## Q13. What are the main benefits of Docker?
+
+### 1. English Definition
+
+Docker provides benefits such as portability, consistent environments, lightweight isolation, faster deployment, efficient resource utilization, scalability, and repeatable application delivery.
+
+### 2. Hindi Definition
+
+Docker ke main benefits hain application ko alag-alag environments mein consistently chalana, deployment ko fast banana, resources ka efficient use karna aur applications ko isolated containers mein run karna.
+
+### 3. Hinglish Explanation
+
+Docker ke benefits ko MERN application ke example se samjho:
+
+1. **Portability:** Same image ko laptop, testing server aur AWS par run kar sakte ho, agar compatible environment ho.
+2. **Consistency:** Node.js version aur dependencies image mein package ki ja sakti hain, isliye “mere laptop par chal raha hai” wali problem kam hoti hai.
+3. **Lightweight:** Containers aam taur par VMs se kam resources use karte hain, kyunki Linux par host kernel share karte hain.
+4. **Fast deployment:** Prebuilt image se container quickly start kiya ja sakta hai.
+5. **Isolation:** Alag applications ko separate containers mein run kar sakte ho.
+6. **Scalability:** Zaroorat ke mutabik same image se additional containers create kar sakte ho; orchestration tools scaling automate kar sakte hain.
+7. **CI/CD support:** Build, test aur deployment pipelines mein same image artifact use kiya ja sakta hai.
+8. **Reproducibility:** Versioned images se deployment ko repeat karna easier hota hai.
+
+Docker har problem solve nahi karta: persistent storage, secrets, security, monitoring aur orchestration ko properly configure karna phir bhi zaroori hai.
+
+### 4. Practical Example / Code
+
+Build a versioned image:
+
+```bash
+docker build -t my-node-app:1.0 .
+```
+
+Run the same image as a container:
+
+```bash
+docker run -d --name my-app -p 5000:5000 my-node-app:1.0
+```
+
+The same tagged image can be pushed to a registry and pulled on a compatible server, helping keep environments consistent.
+
+### 5. Architecture Diagram
+
+```text
+      MERN Application
+              |
+         Dockerfile
+              |
+         docker build
+              |
+              v
+       Versioned Image
+              |
+       +------+------+
+       |      |      |
+       v      v      v
+    Laptop  Testing  AWS
+   Container Container Container
+       |      |      |
+       +-- Consistent packaged app --+
+```
+
+### 6. Practical Command / Configuration
+
+**Build a versioned image:**
+
+```bash
+docker build -t my-node-app:1.0 .
+```
+
+**Run it:**
+
+```bash
+docker run -d --name my-app -p 5000:5000 my-node-app:1.0
+```
+
+**Check resource usage:**
+
+```bash
+docker stats
+```
+
+**Check running containers:**
+
+```bash
+docker ps
+```
+
+### 7. Summary Table
+
+| Benefit | Explanation |
+|---|---|
+| Portability | Same image can run across compatible environments |
+| Consistency | Packages runtime and dependencies |
+| Lightweight | Typically less overhead than a full VM |
+| Fast deployment | Containers can start quickly |
+| Isolation | Applications run in separate container environments |
+| Scalability | More instances can be created from the same image |
+| CI/CD | Supports repeatable build and release pipelines |
+| Reproducibility | Versioned images help repeat deployments |
+
+**Interview-ready summary:**
+
+> Docker makes application delivery more consistent and portable by packaging code and dependencies into images. It supports lightweight isolation, faster deployments, efficient resource usage, scaling, and repeatable CI/CD workflows.
