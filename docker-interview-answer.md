@@ -9474,3 +9474,183 @@ docker compose logs -f backend
 ### Interview-ready answer
 
 “To connect Node.js to MongoDB with Docker Compose, I define both services in the same Compose project and use the MongoDB service name as the hostname in the connection URI, for example `mongodb://mongodb:27017/myapp`. I pass the URI through an environment variable and connect using the MongoDB Node.js driver or Mongoose. A shared Compose network enables service-name DNS, so MongoDB's port does not need to be published to the host for internal communication.”
+
+
+---
+
+## Q114. How do you set up React, Node.js, and MongoDB using Docker Compose?
+
+### 1. English Definition
+
+To run React, Node.js, and MongoDB with Docker Compose, define each component as a service in a Compose YAML file, build the frontend and backend images from their Dockerfiles, configure service communication, and persist MongoDB data with a named volume.
+
+### 2. Hindi Definition
+
+React frontend, Node.js backend aur MongoDB ko Docker Compose se chalane ke liye hum teeno services ko `compose.yaml` mein define karte hain. React aur Node.js ke images build hote hain, MongoDB ka data volume mein store hota hai, aur services Docker network par communicate karti hain.
+
+### 3. Hinglish Architecture
+
+- **React:** Nginx ke through browser ko frontend serve karta hai.
+- **Node.js:** API requests handle karta hai.
+- **MongoDB:** Application data store karta hai.
+- **Docker Compose:** Teeno services ko ek configuration se start/manage karta hai.
+
+Browser React page load karta hai, phir `/api` requests Nginx reverse proxy se Node.js backend tak jaati hain. Backend MongoDB ko service hostname `mongodb` se access karta hai.
+
+### 4. Example Project Structure
+
+```text
+mern-app/
+├── compose.yaml
+├── .env
+├── frontend/
+│   ├── Dockerfile
+│   ├── nginx.conf
+│   ├── package.json
+│   └── src/
+└── backend/
+    ├── Dockerfile
+    ├── package.json
+    └── server.js
+```
+
+### 5. Backend Dockerfile
+
+Create `backend/Dockerfile`:
+
+```dockerfile
+FROM node:22-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+EXPOSE 5000
+CMD ["node", "server.js"]
+```
+
+The Node.js server must listen on `0.0.0.0` inside the container, not only on `127.0.0.1`.
+
+### 6. Frontend Dockerfile
+
+For a typical React app whose build output is `build/` (such as Create React App), create `frontend/Dockerfile`:
+
+```dockerfile
+FROM node:22-alpine AS build
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+FROM nginx:alpine
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /app/build /usr/share/nginx/html
+EXPOSE 80
+```
+
+If your toolchain (for example, Vite) outputs `dist/` instead of `build/`, change the final COPY source to `/app/dist`.
+
+### 7. Nginx Reverse Proxy Configuration
+
+Create `frontend/nginx.conf`:
+
+```nginx
+server {
+    listen 80;
+    server_name _;
+
+    location / {
+        root /usr/share/nginx/html;
+        index index.html;
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /api/ {
+        proxy_pass http://backend:5000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+This example expects the backend API routes to include the `/api/` prefix. The browser calls a relative URL such as `/api/users`; Nginx forwards it to the backend service. This avoids trying to resolve Docker-only hostnames from the user's browser.
+
+### 8. Compose Configuration
+
+Create `compose.yaml` at the project root:
+
+```yaml
+services:
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+  backend:
+    build: ./backend
+    environment:
+      PORT: "5000"
+      MONGO_URI: mongodb://appadmin:${MONGO_APP_PASSWORD}@mongodb:27017/myapp?authSource=admin
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+  mongodb:
+    image: mongo:8
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: appadmin
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_APP_PASSWORD}
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  mongo-data:
+```
+
+Create a local `.env` file next to `compose.yaml`:
+
+```env
+MONGO_APP_PASSWORD=replace_with_a_strong_password
+```
+
+Do not commit the real `.env` file or production secrets. For production, use a dedicated least-privilege MongoDB application user and secure secret management rather than using the root user for application traffic.
+
+### 9. Start and Verify
+
+From the project root:
+
+```bash
+docker compose up --build -d
+docker compose ps
+docker compose logs -f
+```
+
+Open the frontend at `http://localhost:3000`. API calls such as `/api/users` go through Nginx to Node.js. To stop the stack:
+
+```bash
+docker compose down
+```
+
+The named MongoDB volume is retained by default. Avoid `docker compose down -v` unless you intentionally want to remove the Compose-managed volume.
+
+### 10. Important Points
+
+- Compose creates a default network, allowing backend to connect to `mongodb:27017` using the service name.
+- The browser cannot normally resolve Docker-internal names such as `backend`; use a browser-accessible API URL or reverse proxy.
+- `depends_on` controls startup order; the MongoDB health check and `service_healthy` condition help with initial readiness.
+- Ensure the backend reads `process.env.MONGO_URI` and the frontend uses relative `/api` URLs for this Nginx setup.
+- This is a practical starting example, not a complete production deployment; production also needs secure secrets, restricted access, backups, TLS, monitoring, and an appropriate MongoDB user.
+
+### Interview-ready answer
+
+“I set up React, Node.js, and MongoDB by defining three services in `compose.yaml`. I build the React and Node.js images from their Dockerfiles, use a named volume for MongoDB data, and let the backend connect to the database using the Compose service name `mongodb`. I serve React through Nginx and proxy `/api` requests to the backend so the browser does not need to resolve internal Docker hostnames. Then I run `docker compose up --build -d`.”
