@@ -12655,3 +12655,127 @@ Choose limits based on testing and observed application needs; overly restrictiv
 
 ---
 
+## Q137. How do you run a container without using the root user?
+
+### 1. English Interview Definition
+
+To run a Docker container without root privileges, create or use a non-root user in the Docker image and specify that user with the \`USER\` instruction in the Dockerfile. This follows the principle of least privilege and reduces the potential impact if the application is compromised.
+
+### 2. Hindi Definition
+
+Docker container ko root user ke bina run karne ke liye Dockerfile mein ek normal user create karte hain aur \`USER\` instruction se us user ko select karte hain. Isse application ko unnecessary administrative permissions nahi milti.
+
+### 3. Hinglish Explanation
+
+Maan lo aapki Node.js application Docker container mein run ho rahi hai.
+
+- **Root user:** Container ke andar high-level permissions rakhta hai.
+- **Non-root user:** Limited permissions ke saath application run karta hai.
+
+Agar attacker application ko compromise kar de, toh non-root user hone se uske paas available permissions limited rehti hain. Lekin non-root user container ko completely secure nahi banata.
+
+### 4. Practical Example: Node.js Dockerfile
+
+Official Node.js images commonly provide a \`node\` user. You can run the application as that user:
+
+\`\`\`dockerfile
+FROM node:22-alpine
+
+WORKDIR /app
+
+COPY --chown=node:node package*.json ./
+RUN npm ci --omit=dev
+
+COPY --chown=node:node . .
+
+USER node
+
+EXPOSE 5000
+
+CMD ["node", "server.js"]
+\`\`\`
+
+**Important points:**
+
+1. \`USER node\` switches the process to the non-root \`node\` user.
+2. \`COPY --chown=node:node\` makes the copied application files accessible to that user.
+3. Install dependencies before switching users if installation requires elevated permissions.
+4. Choose a supported Node.js image version compatible with your application.
+
+### 5. Build and Run the Container
+
+Build the image:
+
+\`\`\`bash
+docker build -t secure-node-app .
+\`\`\`
+
+Run the container:
+
+\`\`\`bash
+docker run -d --name secure-node-app -p 5000:5000 secure-node-app
+\`\`\`
+
+Verify which user is running inside the container:
+
+\`\`\`bash
+docker exec secure-node-app whoami
+\`\`\`
+
+Expected output:
+
+\`\`\`text
+node
+\`\`\`
+
+You can also inspect the running process:
+
+\`\`\`bash
+docker exec secure-node-app id
+\`\`\`
+
+The output should show the non-root user's UID and group information.
+
+### 6. Alternative: Create Your Own User
+
+If the base image does not provide a suitable non-root user, create one. For Alpine-based images:
+
+\`\`\`dockerfile
+FROM node:22-alpine
+
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --omit=dev
+COPY --chown=appuser:appgroup . .
+
+USER appuser
+
+CMD ["node", "server.js"]
+\`\`\`
+
+Make sure the application has permission to read its files and write only to required directories. If the app needs uploads, logs, or temporary files, explicitly provide appropriately owned writable locations or mounts.
+
+### 7. Common Mistakes
+
+- Adding \`USER node\` without checking file permissions can cause permission errors.
+- Running with \`--privileged\` can undermine the protection gained from a non-root user.
+- Mounting the Docker socket into an application container can grant extensive host control.
+- Non-root execution does not replace image scanning, secret management, network restrictions, or host patching.
+
+### 8. Quick Summary
+
+| Instruction / command | Purpose |
+|---|---|
+| \`USER node\` | Runs the application as the existing non-root user |
+| \`COPY --chown=node:node\` | Assigns copied files to the non-root user |
+| \`docker build -t secure-node-app .\` | Builds the image |
+| \`docker exec secure-node-app whoami\` | Verifies the running user |
+| \`docker exec secure-node-app id\` | Displays UID and group information |
+
+### Interview-ready answer
+
+"I run containers as non-root by configuring a dedicated user in the Dockerfile and setting it with the \`USER\` instruction. For Node.js, I can use the \`node\` user provided by the official image and use \`COPY --chown\` to set correct file ownership. Then I build and run the image and verify the user with \`docker exec <container> whoami\`. This follows least privilege and reduces risk, although it must be combined with other container security controls."
+
+---
