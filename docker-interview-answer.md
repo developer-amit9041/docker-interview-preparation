@@ -7451,3 +7451,71 @@ For clarity and explicit setup, you can create the volume first with `docker vol
 ### Interview-ready answer
 
 “I create a Docker volume using `docker volume create <volume-name>`, for example, `docker volume create mongo-data`. I can verify it with `docker volume ls` and mount it into a container using `-v mongo-data:/data/db`. This keeps the data separate from the container's writable layer.”
+
+
+---
+
+## Q88. How do you attach a volume to a container?
+
+### 1. English Definition
+
+You attach a Docker volume to a container when you create it by using the `-v` or `--mount` option with `docker run`. The volume is mounted at a specified path inside the container, allowing the container to read and write persistent data there.
+
+### 2. Hindi Definition
+
+Container ke saath volume attach karne ke liye `docker run` command mein `-v` ya `--mount` option use karte hain. Ismein volume ka naam aur container ke andar ka path specify karte hain.
+
+### 3. Hinglish Explanation
+
+Maan lo aapne `mongo-data` naam ka volume banaya hai. Ab aap chahte ho ki MongoDB apna database data us volume mein store kare. Volume ko container ke `/data/db` path par mount kar do.
+
+### 4. Practical Example Using `-v`
+
+**Step 1: Volume create karo**
+
+```bash
+docker volume create mongo-data
+```
+
+**Step 2: Volume attach karke container run karo**
+
+```bash
+docker run -d \
+  --name mongodb \
+  -v mongo-data:/data/db \
+  mongo:8
+```
+
+Here:
+- `mongo-data` is the Docker volume.
+- `/data/db` is the mount path inside the container.
+- `-d` runs the container in the background.
+
+### 5. Alternative Using `--mount`
+
+```bash
+docker run -d \
+  --name mongodb \
+  --mount type=volume,source=mongo-data,target=/data/db \
+  mongo:8
+```
+
+The `--mount` syntax is more explicit: `type=volume` specifies the mount type, `source` specifies the volume name, and `target` specifies the container path.
+
+### 6. Verify the Mount
+
+```bash
+docker inspect mongodb
+```
+
+In the output, check the `Mounts` section for the volume name and destination path.
+
+### 7. Important Points
+
+- A volume is attached when the container is created with `docker run`; you cannot add a new mount to an existing container with ordinary `docker start`. Recreate the container with the required mount.
+- Removing the container does not normally remove a named volume.
+- The container path must be appropriate for the application. For MongoDB, the standard data directory is `/data/db`.
+
+### Interview-ready answer
+
+“I attach a Docker volume when creating a container by using `-v volume-name:container-path` or `--mount type=volume,source=volume-name,target=container-path`. For example, I mount `mongo-data` at `/data/db` in a MongoDB container so the database data can persist independently of the container.”
