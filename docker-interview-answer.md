@@ -1719,3 +1719,131 @@ docker stop my-nginx
 **Interview-ready summary:**
 
 > A Docker container is run using `docker run IMAGE_NAME`. Docker obtains the image if needed, creates a container, and starts its configured process. Options such as `-d`, `--name`, and `-p` control how the container runs.
+
+
+---
+
+## Q17. What does the `docker run` command do?
+
+### 1. English Definition
+
+The `docker run` command creates and starts a new container from a specified Docker image. It can also configure options such as the container name, port mapping, environment variables, volume mounts, and detached mode.
+
+### 2. Hindi Definition
+
+`docker run` command ka use Docker image se ek naya container create karne aur use start karne ke liye hota hai. Is command ke through hum port mapping, container name, environment variables aur volumes jaise options bhi set kar sakte hain.
+
+### 3. Hinglish Explanation
+
+Amit, simple words mein samjho:
+
+- **Image** application chalane ka template hoti hai.
+- **Container** us image se create hua isolated environment hota hai.
+- `docker run` image se container banata hai aur uske andar configured process start karta hai.
+
+Agar image local system par nahi milti, to Docker daemon configured registry se image pull karne ki koshish karta hai. Uske baad container create karke start kiya jata hai.
+
+Dhyan rahe: har baar `docker run` execute karne par aam taur par **naya container** create hota hai. Existing stopped container ko dobara start karne ke liye `docker start CONTAINER_NAME` use karte hain.
+
+### 4. Practical Example / Code
+
+Run an Nginx container:
+
+```bash
+docker run nginx
+```
+
+Run it in the background and map host port 8080 to container port 80:
+
+```bash
+docker run -d --name my-nginx -p 8080:80 nginx
+```
+
+Meaning of the options:
+
+- `-d`: container ko background mein run karta hai.
+- `--name my-nginx`: container ko ek readable name deta hai.
+- `-p 8080:80`: host ke port 8080 ko container ke port 80 se map karta hai.
+- `nginx`: image ka naam hai.
+
+Ab browser mein `http://localhost:8080` open karke Nginx page check kar sakte hain, agar port available hai aur container successfully start ho gaya hai.
+
+### 5. Architecture Diagram
+
+```text
+User runs: docker run nginx
+             |
+             v
+        Docker CLI
+             |
+             v
+       Docker daemon
+             |
+             v
+    Is nginx image available?
+       /             \\
+     Yes              No
+      |                |
+      |          Pull image from
+      |          configured registry
+       \\              /
+        v            v
+        Create container
+                |
+                v
+         Start container
+                |
+                v
+       Nginx process runs
+```
+
+### 6. Practical Commands / Configuration
+
+Check running containers:
+
+```bash
+docker ps
+```
+
+Check all containers, including stopped ones:
+
+```bash
+docker ps -a
+```
+
+View container logs:
+
+```bash
+docker logs my-nginx
+```
+
+Stop the container:
+
+```bash
+docker stop my-nginx
+```
+
+Start the existing stopped container again:
+
+```bash
+docker start my-nginx
+```
+
+Remove a container after it has stopped:
+
+```bash
+docker rm my-nginx
+```
+
+### 7. Summary Table
+
+| Command / Option | Purpose |
+|---|---|
+| `docker run nginx` | Creates and starts a container from the Nginx image |
+| `-d` | Runs the container in the background |
+| `--name my-nginx` | Assigns a name to the container |
+| `-p 8080:80` | Maps host port 8080 to container port 80 |
+| `docker start my-nginx` | Starts an existing stopped container |
+| `docker ps` | Lists running containers |
+
+**Interview-ready answer:** The `docker run` command creates and starts a new container from a Docker image. It also supports runtime configuration such as port mapping, naming, environment variables, volume mounts, and detached mode.
