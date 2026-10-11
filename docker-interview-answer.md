@@ -102,3 +102,118 @@ The option `-p 5000:5000` maps port 5000 on the host to port 5000 in the contain
 **Interview-ready summary:**
 
 > Docker packages applications and their dependencies into containers, making them portable and consistent across development, testing, and production environments.
+
+
+---
+
+## Q2. Why do we need Docker?
+
+### 1. English Definition
+
+Docker is needed to package applications and their dependencies into portable containers, reduce environment-related issues, simplify deployment, isolate workloads, and support consistent development, testing, and production environments.
+
+### 2. Hindi Definition
+
+Docker ki zaroorat applications aur unki dependencies ko ek portable container mein package karne ke liye hoti hai, jisse deployment aasaan hota hai aur alag-alag environments mein application chalane se judi problems kam hoti hain.
+
+### 3. Hinglish Explanation
+
+Maan lo aapki MERN application aapke laptop par sahi chalti hai, lekin production server par Node.js version, installed packages, ya configuration alag hone ki wajah se fail ho jaati hai. Is situation ko aksar **“it works on my machine”** problem kaha jata hai.
+
+Docker application ke liye required runtime aur dependencies ko image mein package karne mein help karta hai. Isse team development, testing aur production mein ek consistent setup use kar sakti hai.
+
+Docker ke main use cases:
+
+- **Environment consistency:** Different environments mein configuration differences kam karna.
+- **Portability:** Container image ko compatible Docker environments par run karna.
+- **Isolation:** Applications ko separate containers mein run karna.
+- **Faster deployment:** Repeatable build aur deployment process banana.
+- **Scaling:** Zaroorat ke hisaab se application ke multiple container instances run karna.
+- **CI/CD support:** Automated testing aur deployment pipelines mein containers use karna.
+
+### 4. Practical Example / Code
+
+Suppose aapki Node.js application ko Node.js 20 chahiye. Dockerfile mein version specify karein:
+
+```dockerfile
+FROM node:20
+
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+
+EXPOSE 5000
+CMD ["node", "server.js"]
+```
+
+Build aur run:
+
+```bash
+docker build -t my-node-app .
+docker run -d -p 5000:5000 --name my-node-container my-node-app
+```
+
+Ab image ke andar Node.js 20 runtime specify hai, isliye compatible Docker environments par application ko same runtime ke saath chalana easier hota hai. Application ko sahi tarah configure karna aur required external services dena phir bhi zaroori hai.
+
+### 5. Architecture Diagram
+
+```text
+          Application Source Code
+                    |
+                    v
+            Dockerfile + Dependencies
+                    |
+                    v
+               Docker Image
+                    |
+          +---------+---------+
+          |         |         |
+          v         v         v
+       Dev Env   Test Env   Production
+       Container Container  Container
+          |         |         |
+          +---- Consistent setup ----+
+```
+
+### 6. Practical Command / Configuration
+
+**Check the Node.js version inside a container:**
+
+```bash
+docker run --rm node:20 node --version
+```
+
+**Build your application image:**
+
+```bash
+docker build -t my-node-app .
+```
+
+**Run it with a published port:**
+
+```bash
+docker run -d -p 5000:5000 --name my-node-container my-node-app
+```
+
+**Check container status and logs:**
+
+```bash
+docker ps
+docker logs my-node-container
+```
+
+### 7. Summary Table
+
+| Why Docker is needed | Benefit |
+|---|---|
+| Environment consistency | Reduces “works on my machine” issues |
+| Portability | Runs the same image in compatible environments |
+| Isolation | Separates application processes and dependencies |
+| Deployment | Makes releases more repeatable |
+| Scaling | Allows multiple container instances |
+| CI/CD | Supports automated build, test, and deployment workflows |
+
+**Interview-ready summary:**
+
+> We use Docker to package applications with their dependencies, reduce environment inconsistencies, simplify deployment, isolate workloads, and make application delivery more repeatable across development, testing, and production.
