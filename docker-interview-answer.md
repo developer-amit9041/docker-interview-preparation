@@ -14810,3 +14810,75 @@ For a small local project, Docker Compose may be enough; a full orchestration pl
 “We need container orchestration to automate container deployment, scheduling, scaling, networking, and recovery. It reduces manual work, helps maintain the desired number of application instances, and supports controlled updates and service availability. Tools such as Docker Swarm and Kubernetes provide these capabilities, with different levels of complexity and functionality.”
 
 ---
+## Q159. How do you scale services in Docker?
+
+### 1. English Interview Definition
+Docker services can be scaled by increasing or decreasing the number of running replicas. In Docker Swarm, use \`docker service scale\` or \`docker service update --replicas\`; with Docker Compose, use \`docker compose up --scale\` for services whose configuration supports multiple instances. Kubernetes uses workload controllers and scaling commands such as \`kubectl scale\`.
+
+### 2. Hindi Definition
+Docker service scaling ka matlab hai application ki running instances (replicas) ko zaroorat ke hisaab se badhana ya kam karna, taaki traffic handle ho sake aur resources efficiently use hon.
+
+### 3. Hinglish Explanation
+Maan lo aapke Node.js backend ki ek replica hai aur traffic badh gaya. Aap backend ki 3 ya 5 replicas run kar sakte ho. Swarm service ki desired replica count maintain karne ki koshish karta hai aur tasks ko cluster nodes par schedule karta hai. Dhyan rahe, replicas tabhi useful hain jab application, database connections, networking aur available resources multiple instances support karte hon.
+
+### 4. Scale a Service in Docker Swarm
+
+**Create a service with two replicas:**
+\`\`\`bash
+docker service create \
+  --name backend \
+  --replicas 2 \
+  --publish published=3000,target=3000 \
+  my-backend:1.0
+\`\`\`
+
+**Scale it to five replicas:**
+\`\`\`bash
+docker service scale backend=5
+\`\`\`
+
+**Alternative command:**
+\`\`\`bash
+docker service update --replicas 5 backend
+\`\`\`
+
+**Verify replicas and tasks:**
+\`\`\`bash
+docker service ls
+docker service ps backend
+\`\`\`
+
+Swarm schedules the desired tasks across available nodes, subject to resource availability and placement constraints. The image must be available to the nodes that run it.
+
+### 5. Scale a Service with Docker Compose
+
+For a service that can run as multiple interchangeable instances:
+\`\`\`bash
+docker compose up -d --scale backend=3
+\`\`\`
+
+This starts three Compose instances of the \`backend\` service. Do not configure a fixed \`container_name\` for a service you want to scale, because each instance needs its own container name. Also ensure host ports are not hard-coded to the same port for every replica; use a suitable reverse proxy or internal networking pattern when needed.
+
+The Compose command scales containers on the Compose environment; it does not by itself provide multi-host orchestration or Kubernetes-style autoscaling.
+
+### 6. Scale a Kubernetes Deployment (Comparison)
+
+\`\`\`bash
+kubectl scale deployment backend --replicas=5
+kubectl get deployment backend
+kubectl get pods
+\`\`\`
+
+This changes the Deployment's desired replica count. Kubernetes autoscaling requires a separate autoscaler configuration and appropriate metrics.
+
+### 7. Important Considerations
+- **Vertical scaling:** Give a container more CPU or memory.
+- **Horizontal scaling:** Run more replicas.
+- **Load balancing:** Requests must reach the available replicas appropriately.
+- **Stateful applications:** Ensure sessions, files, and database writes are designed for multiple instances; use shared/external storage or appropriate stateful services.
+- **Capacity:** Scaling replicas does not create more host CPU or RAM; monitor and provision sufficient resources.
+
+### 8. Interview-Ready Answer
+“We scale Docker services by changing the desired number of replicas. In Docker Swarm, we can use \`docker service scale backend=5\` or \`docker service update --replicas 5 backend\`. In Docker Compose, we can use \`docker compose up -d --scale backend=3\` when the service supports multiple instances. We also ensure load balancing, available resources, and application state are handled correctly.”
+
+---
