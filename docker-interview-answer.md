@@ -6163,3 +6163,63 @@ REPOSITORY   TAG       IMAGE ID       SIZE
 ### Interview-ready answer
 
 “Dangling images are untagged Docker images that are not referenced by a tagged image. They can remain after image rebuilds and consume disk space. I can list them using `docker image ls --filter dangling=true` and remove dangling images with `docker image prune`, after checking that they are no longer needed.”
+
+
+---
+
+## Q69. What is Docker image pruning?
+
+### 1. English Definition
+
+Docker image pruning is the process of removing unused Docker images to free disk space. By default, `docker image prune` removes dangling images; adding `-a` broadens the cleanup to images not used by any existing container.
+
+### 2. Hindi Definition
+
+Docker image pruning ka matlab hai disk space bachane ke liye un Docker images ko delete karna jo ab use nahi ho rahi hain. Default command sirf dangling images remove karti hai; `-a` option broader cleanup karta hai.
+
+### 3. Hinglish Explanation
+
+Jab hum baar-baar Docker images build ya pull karte hain, toh system mein purani ya unused images jama ho sakti hain. Ye disk space consume karti hain.
+
+Pruning se unnecessary images remove karke space free ki ja sakti hai. Lekin command chalane se pehle dhyan rakho: `docker image prune -a` tagged images bhi remove kar sakti hai agar koi existing container unhe use nahi kar raha ho. Zaroorat padne par aapko un images ko dobara pull ya build karna pad sakta hai.
+
+### 4. Practical Commands
+
+**Check local images first:**
+
+```bash
+docker image ls
+```
+
+**Remove dangling images (default behavior):**
+
+```bash
+docker image prune
+```
+
+**Remove all images not used by any existing container:**
+
+```bash
+docker image prune -a
+```
+
+**Skip the confirmation prompt:**
+
+```bash
+docker image prune -f
+```
+
+Use `-f` only when you're sure you want to proceed. To combine broader cleanup with no prompt, `docker image prune -a -f` is available, but review the impact first.
+
+### 5. Difference Between Prune Commands
+
+| Command | What it removes |
+|---|---|
+| `docker image prune` | Dangling images by default |
+| `docker image prune -a` | Images not referenced by any existing container |
+| `docker container prune` | Stopped containers, not images |
+| `docker system prune` | Multiple categories of unused Docker objects; review its prompt and options carefully |
+
+### Interview-ready answer
+
+“Docker image pruning removes unused images to reclaim disk space. The command `docker image prune` removes dangling images by default, while `docker image prune -a` removes all images not used by existing containers. I inspect what is present and choose the cleanup scope carefully before running it.”
