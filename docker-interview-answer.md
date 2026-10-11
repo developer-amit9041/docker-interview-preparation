@@ -2732,3 +2732,105 @@ Logs displayed in terminal
 | `--since 10m` | Show recent logs from the specified time window |
 
 **Interview-ready answer:** Use `docker logs CONTAINER_NAME` or `docker logs CONTAINER_ID` to inspect a container's stdout and stderr output. Use `docker logs -f` to follow logs in real time and `docker logs --tail 100` to view only the latest 100 lines.
+
+
+---
+
+## Q28. How do you execute a command inside a container?
+
+### 1. English Definition
+
+The `docker exec` command runs a command inside an already-running Docker container. It is commonly used for troubleshooting, inspecting files, or opening an interactive shell.
+
+### 2. Hindi Definition
+
+Running Docker container ke andar koi command execute karne ke liye `docker exec` command use karte hain. Isse container ke andar shell open kar sakte hain ya directly koi command chala sakte hain.
+
+### 3. Hinglish Explanation
+
+Amit bhai, maan lo aapka `my-nginx` container already running hai aur aap uske andar files check karna chahte ho. Container ko stop ya recreate karne ki zaroorat nahi hai—`docker exec` use karo.
+
+- `docker exec my-nginx ls` → container ke andar `ls` command run karta hai.
+- `docker exec -it my-nginx sh` → interactive shell open karta hai.
+- `-i` input open rakhta hai aur `-t` terminal allocate karta hai.
+
+Yaad rakho: `docker exec` ke liye container running hona chahiye. Container ke andar shell available na ho, toh `sh` ya `bash` command fail ho sakti hai.
+
+### 4. Practical Example / Code
+
+Run an Nginx container:
+
+```bash
+docker run -d --name my-nginx nginx
+```
+
+Execute a command inside it:
+
+```bash
+docker exec my-nginx nginx -v
+```
+
+Open an interactive shell (if `sh` is available):
+
+```bash
+docker exec -it my-nginx sh
+```
+
+Once inside the container, you can run commands such as:
+
+```bash
+ls
+pwd
+exit
+```
+
+For a container that has Bash installed, you can use:
+
+```bash
+docker exec -it my-nginx bash
+```
+
+### 5. Architecture Diagram
+
+```text
+docker exec -it my-nginx sh
+            |
+            v
+        Docker CLI
+            |
+            v
+       Docker daemon
+            |
+            v
+  Find running container
+            |
+            v
+  Execute shell / command
+  inside the container
+            |
+            v
+   Display command output
+```
+
+### 6. Practical Commands / Configuration
+
+| Command | Purpose |
+|---|---|
+| `docker exec my-nginx nginx -v` | Runs a command inside the container |
+| `docker exec -it my-nginx sh` | Opens an interactive shell |
+| `docker exec -it my-nginx bash` | Opens Bash if installed |
+| `docker exec -u root -it my-nginx sh` | Opens a shell as root, if permitted |
+| `docker exec -w /etc/nginx my-nginx pwd` | Runs a command from a specified working directory |
+| `docker ps` | Checks which containers are running |
+
+### 7. Summary Table
+
+| Option / Command | Purpose |
+|---|---|
+| `docker exec` | Executes a command in a running container |
+| `-i` | Keeps standard input open |
+| `-t` | Allocates a terminal |
+| `sh` | Opens a shell when available |
+| `bash` | Opens Bash when installed |
+
+**Interview-ready answer:** The `docker exec` command runs a new command inside an already-running container. For example, `docker exec -it my-nginx sh` opens an interactive shell when the container has `sh` available. Unlike `docker run`, it does not create a new container.
