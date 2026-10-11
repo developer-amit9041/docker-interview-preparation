@@ -8950,3 +8950,87 @@ Here, host port 8080 forwards to container port 5000, so use `http://localhost:8
 ### Interview-ready answer
 
 “In Docker Compose, `ports` publishes a container port to the Docker host using the format `HOST_PORT:CONTAINER_PORT`. For example, `"5000:5000"` allows me to access an application listening on container port 5000 through `http://localhost:5000` on the host.”
+
+
+---
+
+## Q108. What does `environment` mean in Docker Compose?
+
+### 1. English Definition
+
+In Docker Compose, `environment` specifies environment variables that are passed into a service's container at runtime. These variables configure application behavior without hardcoding settings into the application image.
+
+### 2. Hindi Definition
+
+Docker Compose mein `environment` ka use container ke andar environment variables set karne ke liye hota hai, jaise database connection string, application port ya runtime mode.
+
+### 3. Hinglish Explanation
+
+Maan lo Node.js backend ko MongoDB se connect karna hai. Connection string code mein hardcode karne ke bajaye, Compose file mein environment variable pass kar sakte ho. Node.js mein us value ko `process.env.MONGO_URI` se read karoge.
+
+### 4. Practical Example
+
+```yaml
+services:
+  backend:
+    image: my-backend-image
+    ports:
+      - "5000:5000"
+    environment:
+      NODE_ENV: production
+      PORT: "5000"
+      MONGO_URI: mongodb://mongodb:27017/myapp
+
+  mongodb:
+    image: mongo:8
+```
+
+In Node.js:
+
+```js
+const port = process.env.PORT || 3000;
+const mongoUri = process.env.MONGO_URI;
+
+console.log("Environment:", process.env.NODE_ENV);
+```
+
+Start the services:
+
+```bash
+docker compose up -d
+```
+
+Compose passes these values to the backend container. The application must read the variables and use them.
+
+### 5. Alternative: Use an Environment File
+
+Create a local `.env` file:
+
+```env
+NODE_ENV=production
+PORT=5000
+MONGO_URI=mongodb://mongodb:27017/myapp
+```
+
+Then reference the file in Compose:
+
+```yaml
+services:
+  backend:
+    image: my-backend-image
+    env_file:
+      - .env
+```
+
+The Compose `environment` section sets container environment variables directly; `env_file` loads them from a file. A project-level `.env` file can also be used for Compose variable interpolation, which is a different purpose.
+
+### 6. Security Points
+
+- Do not commit real passwords, API keys, or production secrets to Git.
+- Environment variables are convenient configuration, but they are not a dedicated secrets-management system.
+- For sensitive production values, use an appropriate secrets manager or platform-supported secret mechanism.
+- Ensure the application handles missing or invalid environment variables safely.
+
+### Interview-ready answer
+
+“In Docker Compose, `environment` is used to pass environment variables into a container at runtime. For example, I can pass `MONGO_URI` and `NODE_ENV` to a Node.js backend and read them using `process.env.MONGO_URI` and `process.env.NODE_ENV`. This keeps configuration separate from application code, but sensitive secrets should not be committed to source control.”
