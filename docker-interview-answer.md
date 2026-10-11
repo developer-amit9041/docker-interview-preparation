@@ -13041,3 +13041,84 @@ If a secret is accidentally committed or exposed, revoke or rotate it immediatel
 "I manage Docker passwords and secrets by keeping them out of Dockerfiles, source code, and images. For local development, I may use a protected, Git-ignored \`.env\` file. For Docker Swarm, I use Docker secrets and grant access only to the services that need them. In production, I prefer a managed secret manager such as AWS Secrets Manager with least-privilege access and auditing. I also rotate credentials, scan for leaks, and never log secret values."
 
 ---
+## Q140. What are Docker image vulnerabilities?
+
+### 1. English Interview Definition
+
+Docker image vulnerabilities are security weaknesses in a container image's operating system packages, application dependencies, libraries, or configuration that attackers may exploit. They can be reduced by using trusted base images, keeping dependencies updated, scanning images for known vulnerabilities, and rebuilding images with security patches.
+
+### 2. Hindi Definition
+
+Docker image vulnerabilities ka matlab hai Docker image ke andar maujood software packages, libraries ya dependencies mein security ki kamiyan, jinka attacker fayda utha sakta hai.
+
+### 3. Hinglish Explanation
+
+Maan lo aapki MERN application \`node:18\` image use karti hai aur us image ke andar kisi OS package ya library mein known security bug hai.
+
+Agar attacker us vulnerability ka fayda utha sake, toh application ya container risk mein aa sakta hai.
+
+Vulnerabilities in jagahon par ho sakti hain:
+
+- **Base image:** Operating system packages mein security bugs.
+- **Application dependencies:** Vulnerable npm packages.
+- **Outdated libraries:** Purane versions mein known security issues.
+- **Misconfiguration:** Unnecessary tools, permissions ya exposed services.
+
+Isliye sirf Docker image build karna enough nahi hai; image ko scan aur regularly update karna bhi zaroori hai.
+
+### 4. How do you scan a Docker image?
+
+A vulnerability scanner checks the image's operating system packages and application dependencies against known vulnerability databases. A commonly used tool is Trivy.
+
+Build your image:
+
+\`\`\`bash
+docker build -t my-mern-backend:1.0 ./backend
+\`\`\`
+
+Scan it:
+
+\`\`\`bash
+trivy image my-mern-backend:1.0
+\`\`\`
+
+Review the report for vulnerability identifiers, severity, affected package versions, and available fixes. Not every finding is exploitable in every deployment, so prioritize based on severity, exploitability, exposure, and whether a fix exists.
+
+### 5. How do you fix image vulnerabilities?
+
+1. **Update the base image:** Use a supported, patched image version.
+2. **Update npm dependencies:** Review and update vulnerable packages, for example with \`npm audit\` and a controlled dependency update.
+3. **Rebuild the image:** A running container will not automatically receive changes made to the base image or dependencies.
+4. **Rescan the rebuilt image:** Confirm that findings have been fixed or appropriately assessed.
+5. **Use CI/CD scanning:** Scan images before release and set an agreed policy for blocking critical findings.
+6. **Reduce the attack surface:** Remove unnecessary packages and run the application as a non-root user.
+
+Example workflow:
+
+\`\`\`bash
+npm audit
+docker build --pull -t my-mern-backend:1.1 ./backend
+trivy image my-mern-backend:1.1
+\`\`\`
+
+Run \`npm audit fix\` only after reviewing its proposed changes and testing the application. Updating dependencies blindly can introduce breaking changes. Also, \`--pull\` refreshes the base image used during build; it does not automatically update every application dependency.
+
+### 6. Example: Vulnerable vs patched image
+
+| Vulnerable approach | Better approach |
+|---|---|
+| Use an unsupported or outdated base image | Use a supported, patched base image |
+| Ignore old npm packages | Audit and update dependencies |
+| Build once and never rebuild | Rebuild and rescan regularly |
+| Deploy without checking scan results | Add vulnerability scanning to CI/CD |
+| Assume every scanner finding is equally risky | Prioritize by severity and exploitability |
+
+### 7. Important distinction
+
+A vulnerability scanner identifies known weaknesses; it does not guarantee that an image is completely secure. New vulnerabilities can be discovered later, and application logic, secrets, runtime permissions, and deployment configuration need separate security checks.
+
+### Interview-ready answer
+
+"Docker image vulnerabilities are known security weaknesses in the image's OS packages, libraries, or application dependencies. I use trusted and supported base images, scan images with tools such as Trivy or Docker Scout, update vulnerable packages, rebuild the image, and rescan before deployment. I integrate scanning into CI/CD and prioritize findings based on severity, exploitability, and available fixes. Scanning is an important control, but it does not guarantee complete security."
+
+---
