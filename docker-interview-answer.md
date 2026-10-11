@@ -14311,3 +14311,102 @@ A smaller image is not automatically a more secure image. Use maintained base im
 “I optimize Docker images by using a suitable lightweight base image, multi-stage builds, a \`.dockerignore\` file, and production-only dependencies. I also order Dockerfile instructions to improve layer caching and remove unnecessary files from the final image. Finally, I compare image sizes with \`docker image ls\` and inspect layers with \`docker history\`, while keeping the image secure and functional.”
 
 ---
+## Q153. What is the difference between a production Dockerfile and a development Dockerfile?
+
+### 1. English Interview Definition
+A development Dockerfile is designed for fast iteration, debugging, and convenient local development. A production Dockerfile is designed for secure, reliable, and efficient deployment, typically with production dependencies only, a minimal runtime image, a non-root user, and no development tools or secrets baked into the image.
+
+### 2. Hindi Definition
+Development Dockerfile developer ke local development aur debugging ko easy banata hai. Production Dockerfile live application ko securely, efficiently aur reliably run karne ke liye optimize kiya jata hai.
+
+### 3. Hinglish Explanation
+Development mein humein code change karte hi app reload, debugging tools aur testing packages chahiye hote hain. Production mein humein stable build, kam image size, better security aur sirf runtime ke liye required files chahiye hoti hain.
+
+### 4. Main Differences
+
+| Feature | Development Dockerfile | Production Dockerfile |
+|---|---|---|
+| Purpose | Coding, testing, debugging | Live deployment |
+| Dependencies | Often includes dev dependencies | Installs production dependencies only where appropriate |
+| Code changes | Often uses bind mounts and hot reload | Uses a built, versioned image |
+| Image size | Convenience is a priority; may be larger | Usually minimized |
+| Debugging tools | May include debuggers and development tools | Avoids unnecessary tools |
+| Security | Still needs safe defaults | Stronger hardening is expected |
+| User | May run as a developer user | Prefer a non-root user |
+| Build | Fast feedback and convenient iteration | Reproducible, tested, optimized build |
+| Secrets | Supplied locally through environment/configuration | Injected securely at runtime or through a secret manager |
+| Restart / monitoring | Developer workflow | Production orchestration, health checks, logging and monitoring |
+
+### 5. Example: Development Dockerfile
+
+\`\`\`dockerfile
+FROM node:22-alpine
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm ci
+
+COPY . .
+
+EXPOSE 3000
+
+CMD ["npm", "run", "dev"]
+\`\`\`
+
+This example assumes the project has a \`dev\` script. In development, source code is commonly mounted from the host and a watcher such as nodemon or a framework dev server reloads changes. If using bind mounts, ensure host \`node_modules\` does not unintentionally overwrite the container's dependencies.
+
+Example Compose service:
+\`\`\`yaml
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+\`\`\`
+
+### 6. Example: Production Dockerfile
+
+\`\`\`dockerfile
+FROM node:22-alpine AS deps
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+
+FROM deps AS build
+COPY . .
+RUN npm run build
+
+FROM node:22-alpine AS production
+WORKDIR /app
+ENV NODE_ENV=production
+
+COPY package*.json ./
+RUN npm ci --omit=dev && npm cache clean --force
+COPY --from=build /app/dist ./dist
+
+USER node
+EXPOSE 3000
+CMD ["node", "dist/server.js"]
+\`\`\`
+
+This is an illustrative pattern. Adjust the output and entry-point paths for your app, and copy any required runtime assets. The official Node image's \`node\` user must have permission to access the app files. Build and test the final stage before deployment.
+
+### 7. Best Practices
+- Keep development and production configuration separate, for example \`Dockerfile.dev\` and \`Dockerfile\`.
+- Use a \`.dockerignore\` file in both workflows.
+- Do not bake passwords, API keys, or production \`.env\` files into images.
+- Pin and regularly update supported base images; scan images for vulnerabilities.
+- Run the production process as a non-root user when possible.
+- Use multi-stage builds when they help exclude build tools and development dependencies from the final image.
+- Do not assume that a production Dockerfile alone provides health checks, orchestration, monitoring, or a complete deployment strategy.
+
+### 8. Interview-Ready Answer
+“A development Dockerfile prioritizes fast feedback, hot reloading, debugging, and developer tools. A production Dockerfile prioritizes security, reliability, and efficiency by using a tested build, a minimal runtime image, production dependencies, and a non-root user. We commonly separate these workflows with \`Dockerfile.dev\` and a production \`Dockerfile\`, while keeping secrets outside the image.”
+
+---
