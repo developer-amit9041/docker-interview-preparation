@@ -14049,3 +14049,101 @@ Choose a limit based on testing and observed usage. A limit that is too low can 
 "I set a Docker container's memory limit using the \`--memory\` or \`-m\` option with \`docker run\`, for example \`docker run -d --memory=512m my-backend:1.0\`. I verify the configured limit with \`docker inspect\` and monitor actual usage with \`docker stats\`. In Docker Compose, I configure the appropriate memory limit for the deployment mode. This helps control resource consumption, but the limit must be sized carefully to avoid out-of-memory failures."
 
 ---
+## Q150. How do you set a CPU limit for a Docker container?
+
+### 1. English Interview Definition
+
+You can limit a Docker container's CPU usage using the \`--cpus\` option with \`docker run\`. This controls how much CPU time a container can consume, helping prevent one container from monopolizing the host's processing resources.
+
+### 2. Hindi Definition
+
+Docker container ki CPU usage limit karne ke liye \`docker run\` command mein \`--cpus\` option use karte hain. Isse container ke CPU consumption ko control kar sakte hain aur doosre containers ke liye resources available rakh sakte hain.
+
+### 3. Hinglish Explanation
+
+Maan lo aapki Node.js backend application CPU ka bahut zyada use kar rahi hai. Isse same server par chal rahe frontend ya doosre services slow ho sakte hain.
+
+Agar aap \`--cpus=1\` set karte ho, toh container ko maximum **1 CPU core ke equivalent CPU time** mil sakta hai. Ye dedicated core reserve nahi karta; ye CPU usage par limit lagata hai.
+
+### 4. Set CPU limit using \`docker run\`
+
+Limit a container to the equivalent of one CPU:
+
+\`\`\`bash
+docker run -d \
+  --name backend \
+  --cpus=1 \
+  my-backend:1.0
+\`\`\`
+
+Limit it to half a CPU:
+
+\`\`\`bash
+docker run -d --name backend --cpus="0.5" my-backend:1.0
+\`\`\`
+
+The \`--cpus\` option sets a CPU quota; it does not reserve a dedicated physical core for the container.
+
+### 5. Monitor and inspect CPU settings
+
+View live CPU and memory usage:
+
+\`\`\`bash
+docker stats backend
+\`\`\`
+
+Inspect the configured CPU quota:
+
+\`\`\`bash
+docker inspect backend --format '{{.HostConfig.NanoCpus}}'
+\`\`\`
+
+For a \`--cpus=1\` setting, the NanoCpus value is typically \`1000000000\`. Actual CPU usage varies with workload and host availability.
+
+### 6. Set CPU limits in Docker Compose
+
+For a typical non-Swarm Compose deployment:
+
+\`\`\`yaml
+services:
+  backend:
+    image: my-backend:1.0
+    cpus: 1.0
+\`\`\`
+
+For a Swarm service, specify a CPU limit in the deploy resources section:
+
+\`\`\`yaml
+services:
+  backend:
+    image: my-backend:1.0
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+\`\`\`
+
+Compose behavior can vary by deployment mode and version, so confirm which configuration your environment supports.
+
+### 7. CPU limit vs CPU shares
+
+| Option | Purpose |
+|---|---|
+| \`--cpus=1\` | Sets a CPU usage quota equivalent to one CPU |
+| \`--cpus=0.5\` | Sets a quota equivalent to half a CPU |
+| \`--cpu-shares\` | Relative CPU scheduling weight under contention; not a hard CPU cap |
+| \`docker stats\` | Monitors current CPU and memory usage |
+
+### 8. Best practices
+
+1. Measure normal and peak CPU usage before choosing a limit.
+2. Set limits according to the workload and available host capacity.
+3. Monitor for throttling, slow responses, and timeouts after applying limits.
+4. Remember that CPU limits control usage; they do not guarantee application performance.
+5. Configure CPU limits for the correct Compose or orchestration deployment mode.
+
+### Interview-ready answer
+
+"I set a Docker container's CPU limit using the \`--cpus\` option, for example \`docker run -d --cpus=1 my-backend:1.0\`. This limits the container to CPU time equivalent to one CPU, rather than reserving a dedicated core. I monitor usage with \`docker stats\`, inspect the configured quota when needed, and choose a limit based on workload measurements. In Compose or Swarm, I configure the corresponding CPU resource limit for the deployment mode."
+
+---
