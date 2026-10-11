@@ -15234,3 +15234,77 @@ For production:
 “We manage Docker logging by collecting container output from stdout and stderr, viewing it with commands such as \`docker logs\`, and configuring a logging driver and log rotation. In production, we often forward logs to a centralized platform, use structured logging, and avoid recording secrets or sensitive data.”
 
 ---
+## Q164. What happens when a Docker container crashes?
+
+### 1. English Interview Definition
+When a Docker container crashes, its main process exits or the container stops running. Docker records the container's exit status and logs; whether it starts again depends on the configured restart policy or an orchestrator such as Docker Swarm or Kubernetes.
+
+### 2. Hindi Definition
+Jab Docker container ka main process fail hokar exit ho jata hai, toh container stop ho sakta hai. Woh automatically restart hoga ya nahi, yeh restart policy aur orchestration configuration par depend karta hai.
+
+### 3. Hinglish Explanation
+Maan lo Node.js backend container ke andar run ho raha hai aur code mein unhandled error ki wajah se Node process exit ho jata hai. Container stop ho sakta hai, lekin uske logs aur exit code inspect karke cause find kar sakte ho. Agar restart policy configured hai, Docker container ko dobara start karne ki koshish kar sakta hai.
+
+**Important:** Container crash aur application request failure hamesha same nahi hote. Agar process crash nahi hua lekin application unhealthy ya hung hai, toh health checks and suitable orchestration/recovery configuration are important.
+
+### 4. Check What Happened
+
+**List containers, including stopped ones:**
+\`\`\`bash
+docker ps -a
+\`\`\`
+
+**Check the container logs:**
+\`\`\`bash
+docker logs backend
+\`\`\`
+
+**Check the exit code and state:**
+\`\`\`bash
+docker inspect backend --format '{{.State.Status}} {{.State.ExitCode}} {{.State.Error}}'
+\`\`\`
+
+Exit code \`0\` usually indicates the process exited successfully; a non-zero exit code commonly indicates an error, but the exact meaning depends on the application and how it exited.
+
+### 5. Configure a Restart Policy
+
+**Restart only if the container exits with a failure:**
+\`\`\`bash
+docker run -d --name backend --restart on-failure:5 my-backend:1.0
+\`\`\`
+
+**Always restart it when it stops, subject to Docker's restart-policy behavior:**
+\`\`\`bash
+docker run -d --name backend --restart always my-backend:1.0
+\`\`\`
+
+**Restart unless it was explicitly stopped:**
+\`\`\`bash
+docker run -d --name backend --restart unless-stopped my-backend:1.0
+\`\`\`
+
+For an existing container, update its restart policy with:
+\`\`\`bash
+docker update --restart unless-stopped backend
+\`\`\`
+
+### 6. Restart Policy Comparison
+
+| Policy | Behavior |
+|---|---|
+| \`no\` | Default; Docker does not automatically restart the container |
+| \`on-failure[:max-retries]\` | Restarts after a non-zero exit, optionally limiting retries |
+| \`always\` | Restarts when it stops; Docker also applies the policy after daemon restart, subject to policy behavior |
+| \`unless-stopped\` | Similar to \`always\`, but respects an explicit stop across daemon restarts |
+
+A restart policy does not fix the underlying bug; a process that repeatedly crashes may enter a restart loop. Investigate logs, configuration, dependencies, and resource limits.
+
+### 7. What If the Container Is Managed by an Orchestrator?
+- **Docker Swarm:** The service scheduler can create a replacement task to maintain the desired replica count.
+- **Kubernetes:** A workload controller can recreate failed Pods according to the workload and restart policies.
+- **Standalone Docker:** Behavior depends mainly on the container's restart policy.
+
+### 8. Interview-Ready Answer
+“When a Docker container crashes, its main process exits and Docker records its state, exit code, and available logs. Automatic recovery depends on the restart policy or orchestration platform. I troubleshoot with \`docker ps -a\`, \`docker logs\`, and \`docker inspect\`, then fix the root cause and configure an appropriate restart policy.”
+
+---
