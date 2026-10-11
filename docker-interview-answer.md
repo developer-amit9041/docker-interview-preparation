@@ -11174,3 +11174,167 @@ If a connection fails, verify the service name, shared network, container port, 
 
 ---
 
+## Q128. How do you write a Docker Compose file for a MERN application?
+
+### 1. English Definition
+
+A Docker Compose file defines the services, networks, environment variables, ports, and volumes required to run a multi-container application. For a MERN application, it commonly defines a React frontend, a Node.js/Express backend, and a MongoDB database.
+
+### 2. Hindi Definition
+
+Docker Compose file ek YAML configuration file hoti hai jisme hum define karte hain ki application ke kaun-kaun se containers run honge, unki settings kya hongi, aur woh aapas mein kaise communicate karenge. MERN app mein aam taur par React, Node.js/Express aur MongoDB services hoti hain.
+
+### 3. Hinglish Explanation
+
+Bhai, MERN application ke 3 main parts hain:
+
+- **Frontend:** React application, jo users ko UI dikhati hai.
+- **Backend:** Node.js + Express API, jo business logic handle karti hai.
+- **Database:** MongoDB, jo application ka data store karta hai.
+
+Docker Compose in services ko ek configuration se start karne deta hai. Compose services ko default network par connect karta hai, isliye backend MongoDB ko uske service name `mongodb` se access kar sakta hai.
+
+### 4. Example Project Structure
+
+```text
+mern-app/
+├── compose.yaml
+├── frontend/
+│   ├── Dockerfile
+│   ├── nginx.conf
+│   └── ...
+└── backend/
+    ├── Dockerfile
+    ├── package.json
+    └── ...
+```
+
+This example assumes the frontend Dockerfile builds React and serves the production files through Nginx, while the backend Dockerfile starts the Express API.
+
+### 5. Docker Compose File — compose.yaml
+
+```yaml
+services:
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+    environment:
+      PORT: "5000"
+      MONGO_URI: mongodb://mongodb:27017/myapp
+    ports:
+      - "5000:5000"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    restart: unless-stopped
+
+  mongodb:
+    image: mongo:8
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test:
+        - CMD
+        - mongosh
+        - --quiet
+        - --eval
+        - "db.adminCommand('ping').ok"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  mongo-data:
+```
+
+### 6. Important Configuration Explained
+
+| Configuration | Meaning |
+|---|---|
+| `services` | Defines the containers/services in the application |
+| `build.context` | Directory containing that service's Dockerfile and build context |
+| `ports: "3000:80"` | Maps host port 3000 to the frontend container's port 80 |
+| `MONGO_URI` | Gives the backend its MongoDB connection string |
+| `mongodb:27017` | Uses the Compose service name and MongoDB's internal port |
+| `depends_on` | Controls startup order; the health condition waits for MongoDB to pass its health check |
+| `mongo-data:/data/db` | Persists MongoDB data in a named volume |
+| `restart: unless-stopped` | Restarts the service after many unexpected exits unless explicitly stopped |
+
+The backend must listen on `0.0.0.0` inside its container, for example:
+
+```js
+app.listen(process.env.PORT || 5000, "0.0.0.0");
+```
+
+### 7. Important React-to-Backend Networking Detail
+
+If React is built into static files and served by Nginx, browser-side JavaScript cannot normally resolve Docker's internal hostname `backend`. A common setup is to configure the frontend Nginx server to proxy `/api/` requests to `http://backend:5000`, then have React call a relative URL such as:
+
+```js
+fetch("/api/users");
+```
+
+Example `frontend/nginx.conf` location block:
+
+```nginx
+location /api/ {
+    proxy_pass http://backend:5000;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+}
+```
+
+Ensure this configuration is included in the frontend image's Nginx configuration. The backend should define the matching API routes.
+
+### 8. Run the MERN Application
+
+From the project root, run:
+
+```bash
+docker compose up --build -d
+```
+
+Useful commands:
+
+```bash
+docker compose ps
+docker compose logs -f backend
+docker compose logs -f frontend
+docker compose logs -f mongodb
+docker compose down
+```
+
+Open the frontend at `http://localhost:3000`. The backend port is published at `http://localhost:5000` for local testing. In this example, MongoDB's port is not published to the host because the backend can access it over the Compose network.
+
+### 9. Production Notes
+
+- Do not hardcode production credentials in the Compose file. Use a protected `.env` file, environment-specific configuration, or a secrets manager, and do not commit secrets to Git.
+- For production, restrict public access to the backend and database as appropriate; publish only the ports that need host access.
+- A MongoDB health check helps with startup ordering, but the backend should still handle temporary connection failures and retries.
+- Use persistent volumes and backups for important database data.
+
+### 10. Summary Table
+
+| Service | Typical image/build | Purpose |
+|---|---|---|
+| `frontend` | Build from `./frontend` | Serves React UI |
+| `backend` | Build from `./backend` | Runs Node.js/Express APIs |
+| `mongodb` | `mongo:8` | Stores application data |
+| `mongo-data` | Named volume | Persists MongoDB files |
+
+### Interview-ready answer
+
+“To run a MERN application with Docker Compose, I define frontend, backend, and MongoDB services in compose.yaml. I build the React and Node.js images from their respective directories, configure the backend with a MongoDB URI such as mongodb://mongodb:27017/myapp, and use a named volume to persist database data. Compose provides a shared network for service discovery. I start everything with docker compose up --build -d. For a production-style React deployment, I can use Nginx to serve the frontend and proxy /api requests to the backend.”
+
+---
+
