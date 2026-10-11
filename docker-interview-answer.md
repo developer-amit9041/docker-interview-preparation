@@ -8518,3 +8518,84 @@ The named volume is retained by default. Avoid `docker compose down -v` if you w
 ### Interview-ready answer
 
 “Docker Compose is a tool for defining and running multi-container applications using a YAML file. I use it to configure services such as a Node.js backend and MongoDB, their networks, ports, environment variables, and volumes, then manage the stack with commands like `docker compose up -d` and `docker compose down`.”
+
+
+---
+
+## Q102. Why do we use Docker Compose?
+
+### 1. English Definition
+
+Docker Compose is used to define, configure, and manage applications made up of multiple containers from a single YAML file. It simplifies starting, stopping, networking, and configuring related services consistently.
+
+### 2. Hindi Definition
+
+Docker Compose ka use multiple containers wali application ko ek hi YAML file se configure aur manage karne ke liye hota hai. Isse har container ko alag command se manually manage nahi karna padta.
+
+### 3. Hinglish Explanation
+
+Maan lo aapke MERN project mein React frontend, Node.js backend aur MongoDB database hain. Har service ko alag-alag command se start karna, network banana aur volumes set karna repetitive ho sakta hai.
+
+Compose mein aap services, ports, environment variables, networks aur volumes ek file mein define kar dete ho. Phir poora setup start karne ke liye ek command use karte ho.
+
+### 4. Practical Example
+
+In a `compose.yaml` file:
+
+```yaml
+services:
+  backend:
+    image: my-backend-image
+    ports:
+      - "5000:5000"
+    environment:
+      MONGO_URI: mongodb://mongodb:27017/myapp
+    depends_on:
+      - mongodb
+
+  mongodb:
+    image: mongo:8
+    volumes:
+      - mongo-data:/data/db
+
+volumes:
+  mongo-data:
+```
+
+Start both services:
+
+```bash
+docker compose up -d
+```
+
+Check status and logs:
+
+```bash
+docker compose ps
+docker compose logs
+```
+
+Stop and remove the containers and project network:
+
+```bash
+docker compose down
+```
+
+The named volume is retained by default; avoid `docker compose down -v` when you need to keep it.
+
+### 5. Main Benefits
+
+- **One-file configuration:** Services, networks, ports, environment variables, and volumes are defined together.
+- **Easy startup and shutdown:** Manage the whole application stack with a few commands.
+- **Service communication:** Compose creates a project network by default, and services can typically reach each other by service name.
+- **Repeatability:** Team members can use the same configuration for consistent development and testing.
+- **Persistence:** Named volumes can store data independently of container writable layers.
+- **Logs and status:** Inspect services using Compose commands.
+
+### 6. Important Point
+
+`depends_on` can control service startup order, but it does not by itself guarantee that a dependency is ready to accept requests. Use health checks and application-level retry logic when readiness matters.
+
+### Interview-ready answer
+
+“We use Docker Compose to manage multi-container applications through one YAML configuration file. It simplifies service setup, networking, environment variables, volumes, and lifecycle commands. For example, I can start a Node.js backend and MongoDB together using `docker compose up -d` instead of managing each container manually.”
