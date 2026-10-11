@@ -12106,3 +12106,145 @@ The browser talks to Nginx; Nginx forwards that request to the backend. Browser-
 
 ---
 
+## Q134. Explain the architecture of Docker, Nginx, and Node.js.
+
+### 1. English Definition
+
+Docker packages and runs application components in isolated containers. Nginx is commonly used as a web server and reverse proxy in front of the application, while Node.js runs the backend JavaScript code and handles API requests. Together, they provide a deployable architecture with separated responsibilities.
+
+### 2. Hindi Definition
+
+Docker application ko containers mein package aur run karta hai. Nginx incoming web requests receive karke static files serve kar sakta hai aur API requests ko Node.js backend tak forward karta hai. Node.js backend logic execute karta hai aur database jaise MongoDB se communicate karta hai.
+
+### 3. Hinglish Explanation
+
+Bhai, teeno ka kaam alag hai:
+
+- **Docker:** Application aur uski dependencies ko containers mein run karta hai.
+- **Nginx:** Public traffic receive karta hai, React ki static files serve karta hai, aur API requests ko backend tak forward karta hai.
+- **Node.js:** JavaScript runtime hai jo Express APIs aur backend business logic chalata hai.
+
+Docker khud request ko Nginx ya Node.js tak route nahi karta. Docker containers ko run karta hai aur Docker networking services ko aapas mein communicate karne deti hai. Nginx request routing/reverse proxy ka kaam karta hai.
+
+### 4. Architecture Diagram
+
+\`\`\`text
+                   User's Browser
+                         |
+                     HTTPS :443
+                         |
+                         v
+              EC2 / Host Machine
+                 Docker Engine
+                         |
+                         v
+                Nginx Container
+               /                \\
+      React static files       /api/* proxy
+                                    |
+                                    v
+                           Node.js Container
+                          Express API / Logic
+                                    |
+                                    v
+                           MongoDB Container
+                                    |
+                                    v
+                           Named Data Volume
+\`\`\`
+
+In this architecture, Nginx is the public entry point. It serves the React build and forwards API requests to Node.js. Node.js connects to MongoDB using the Compose service name, such as \`mongodb:27017\`. The database remains on the internal Docker network rather than being exposed publicly.
+
+### 5. Role of Each Component
+
+| Component | Main responsibility | Example |
+|---|---|---|
+| Docker Engine | Runs and manages containers, images, and networks | Runs Nginx, Node.js, and MongoDB containers |
+| Docker Compose | Defines and starts multiple related services | \`docker compose up -d\` |
+| Nginx | Web server and reverse proxy | Serves React and proxies \`/api/*\` |
+| Node.js | JavaScript runtime for backend code | Runs Express APIs |
+| Express | Web framework running on Node.js | Defines routes such as \`GET /api/users\` |
+| MongoDB | Stores application data | Persists users and orders |
+| Docker network | Enables service-to-service communication | Nginx reaches \`backend:5000\` |
+
+### 6. Example Request Flow
+
+Suppose the user opens the website and requests the users list:
+
+1. The browser sends \`GET /api/users\` to the public website.
+2. Nginx receives the request.
+3. Its reverse-proxy rule forwards the request to \`http://backend:5000\`.
+4. Node.js/Express processes the API request and queries MongoDB if needed.
+5. MongoDB returns the data to Node.js.
+6. Node.js returns the HTTP response through Nginx to the browser.
+
+### 7. Example Nginx Configuration
+
+\`\`\`nginx
+server {
+    listen 80;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /api/ {
+        proxy_pass http://backend:5000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+\`\`\`
+
+This assumes the frontend image contains the built React files at the configured root and that the backend Compose service is named \`backend\`. The backend must listen on \`0.0.0.0:5000\` inside its container.
+
+### 8. Simplified Docker Compose Example
+
+\`\`\`yaml
+services:
+  frontend:
+    build: ./frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+  backend:
+    build: ./backend
+    environment:
+      PORT: "5000"
+      MONGO_URI: mongodb://mongodb:27017/myapp
+    expose:
+      - "5000"
+    depends_on:
+      - mongodb
+
+  mongodb:
+    image: mongo:8
+    volumes:
+      - mongo-data:/data/db
+
+volumes:
+  mongo-data:
+\`\`\`
+
+In this example, Nginx is part of the frontend image. Another valid design is to run Nginx in its own dedicated proxy container. The right choice depends on deployment and operational needs.
+
+### 9. Why Use This Architecture?
+
+- **Separation of responsibilities:** Nginx handles web traffic; Node.js handles backend logic.
+- **Isolation:** Each component can have its own image, dependencies, and configuration.
+- **Independent deployment:** Frontend and backend can often be updated separately.
+- **Security:** Only Nginx needs to expose public HTTP/HTTPS ports in this design; backend and database ports can remain internal.
+- **Scalability:** Backend replicas can be added when needed, with an appropriate proxy or load-balancing setup.
+- **Portability:** Docker images make deployments more consistent across environments.
+
+### Interview-ready answer
+
+“Docker provides the container runtime and networking for the application components. Nginx acts as the public web server and reverse proxy: it serves React's static files and forwards API requests to the Node.js/Express backend. Node.js executes the backend logic and connects to MongoDB over the private Docker network. This separation improves deployment consistency, service isolation, security, and independent scaling. In production, I expose only the necessary public ports and configure HTTPS, monitoring, and database backups.”
+
+---
+
