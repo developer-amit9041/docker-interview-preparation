@@ -8261,3 +8261,88 @@ You can publish a port with `-p` even if the Dockerfile does not contain `EXPOSE
 ### Interview-ready answer
 
 “`EXPOSE 5000` documents the port used inside the container; it does not publish that port on the host. `-p 5000:5000` publishes host port 5000 and forwards traffic to container port 5000. I use `EXPOSE` in the Dockerfile for documentation and `-p` at runtime when host access is required.”
+
+
+---
+
+## Q99. How do you create a Docker network?
+
+### 1. English Definition
+
+You create a Docker network with the `docker network create` command. By default, it creates a user-defined bridge network, which lets containers on the same Docker host communicate and resolve each other by name.
+
+### 2. Hindi Definition
+
+Docker network create karne ke liye `docker network create` command use karte hain. Is network se connected containers ek doosre ke saath communicate kar sakte hain.
+
+### 3. Hinglish Explanation
+
+Maan lo aapke MERN project mein Node.js backend aur MongoDB alag containers mein hain. Dono ko connect karne ke liye pehle `mern-network` create karo, phir dono containers ko usi network par run karo.
+
+### 4. Practical Example
+
+**Step 1: Network create karo**
+
+```bash
+docker network create mern-network
+```
+
+**Step 2: Network list check karo**
+
+```bash
+docker network ls
+```
+
+**Step 3: Network ki details check karo**
+
+```bash
+docker network inspect mern-network
+```
+
+**Step 4: MongoDB ko network par run karo**
+
+```bash
+docker volume create mongo-data
+
+docker run -d \
+  --name mongodb \
+  --network mern-network \
+  -v mongo-data:/data/db \
+  mongo:8
+```
+
+**Step 5: Backend ko same network par run karo**
+
+```bash
+docker run -d \
+  --name backend \
+  --network mern-network \
+  -e MONGO_URI=mongodb://mongodb:27017/myapp \
+  my-backend-image
+```
+
+Now the backend can resolve the MongoDB container by hostname `mongodb`, assuming the application uses this environment variable and MongoDB is listening and ready.
+
+### 5. Create a Specific Driver
+
+To explicitly create a bridge network:
+
+```bash
+docker network create --driver bridge app-network
+```
+
+Other drivers, such as overlay or macvlan, require their relevant configuration and use cases.
+
+### 6. Important Commands
+
+| Command | Purpose |
+|---|---|
+| `docker network create mern-network` | Create a network |
+| `docker network ls` | List networks |
+| `docker network inspect mern-network` | Inspect network and connected containers |
+| `docker network connect mern-network backend` | Connect an existing container to the network |
+| `docker network rm mern-network` | Remove a network when no containers are attached |
+
+### Interview-ready answer
+
+“I create a Docker network using `docker network create <network-name>`, for example, `docker network create mern-network`. I then attach application containers to it using `--network mern-network`. On a user-defined bridge network, containers can communicate using their container names.”
