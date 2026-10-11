@@ -402,3 +402,123 @@ docker rm my-app
 **Interview-ready summary:**
 
 > A Docker container is an isolated runtime instance created from a Docker image. It runs an application with its required dependencies and shares the host OS kernel on Linux, making it generally lightweight and portable.
+
+
+---
+
+## Q5. What is a Docker image?
+
+### 1. English Definition
+
+A Docker image is a read-only template used to create Docker containers. It contains the application code, runtime, libraries, dependencies, and configuration needed to run an application.
+
+### 2. Hindi Definition
+
+Docker image ek read-only template hoti hai, jiska use Docker containers create karne ke liye hota hai. Ismein application code, runtime, libraries aur required dependencies ho sakti hain.
+
+### 3. Hinglish Explanation
+
+Image ko application ka packaged blueprint samjho, aur container ko us blueprint se bana hua running instance.
+
+For example, aap Node.js application ki image banate ho. Us image mein Node.js runtime, aapka application code aur required packages include ho sakte hain. Isi ek image se aap development, testing ya production ke liye multiple containers create kar sakte ho.
+
+**Remember:**
+- **Dockerfile:** Image banane ke instructions.
+- **Docker image:** Built template.
+- **Docker container:** Image se create hua runtime instance.
+
+Images layered hoti hain, isliye unchanged layers ko reuse kiya ja sakta hai. Image build karne ke baad usse Docker Hub ya private registry mein store aur share bhi kar sakte hain.
+
+### 4. Practical Example / Code
+
+Example Dockerfile for a Node.js application:
+
+```dockerfile
+FROM node:20
+WORKDIR /app
+COPY package*.json ./
+RUN npm install
+COPY . .
+EXPOSE 5000
+CMD ["npm", "start"]
+```
+
+Build the image:
+
+```bash
+docker build -t my-node-app:1.0 .
+```
+
+List local images:
+
+```bash
+docker images
+```
+
+Create a container from the image:
+
+```bash
+docker run -d --name my-app -p 5000:5000 my-node-app:1.0
+```
+
+Note: The project should have a valid `package.json` with a `start` script, and the application should listen on port 5000.
+
+### 5. Architecture Diagram
+
+```text
+          Dockerfile
+      (build instructions)
+               |
+         docker build
+               |
+               v
+       +------------------+
+       |   Docker Image   |
+       | App Code         |
+       | Runtime          |
+       | Dependencies     |
+       +------------------+
+               |
+          docker run
+               |
+               v
+       +------------------+
+       | Docker Container |
+       | Running App      |
+       +------------------+
+```
+
+### 6. Practical Command / Configuration
+
+**Pull an image from a registry:**
+
+```bash
+docker pull node:20
+```
+
+**Inspect image details:**
+
+```bash
+docker image inspect node:20
+```
+
+**Remove a local image (after removing containers that use it, if necessary):**
+
+```bash
+docker image rm my-node-app:1.0
+```
+
+### 7. Summary Table
+
+| Term | Meaning |
+|---|---|
+| Docker image | Read-only template for creating containers |
+| Created using | Usually a Dockerfile and `docker build` |
+| Contains | Application files, runtime, dependencies and configuration |
+| Runs directly? | No; a container is created to run the application |
+| Reusable | One image can create multiple containers |
+| Stored in | Local image cache or a container registry |
+
+**Interview-ready summary:**
+
+> A Docker image is a read-only, layered template that packages an application and its required runtime dependencies. Docker uses the image to create one or more containers.
