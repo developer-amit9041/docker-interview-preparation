@@ -19818,3 +19818,329 @@ Backup directory ko secure storage mein copy karo. Production-scale backups ke l
 
     MongoDB container → /data/db → named volume mongo_data → persistent database files
 
+## Q193. How would you write a Docker Compose file for a complete MERN application?
+
+### Step 1 — English Definition
+
+Docker Compose is a tool for defining and running multi-container applications using a YAML configuration file. For a MERN application, it can build and run the React frontend, Node.js backend and MongoDB database, configure their networking, pass environment variables, and persist database data using volumes.
+
+### Step 2 — Understand the Architecture in Simple Hinglish
+
+A complete example has three services:
+
+    Browser
+       |
+       v
+    Frontend container: React build + Nginx (port 80)
+       |
+       | /api requests are reverse-proxied
+       v
+    Backend container: Node.js + Express (port 5000)
+       |
+       | mongodb://mongo:27017/...
+       v
+    MongoDB container (port 27017)
+       |
+       v
+    Named volume: mongo_data
+
+Browser host port 8080 par frontend access karega. Nginx API requests ko Docker network par backend service tak forward karega. Backend MongoDB ko service name mongo se access karega. Database files named volume mein persist hongi.
+
+### Step 3 — Create the Project Structure
+
+    mern-app/
+    ├── compose.yaml
+    ├── .env
+    ├── .gitignore
+    ├── frontend/
+    │   ├── Dockerfile
+    │   ├── nginx.conf
+    │   ├── package.json
+    │   ├── index.html
+    │   └── src/
+    │       └── App.jsx
+    └── backend/
+        ├── Dockerfile
+        ├── package.json
+        └── server.js
+
+Assumption: frontend is a Vite React app that builds to dist/, and backend exposes an Express API on port 5000. If using Create React App, its build output path may be build/ instead of dist/.
+
+### Step 4 — Create the Environment File
+
+Root .env for local development:
+
+    MONGO_ROOT_USERNAME=appadmin
+    MONGO_ROOT_PASSWORD=change_this_local_password
+    BACKEND_PORT=5000
+    FRONTEND_PORT=8080
+    JWT_SECRET=replace_with_a_long_random_secret
+
+These are local learning placeholders, not production credentials. Add .env to .gitignore and never commit actual secrets:
+
+    .env
+    .env.*
+    !.env.example
+
+Compose uses the root .env for variable interpolation; variables are passed into containers through the service's environment configuration. For production, use protected deployment secrets or a managed secrets service, and create a least-privilege MongoDB application user rather than giving the app the root account.
+
+### Step 5 — Write the Complete compose.yaml
+
+Create compose.yaml in the project root:
+
+    services:
+      frontend:
+        build:
+          context: ./frontend
+        ports:
+          - "${FRONTEND_PORT:-8080}:80"
+        depends_on:
+          backend:
+            condition: service_started
+        restart: unless-stopped
+
+      backend:
+        build:
+          context: ./backend
+        environment:
+          NODE_ENV: production
+          PORT: 5000
+          MONGODB_URI: mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@mongo:27017/myapp?authSource=admin
+          JWT_SECRET: ${JWT_SECRET}
+        expose:
+          - "5000"
+        depends_on:
+          mongo:
+            condition: service_healthy
+        restart: unless-stopped
+
+      mongo:
+        image: mongo:7
+        environment:
+          MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME}
+          MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+        volumes:
+          - mongo_data:/data/db
+        healthcheck:
+          test:
+            [
+              "CMD",
+              "mongosh",
+              "--quiet",
+              "--username",
+              "${MONGO_ROOT_USERNAME}",
+              "--password",
+              "${MONGO_ROOT_PASSWORD}",
+              "--authenticationDatabase",
+              "admin",
+              "--eval",
+              "db.adminCommand('ping').ok"
+            ]
+          interval: 5s
+          timeout: 5s
+          retries: 10
+          start_period: 10s
+        restart: unless-stopped
+
+    volumes:
+      mongo_data:
+
+### Step 6 — Understand the Compose File Line by Line
+
+**1. services**
+
+The services section defines the containers Compose should create: frontend, backend and mongo.
+
+**2. build.context**
+
+- ./frontend: Compose builds the frontend image using frontend/Dockerfile.
+- ./backend: Compose builds the backend image using backend/Dockerfile.
+
+**3. ports**
+
+    - "${FRONTEND_PORT:-8080}:80"
+
+Host port 8080 maps to Nginx container port 80. Browser mein http://localhost:8080 open karoge. Backend and MongoDB ports host par publish nahi kiye gaye; is example mein unki direct host access required nahi hai.
+
+**4. environment**
+
+Backend ko PORT, NODE_ENV, MONGODB_URI aur JWT_SECRET milte hain. MongoDB ko root initialization credentials milte hain. Local learning example root credentials app connection mein use karta hai; production mein dedicated least-privilege database user use karo.
+
+**5. depends_on and healthcheck**
+
+Backend waits for MongoDB's healthcheck to pass because of condition: service_healthy. Frontend waits for backend container to start, but service_started does not guarantee the API is fully ready. Production systems should implement robust retries and readiness checks.
+
+**6. expose**
+
+Backend port 5000 ko document karta hai for internal service communication. It does not publish the port on the host. Containers on the same Compose network can reach the backend at backend:5000.
+
+**7. volumes**
+
+mongo_data:/data/db persists MongoDB data outside the container writable layer. Recreating the container while reusing the same volume retains the database files.
+
+**8. restart**
+
+unless-stopped is a restart policy, not a data persistence or backup mechanism.
+
+### Step 7 — Create the Backend Dockerfile
+
+backend/Dockerfile:
+
+    FROM node:22-alpine
+    WORKDIR /app
+    COPY package*.json ./
+    RUN npm ci --omit=dev
+    COPY . .
+    ENV NODE_ENV=production
+    EXPOSE 5000
+    CMD ["npm", "start"]
+
+Backend package.json must contain a start script such as "start": "node server.js", and the committed package-lock.json must match package.json for npm ci to work. Keep a .dockerignore file to exclude .env, node_modules and .git.
+
+The Express server should read process.env.MONGODB_URI, connect to MongoDB before accepting API traffic, and listen on 0.0.0.0:5000 inside the container.
+
+### Step 8 — Create the Frontend Dockerfile
+
+frontend/Dockerfile for a Vite app:
+
+    FROM node:22-alpine AS build
+    WORKDIR /app
+    COPY package*.json ./
+    RUN npm ci
+    COPY . .
+    RUN npm run build
+
+    FROM nginx:alpine
+    COPY nginx.conf /etc/nginx/conf.d/default.conf
+    COPY --from=build /app/dist /usr/share/nginx/html
+    EXPOSE 80
+    CMD ["nginx", "-g", "daemon off;"]
+
+This multi-stage build compiles React in the first stage and serves the static production build using Nginx in the second stage. For this example, frontend/package.json must contain a build script and a committed lockfile.
+
+### Step 9 — Configure Nginx to Proxy API Requests
+
+frontend/nginx.conf:
+
+    server {
+        listen 80;
+        server_name _;
+        root /usr/share/nginx/html;
+        index index.html;
+
+        location /api/ {
+            proxy_pass http://backend:5000;
+            proxy_http_version 1.1;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+        }
+
+        location / {
+            try_files $uri $uri/ /index.html;
+        }
+    }
+
+React can call a relative URL such as fetch("/api/users"). Browser request goes to localhost:8080/api/users, Nginx forwards it to backend:5000, and Docker's internal DNS resolves the service name backend. The browser itself does not resolve Docker service names.
+
+### Step 10 — Ensure the Backend Connects to MongoDB
+
+Example connection code:
+
+    const mongoose = require("mongoose");
+
+    async function connectDatabase() {
+      const uri = process.env.MONGODB_URI;
+
+      if (!uri) {
+        throw new Error("MONGODB_URI is required");
+      }
+
+      await mongoose.connect(uri);
+      console.log("MongoDB connected");
+    }
+
+    connectDatabase().catch((error) => {
+      console.error("Startup failed:", error.message);
+      process.exit(1);
+    });
+
+For a real backend, start the HTTP server only after the database connection succeeds. Do not log the complete MongoDB URI because it may contain credentials. If credentials contain URI-reserved characters, encode them correctly. The MongoDB root account in this local example is for demonstrating Compose wiring only; use a restricted application account in production.
+
+### Step 11 — Build, Start and Test
+
+From the mern-app root directory:
+
+    docker compose config
+    docker compose up -d --build
+    docker compose ps
+
+Open the frontend in a browser:
+
+    http://localhost:8080
+
+Inspect logs:
+
+    docker compose logs -f frontend
+    docker compose logs -f backend
+    docker compose logs -f mongo
+
+If the frontend exposes a GET /api/users route through Nginx, test it with:
+
+    curl http://localhost:8080/api/users
+
+docker compose config helps validate the resolved configuration, but its output can reveal interpolated secrets. Do not publish that output without redacting sensitive values.
+
+### Step 12 — Common Problems
+
+**Frontend shows 502 Bad Gateway**
+- Check backend status and logs.
+- Confirm Express listens on 0.0.0.0:5000.
+- Verify Nginx proxy_pass uses the Compose service name backend and port 5000.
+
+**Backend cannot connect to MongoDB**
+- Use mongo:27017, not localhost:27017, from the backend container.
+- Verify MongoDB healthcheck, credentials and authSource.
+- Check the backend and MongoDB are on the same Compose network.
+
+**Database data disappears**
+- Confirm mongo_data:/data/db is configured.
+- Confirm the same named volume is reused.
+- Avoid docker compose down -v unless volume deletion is intentional.
+- Keep separate backups; a volume is not a backup.
+
+**Frontend API call fails**
+- Use a relative path such as /api/users with the shown Nginx proxy.
+- Check the Express route and Nginx path forwarding.
+
+### Step 13 — Production Considerations
+
+This is a learning/single-host Compose example, not a complete high-availability production platform. Before production, also plan:
+
+- A least-privilege MongoDB user, secret manager, credential rotation and TLS where appropriate.
+- Tested database backups and restore procedures.
+- Health/readiness checks and application retry behavior.
+- Resource limits, monitoring, logging and image/version update policy.
+- TLS termination, domain names and firewall rules.
+- Separate development, staging and production configuration.
+
+### Step 14 — Interview-Ready Answer
+
+“I would define frontend, backend and MongoDB as services in a root compose.yaml file. The frontend image would build React and serve it through Nginx, publishing host port 8080 to container port 80. Nginx would proxy /api requests to the backend service name on port 5000. The backend would receive its MongoDB URI and other configuration through environment variables, while MongoDB would use a named volume mounted at /data/db. I would use a healthcheck so the backend waits for MongoDB readiness, keep internal ports unpublished unless needed, protect secrets, and verify the setup with docker compose ps and logs.”
+
+### Quick Revision
+
+- **Services:** frontend, backend, mongo.
+- **Frontend:** React build + Nginx, host port 8080 → container port 80.
+- **Backend:** Node.js/Express, internal port 5000.
+- **Database hostname:** mongo:27017 from backend.
+- **Database persistence:** mongo_data:/data/db.
+- **Readiness:** MongoDB healthcheck + depends_on service_healthy.
+- **API routing:** Browser /api/users → Nginx → backend:5000.
+- **Secrets:** Local ignored .env; production secret manager and least privilege.
+- **Run:** docker compose up -d --build.
+- **Inspect:** docker compose ps and docker compose logs.
+
+    Browser → Frontend/Nginx → Backend/Express → MongoDB
+
