@@ -18142,3 +18142,222 @@ Lekin jab application grow karti hai, independent scaling, deployment aur troubl
 
 `Separate Containers → Independent Scaling + Deployment + Isolation + Easier Troubleshooting`
 
+## Q187. How would you connect a React frontend container to a Node.js backend container?
+
+### 1. English Definition
+
+A React frontend container can communicate with a Node.js/Express backend container through a Docker network. In production, a common approach is to use Nginx in the frontend container to proxy API requests to the backend using its Docker Compose service name.
+
+### 2. Easy Hinglish Explanation
+
+Maan lo tumhare paas do containers hain:
+
+- **React container:** Frontend UI show karta hai.
+- **Node.js container:** Backend API provide karta hai.
+
+React ko users ki information chahiye, toh React `/api/users` endpoint par request bhejega. Backend request process karke response return karega.
+
+```text
+Browser
+   |
+   | http://localhost:8080
+   v
+React + Nginx Container
+   |
+   | /api/users → http://backend:5000
+   v
+Node.js / Express Container
+```
+
+**Sabse important concept:** React ka code browser mein execute hota hai. Browser Docker ke internal hostname `backend` ko generally resolve nahi kar sakta. Isliye browser se `http://backend:5000` directly call karna sahi approach nahi hai. Nginx API request ko backend container tak forward kar sakta hai.
+
+### 3. Step 1 — Use Docker Compose
+
+Project structure:
+
+```text
+mern-app/
+├── compose.yaml
+├── frontend/
+│   ├── Dockerfile
+│   ├── nginx.conf
+│   └── src/
+└── backend/
+    ├── Dockerfile
+    └── src/
+        └── server.js
+```
+
+Example `compose.yaml`:
+
+```yaml
+services:
+  frontend:
+    build: ./frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    expose:
+      - "5000"
+    environment:
+      PORT: 5000
+    restart: unless-stopped
+```
+
+Compose automatically creates a network for these services. The frontend container can resolve the backend using the service name `backend`. `expose` documents the internal port; it does not publish the backend port to the host. Containers on the same network can communicate without host port publishing.
+
+### 4. Step 2 — Configure Nginx as a Reverse Proxy
+
+Create or update `frontend/nginx.conf`:
+
+```nginx
+server {
+    listen 80;
+    server_name _;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    location /api/ {
+        proxy_pass http://backend:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+```
+
+Yahan:
+
+- `listen 80`: Nginx container port 80 par requests accept karta hai.
+- `location /api/`: API requests ko match karta hai.
+- `proxy_pass http://backend:5000`: Request ko backend service par forward karta hai.
+- `try_files ... /index.html`: React single-page application routes ke liye fallback deta hai.
+
+Is configuration mein `proxy_pass` ke URL ke baad extra path nahi diya gaya, isliye original `/api/...` path backend tak preserve hota hai.
+
+### 5. Step 3 — Call the API from React
+
+React component se relative URL use karo:
+
+```javascript
+async function fetchUsers() {
+  const response = await fetch("/api/users");
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch users");
+  }
+
+  return response.json();
+}
+```
+
+Browser request `http://localhost:8080/api/users` par jayegi. Nginx us request ko Docker network ke through `http://backend:5000/api/users` par forward karega.
+
+Relative URL use karne ka benefit ye hai ki frontend ko backend ka internal Docker hostname ya hardcoded host port pata hone ki zaroorat nahi.
+
+### 6. Step 4 — Create a Backend API
+
+Example `backend/src/server.js`:
+
+```javascript
+const express = require("express");
+
+const app = express();
+const PORT = process.env.PORT || 5000;
+
+app.use(express.json());
+
+app.get("/api/users", (req, res) => {
+  res.json([
+    { id: 1, name: "Amit" },
+    { id: 2, name: "Rahul" }
+  ]);
+});
+
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Backend listening on port ${PORT}`);
+});
+```
+
+Backend ko `0.0.0.0` par listen karna chahiye taaki doosre containers network ke through us tak pahunch sakein.
+
+### 7. Step 5 — Build and Run
+
+Project root se:
+
+```bash
+docker compose up -d --build
+docker compose ps
+docker compose logs -f backend
+```
+
+Browser mein open karo:
+
+```text
+http://localhost:8080/api/users
+```
+
+Expected response:
+
+```json
+[
+  { "id": 1, "name": "Amit" },
+  { "id": 2, "name": "Rahul" }
+]
+```
+
+### 8. Alternative — Direct Browser-to-Backend Requests
+
+Agar Nginx proxy use nahi karna, toh backend ka port host par publish kar sakte ho:
+
+```yaml
+backend:
+  build: ./backend
+  ports:
+    - "5000:5000"
+```
+
+React browser code phir `http://localhost:5000/api/users` call kar sakta hai in local development. Lekin frontend aur backend ke different origins hone par backend par CORS configuration ki zaroorat ho sakti hai. Production mein correct public API URL, HTTPS, CORS policy aur network exposure carefully configure karna chahiye.
+
+**Difference yaad rakho:**
+
+- Container-to-container request: `http://backend:5000`
+- Browser-to-host-published backend port: `http://localhost:5000` (local development)
+- Browser-to-Nginx proxy: `/api/users` (same origin)
+
+### 9. Common Problems
+
+- **502 Bad Gateway:** Backend container running hai ya nahi, port 5000 sahi hai ya nahi, aur Nginx proxy target verify karo.
+- **Name resolution error:** Confirm karo ki frontend aur backend same Compose network par hain aur service ka naam `backend` hai.
+- **CORS error:** Agar browser directly alag origin par backend call kar raha hai, toh backend CORS policy check karo. Same-origin Nginx proxy setup mein browser-side cross-origin request ki zaroorat nahi hoti.
+- **Connection refused:** Backend ko `0.0.0.0` par bind karna chahiye aur application expected port par listen kar rahi honi chahiye.
+- **Frontend changes visible nahi:** Image rebuild karo aur container recreate karo using `docker compose up -d --build`.
+
+### 10. Interview-Ready Answer
+
+“I would put the React frontend and Node.js backend on the same Docker Compose network. The backend would be reachable internally by its service name, such as `backend:5000`. For production, I would configure Nginx in the frontend container to reverse-proxy `/api` requests to the backend, and React would call relative URLs such as `/api/users`. This avoids exposing the backend port publicly and avoids making the browser resolve an internal Docker hostname. I would verify the service health, port configuration, proxy rules, and logs.”
+
+### 11. Quick Revision
+
+- **Docker network:** Containers ko communicate karne deta hai.
+- **Compose service name:** Backend hostname, for example `backend`.
+- **Nginx reverse proxy:** Browser ki API requests backend ko forward karta hai.
+- **React API URL:** `/api/users`.
+- **Backend listening address:** `0.0.0.0:5000`.
+- **CORS:** Usually relevant when browser directly calls a different origin.
+- **Debugging:** `docker compose logs -f backend`.
+
+`Browser → React/Nginx → Docker Network → Node.js/Express API`
+
