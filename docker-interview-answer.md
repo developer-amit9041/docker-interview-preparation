@@ -19099,3 +19099,311 @@ Common errors:
 
 `Backend container: mongo:27017 → MongoDB service on Docker network`
 
+## Q190. How would you configure environment variables for a Dockerized MERN application?
+
+### Step 1 — English Definition
+
+Environment variables are key-value pairs used to configure an application at runtime without hardcoding environment-specific settings in the source code or Docker image.
+
+### Step 2 — Understand the Purpose in Simple Hinglish
+
+MERN application mein MongoDB connection string, JWT secret, backend port, API URL aur payment gateway credentials jaise configuration values hoti hain.
+
+Agar values code mein hardcode kar doge, toh development aur production ke liye code change karna padega. Secrets GitHub par leak hone ka risk bhi hota hai. Environment variables se application code same rakh kar configuration environment ke hisaab se change kar sakte hain.
+
+**Important distinction:** Backend secrets jaise `JWT_SECRET`, database password aur payment secret key server side par hi rehne chahiye. React application browser mein run hoti hai; frontend build mein include hui values user inspect kar sakta hai.
+
+### Step 3 — Understand the Configuration Flow
+
+```text
+Environment configuration
+(.env for local Compose interpolation,
+deployment environment / secret manager)
+                 |
+                 v
+         Docker Compose
+           /        \
+          v          v
+     Frontend      Backend
+   public config   server config
+                  + private secrets
+                       |
+                       v
+                    MongoDB
+```
+
+Compose ka root `.env` file commonly Compose YAML mein variable interpolation ke liye hota hai. Us file ki values automatically har container ke andar available nahi hoti; service ke `environment` ya `env_file` section se values container mein pass karni hoti hain.
+
+### Step 4 — Create a Root `.env` File for Local Development
+
+Project structure:
+
+```text
+mern-app/
+├── .env
+├── .gitignore
+├── compose.yaml
+├── frontend/
+│   └── ...
+└── backend/
+    └── ...
+```
+
+Example root `.env`:
+
+```dotenv
+MONGO_ROOT_USERNAME=appadmin
+MONGO_ROOT_PASSWORD=change_this_local_password
+JWT_SECRET=replace_with_a_long_random_secret
+BACKEND_PORT=5000
+FRONTEND_PORT=8080
+```
+
+Ye sirf local learning placeholders hain. Real project mein strong unique secrets use karo. Root `.env` ko Git mein commit mat karo; `.gitignore` mein add karo:
+
+```gitignore
+.env
+.env.*
+!.env.example
+```
+
+Agar `.env` pehle hi Git mein commit ho chuki hai, sirf ignore karna enough nahi: exposed secrets rotate karo aur repository history clean karne ki zaroorat assess karo.
+
+### Step 5 — Pass Backend Variables with Docker Compose
+
+Example `compose.yaml`:
+
+```yaml
+services:
+  backend:
+    build: ./backend
+    environment:
+      NODE_ENV: production
+      PORT: ${BACKEND_PORT:-5000}
+      MONGODB_URI: mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@mongo:27017/myapp?authSource=admin
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+      - mongo
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:7
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+    volumes:
+      - mongo_data:/data/db
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
+    depends_on:
+      - backend
+
+volumes:
+  mongo_data:
+```
+
+**Configuration ka meaning:**
+
+- `environment`: Listed variables container ke environment mein set karta hai.
+- `${BACKEND_PORT:-5000}`: Variable set na ho toh Compose default 5000 use karta hai.
+- `MONGODB_URI`: Backend ko MongoDB connection string deta hai. Compose network par service hostname `mongo` use hota hai, `localhost` nahi.
+- `JWT_SECRET`: Server-side signing secret hai; React build mein pass mat karo.
+- `ports`: Host port ko frontend container ke port 80 se map karta hai.
+- `mongo_data`: MongoDB files ko named volume mein persist karta hai.
+
+Local demo mein root database credentials application ko pass kiye gaye hain. Production mein backend ke liye least-privilege MongoDB user use karo; root credentials app ko dena avoid karo. URI mein reserved characters wale username/password ko correctly percent-encode karna zaroori hai.
+
+### Step 6 — Read Variables in the Node.js Backend
+
+`backend/server.js`:
+
+```javascript
+const express = require("express");
+const mongoose = require("mongoose");
+
+const app = express();
+
+const PORT = process.env.PORT || 5000;
+const MONGODB_URI = process.env.MONGODB_URI;
+const JWT_SECRET = process.env.JWT_SECRET;
+
+app.use(express.json());
+
+async function startServer() {
+  if (!MONGODB_URI) {
+    throw new Error("MONGODB_URI is required");
+  }
+
+  if (!JWT_SECRET) {
+    throw new Error("JWT_SECRET is required");
+  }
+
+  await mongoose.connect(MONGODB_URI);
+  console.log("MongoDB connected");
+
+  app.get("/api/health", (req, res) => {
+    res.json({ status: "ok" });
+  });
+
+  app.listen(PORT, "0.0.0.0", () => {
+    console.log(`Server listening on port ${PORT}`);
+  });
+}
+
+startServer().catch((error) => {
+  console.error("Startup failed:", error.message);
+  process.exit(1);
+});
+```
+
+**Important lines:**
+
+- `process.env.PORT`: Node.js runtime environment se port read karta hai.
+- `process.env.MONGODB_URI`: MongoDB URI read karta hai.
+- `process.env.JWT_SECRET`: JWT signing/verification ke liye secret read karta hai.
+- Required variable missing ho toh startup fail karna silent misconfiguration se better hai.
+- `0.0.0.0`: Container ke network interfaces par backend requests accept karne deta hai.
+
+### Step 7 — Configure Frontend Variables Carefully
+
+Vite frontend mein variable names usually `VITE_` prefix se expose hote hain. For example, `frontend/.env.production`:
+
+```dotenv
+VITE_API_BASE_URL=/api
+```
+
+React code:
+
+```javascript
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
+
+fetch(`${API_BASE_URL}/users`);
+```
+
+Lekin Vite variables **build time** par frontend bundle mein include hote hain, runtime par automatically backend environment se read nahi hote. Jo value bundle mein hai woh browser users inspect kar sakte hain.
+
+- Public API base URL jaise `VITE_API_BASE_URL` expose karna generally acceptable hai.
+- `JWT_SECRET`, database URI/password, private API keys ya payment secret key ko `VITE_*` variable mein kabhi mat rakho.
+- Agar same frontend image ko different environments mein deploy karna hai, toh runtime-generated public config file ya Nginx templating pattern consider karo; sirf container environment badalne se already-built Vite bundle ki value change nahi hoti.
+
+### Step 8 — Understand `environment` vs `env_file`
+
+**Option A: Inline `environment`**
+
+```yaml
+services:
+  backend:
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+```
+
+Ye YAML ke andar variables directly define karta hai.
+
+**Option B: `env_file`**
+
+`backend/backend.env`:
+
+```dotenv
+NODE_ENV=production
+PORT=5000
+MONGODB_URI=mongodb://mongo:27017/myapp
+```
+
+Compose:
+
+```yaml
+services:
+  backend:
+    env_file:
+      - ./backend/backend.env
+```
+
+`env_file` file ke variables container environment mein pass karta hai. Compose root `.env` aur service-level `env_file` ka purpose alag hai: root `.env` commonly Compose YAML interpolation ke liye, jabki `env_file` container environment populate karne ke liye use hota hai.
+
+### Step 9 — Build and Run
+
+Project root se:
+
+```bash
+docker compose config
+docker compose up -d --build
+docker compose ps
+docker compose logs -f backend
+```
+
+- `docker compose config`: Resolved configuration validate/show karta hai. Expanded output mein secrets ho sakte hain; use logs, screenshots ya public chat mein share mat karo.
+- `docker compose up -d --build`: Images build karke containers start karta hai.
+- `docker compose ps`: Status check karta hai.
+- `docker compose logs -f backend`: Backend logs follow karta hai.
+
+Agar environment variable badla hai, toh affected service ko recreate karna pad sakta hai:
+
+```bash
+docker compose up -d --force-recreate backend
+```
+
+Frontend build-time variable badla ho toh frontend image ko rebuild karna bhi zaroori hai:
+
+```bash
+docker compose up -d --build frontend
+```
+
+### Step 10 — Production Secrets and Security
+
+Production mein sensitive values ko ordinary committed `.env` file ya Docker image mein bake mat karo.
+
+Prefer:
+- Cloud secret manager or a protected deployment secret store.
+- Least-privilege MongoDB user and credentials rotation.
+- Restricted access to deployment configuration and logs.
+- Separate values for development, test, staging and production.
+- No secret values in frontend bundles, Dockerfile `ARG`/image layers, source control or public logs.
+
+Docker Compose supports secrets for specific use cases, but availability and protection depend on the deployment platform and how secrets are mounted/managed. A plain environment variable is configuration, not a complete secret-management system.
+
+### Step 11 — Common Mistakes
+
+**1. Variable container mein missing hai**
+- Check karo ki Compose service mein `environment` ya `env_file` configured hai.
+- Root `.env` ki value interpolation ke liye hai; container tak pass karna alag step hai.
+
+**2. Backend MongoDB connect nahi kar pa raha**
+- `MONGODB_URI` check karo.
+- Container-to-container hostname `mongo` use karo, `localhost` nahi.
+- Credentials, authentication database aur MongoDB readiness verify karo.
+
+**3. Frontend variable `undefined` aa raha hai**
+- Vite variable ke liye `VITE_` prefix check karo.
+- Ensure variable build process ko available tha aur image rebuild hui.
+- Browser bundle mein public values hi rakho.
+
+**4. Secret GitHub par chala gaya**
+- Secret immediately rotate/revoke karo.
+- `.gitignore` add karo; yaad rakho, ignore karna existing committed file ko untrack nahi karta.
+- Repository history aur logs mein exposure assess karo.
+
+**5. Updated variable container mein reflect nahi hua**
+- Affected container recreate karo.
+- Frontend build-time configuration change hui ho toh frontend rebuild karo.
+
+### Step 12 — Interview-Ready Answer
+
+“I configure Dockerized MERN applications using environment variables instead of hardcoding environment-specific values. In Docker Compose, I pass backend settings such as `PORT`, `MONGODB_URI` and `JWT_SECRET` through the service’s `environment` or `env_file` configuration. Node.js reads them using `process.env`. The root Compose `.env` file is commonly used for interpolation and does not automatically populate every container. For React, Vite’s `VITE_` variables are embedded at build time and are public, so I never put database credentials or private secrets in the frontend. In production, I use protected secret management, validate required variables and avoid committing secrets to Git.”
+
+### Quick Revision
+
+- **Root `.env`:** Compose YAML variable interpolation.
+- **`environment`:** Set variables in a service container.
+- **`env_file`:** Load variables from a file into a container.
+- **Node.js:** Read with `process.env.VARIABLE_NAME`.
+- **Vite React:** `VITE_*` variables are public and build-time.
+- **Never expose:** MongoDB credentials, JWT signing secret, payment secret keys in frontend.
+- **After changes:** Recreate affected service; rebuild frontend for build-time config.
+- **Production:** Use protected secrets management and least privilege.
+
+`Configuration source → Docker Compose → Container environment → Node.js process.env`
+
