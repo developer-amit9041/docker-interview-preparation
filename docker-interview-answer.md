@@ -21155,3 +21155,239 @@ Compare image sizes before and after the change, and test the containers to ensu
 - **Security:** non-root runtime, trusted/patched base images, no baked-in secrets.
 - **Verification:** `docker image ls`, `docker history`, runtime tests and image scanning.
 
+## Q199. How would you separate development and production configurations for a Dockerized MERN application?
+
+### Step 1 — English Definition
+
+Development and production configurations are separated by using environment-specific Compose files, environment variables, secrets management, and different runtime settings. Development prioritizes fast feedback and debugging, while production prioritizes security, reliability, performance, and controlled deployments.
+
+### Step 2 — Simple Hinglish Explanation
+
+Bhai, development mein hum code frequently change karte hain, hot reload chahiye hota hai, aur debugging tools useful hote hain. Production mein users actual application use karte hain, isliye debug mode off, secrets secure, optimized frontend build, persistent database storage aur restricted ports chahiye.
+
+Dono environments ke liye alag configuration rakho, lekin application code ko unnecessarily duplicate mat karo.
+
+### Step 3 — Suggested project structure
+
+    my-mern-app/
+    ├── frontend/
+    │   ├── Dockerfile
+    │   ├── package.json
+    │   └── src/
+    ├── backend/
+    │   ├── Dockerfile
+    │   ├── package.json
+    │   └── src/
+    ├── compose.yaml
+    ├── compose.dev.yaml
+    ├── compose.prod.yaml
+    ├── .env.example
+    ├── .gitignore
+    └── .dockerignore
+
+- `compose.yaml`: shared service definitions and common settings.
+- `compose.dev.yaml`: source bind mounts, development commands, and local-only ports.
+- `compose.prod.yaml`: production settings, restart policy, and production-specific configuration.
+- `.env.example`: names of required variables with safe placeholder values; never put real credentials here.
+- Actual `.env` files: local configuration only, ignored by Git. For production, prefer the deployment platform's secret/environment configuration.
+
+### Step 4 — Shared Compose configuration
+
+Create `compose.yaml`:
+
+    services:
+      frontend:
+        build:
+          context: ./frontend
+        depends_on:
+          - backend
+        networks:
+          - app_network
+
+      backend:
+        build:
+          context: ./backend
+        environment:
+          NODE_ENV: ${NODE_ENV:-production}
+          PORT: 5000
+          MONGODB_URI: ${MONGODB_URI:?Set MONGODB_URI}
+        expose:
+          - "5000"
+        networks:
+          - app_network
+          - data_network
+
+      mongo:
+        image: mongo:8
+        volumes:
+          - mongo_data:/data/db
+        networks:
+          - data_network
+
+    networks:
+      app_network:
+      data_network:
+        internal: true
+
+    volumes:
+      mongo_data:
+
+This is an illustrative base file. Adjust image versions, service names, and application settings to your project. The internal data network helps keep MongoDB isolated from the frontend-facing network. Do not publish MongoDB's port unless a deliberate local access requirement exists.
+
+### Step 5 — Development override
+
+Create `compose.dev.yaml`:
+
+    services:
+      frontend:
+        build:
+          context: ./frontend
+          target: development
+        command: npm run dev -- --host 0.0.0.0
+        volumes:
+          - ./frontend:/app
+          - /app/node_modules
+        ports:
+          - "5173:5173"
+        environment:
+          VITE_API_BASE_URL: http://localhost:5000
+
+      backend:
+        build:
+          context: ./backend
+          target: development
+        command: npm run dev
+        volumes:
+          - ./backend:/app
+          - /app/node_modules
+        ports:
+          - "5000:5000"
+        environment:
+          NODE_ENV: development
+          PORT: 5000
+          MONGODB_URI: mongodb://mongo:27017/mern_dev
+          CORS_ORIGIN: http://localhost:5173
+
+The `development` build target must exist in each corresponding Dockerfile. The bind mounts let you edit source code on your machine and see changes inside the container. The anonymous `/app/node_modules` volume prevents the host's `node_modules` from replacing the container's Linux dependencies.
+
+For a Vite browser request, `localhost:5000` refers to the developer's machine. By contrast, backend-to-MongoDB traffic uses the Compose service name `mongo` and the container port `27017`.
+
+### Step 6 — Production override
+
+Create `compose.prod.yaml`:
+
+    services:
+      frontend:
+        build:
+          context: ./frontend
+          target: production
+        restart: unless-stopped
+        ports:
+          - "80:80"
+
+      backend:
+        build:
+          context: ./backend
+          target: production
+        restart: unless-stopped
+        environment:
+          NODE_ENV: production
+          PORT: 5000
+          MONGODB_URI: ${MONGODB_URI:?Set production MONGODB_URI}
+          CORS_ORIGIN: ${CORS_ORIGIN:?Set production CORS_ORIGIN}
+        # No host port mapping: backend is reached over the Docker network.
+
+    # Keep the shared mongo_data volume so database data survives container replacement.
+
+Production uses optimized frontend assets and production backend dependencies, does not mount source code from the host, and does not publish the backend or MongoDB ports directly to the host. In a real deployment, terminate HTTPS at a suitable reverse proxy/load balancer, configure health checks, and use managed secrets rather than committing credentials.
+
+### Step 7 — Make sure Dockerfiles support the targets
+
+A Dockerfile can expose named stages for Compose to select. For example, a simplified backend Dockerfile:
+
+    FROM node:22-alpine AS base
+    WORKDIR /app
+    COPY package*.json ./
+
+    FROM base AS development
+    RUN npm ci
+    COPY . .
+    CMD ["npm", "run", "dev"]
+
+    FROM base AS production-deps
+    RUN npm ci --omit=dev
+
+    FROM node:22-alpine AS production
+    WORKDIR /app
+    ENV NODE_ENV=production
+    COPY --from=production-deps --chown=node:node /app/node_modules ./node_modules
+    COPY --chown=node:node package*.json ./
+    COPY --chown=node:node src ./src
+    USER node
+    EXPOSE 5000
+    CMD ["npm", "start"]
+
+This assumes the app runs from `src/` and has an `npm start` script. Include compiled output or other runtime assets if required. Create matching `development` and `production` stages in the frontend Dockerfile too; the frontend production stage can build React assets and serve them with Nginx.
+
+### Step 8 — Run the correct configuration
+
+Development:
+
+    docker compose -f compose.yaml -f compose.dev.yaml up --build
+
+Production:
+
+    docker compose -f compose.yaml -f compose.prod.yaml config
+    docker compose -f compose.yaml -f compose.prod.yaml up -d --build
+
+The `config` command helps validate the merged configuration before starting services. Use a deployment pipeline to supply production variables securely. Do not commit production `.env` files or pass secrets as Docker build arguments.
+
+### Step 9 — Environment variables and secrets
+
+Example `.env.example`:
+
+    MONGODB_URI=
+    CORS_ORIGIN=
+
+For local development, an ignored `.env` file can supply local values. For production, supply values through your hosting platform, CI/CD secret store, or an appropriate Docker/Kubernetes secret mechanism.
+
+Important distinctions:
+- `NODE_ENV=development` or `production` controls application behavior; it does not itself make a deployment secure.
+- Browser-exposed React variables (for example, Vite variables prefixed with `VITE_`) are embedded in the client build and must never contain database passwords, private API keys, or other secrets.
+- Do not use `localhost` for one container to reach another container. Use the Compose service name, such as `mongo` or `backend`, for container-to-container communication.
+- Keep production debug endpoints and verbose error responses disabled.
+
+### Step 10 — Common mistakes
+
+**1. Using the same settings everywhere**
+- Development may expose debugging ports; production should publish only the intended public entry point.
+
+**2. Committing secrets**
+- Commit `.env.example`, not the real `.env` file. Rotate any credential that was accidentally committed.
+
+**3. Mounting source code in production**
+- Bind mounts can overwrite image contents and undermine an immutable deployment. Use built images instead.
+
+**4. Incorrect MongoDB hostname**
+- Inside the backend container, use `mongodb://mongo:27017/...`, not `mongodb://localhost:27017/...`.
+
+**5. Assuming Compose override files replace everything**
+- Compose merges files. Inspect the result with `docker compose -f compose.yaml -f compose.prod.yaml config`.
+
+**6. Forgetting readiness**
+- `depends_on` alone does not always guarantee MongoDB is ready to accept connections. Configure a MongoDB health check and `condition: service_healthy` where supported, and implement backend retry logic.
+
+### Step 11 — Interview-Ready Answer
+
+“I separate development and production using a shared Compose file plus environment-specific override files. Development enables hot reload, source bind mounts, debugging, and local ports. Production uses optimized multi-stage images, production dependencies, no source bind mounts, secure environment variables or secrets, persistent database storage, and only the required public ports. I validate the merged Compose configuration before deployment and keep credentials out of Git and image layers.”
+
+### Quick Revision
+
+- Shared settings: `compose.yaml`.
+- Development: `compose.dev.yaml`, hot reload, bind mounts, local ports.
+- Production: `compose.prod.yaml`, optimized images, no source mounts, restricted ports.
+- Secrets: ignored local `.env` or production secret manager; never commit credentials.
+- Container DNS: use service names such as `mongo` and `backend`.
+- Validate: `docker compose -f compose.yaml -f compose.prod.yaml config`.
+- Reliability: persistent volumes, health checks, retry logic, HTTPS and monitoring.
+
