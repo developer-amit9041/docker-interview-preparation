@@ -18548,3 +18548,368 @@ Then browser `http://localhost:5000/api/users` call kar sakta hai. Agar frontend
 
 `Browser → localhost:8080 → Nginx → backend:5000 → Express API → JSON response`
 
+## Q188. How would the Node.js backend connect to MongoDB in Docker?
+
+### Step 1 — English Definition
+
+A Node.js backend connects to a MongoDB container through a shared Docker network using the MongoDB service name as the hostname and the MongoDB port, usually `27017`. The connection URI is provided through an environment variable and used by a MongoDB driver or Mongoose.
+
+### Step 2 — Understand the Architecture in Simple Hinglish
+
+Maan lo MERN application mein teen components hain:
+
+```text
+React Frontend Container
+        |
+        | HTTP API request
+        v
+Node.js + Express Backend Container
+        |
+        | MongoDB connection over Docker network
+        v
+MongoDB Container (port 27017)
+```
+
+Example: User signup karta hai. React request backend ko bhejta hai. Backend user data MongoDB mein save karta hai aur response React ko return karta hai.
+
+**Important:** Backend ko MongoDB container ka IP manually dene ki zaroorat nahi. Docker Compose ke shared network par backend, MongoDB ko uske service name `mongo` se reach kar sakta hai.
+
+Connection URI ka example:
+
+```text
+mongodb://mongo:27017/myapp
+```
+
+- `mongodb://`: MongoDB connection scheme.
+- `mongo`: Compose service name; Docker network ka internal hostname.
+- `27017`: MongoDB ka default port.
+- `myapp`: database ka naam.
+
+Backend ke code mein `localhost:27017` use mat karo. Backend container ke andar `localhost` ka matlab backend container khud hai, MongoDB container nahi.
+
+### Step 3 — Create the Project Structure
+
+```text
+mern-app/
+├── compose.yaml
+├── .env
+├── backend/
+│   ├── Dockerfile
+│   ├── package.json
+│   └── server.js
+└── frontend/
+    └── ...
+```
+
+Is answer mein hum backend ke liye Mongoose use karenge. Mongoose Node.js se MongoDB connect karne aur schemas/models define karne ki library hai.
+
+### Step 4 — Install Backend Dependencies
+
+`backend/package.json` mein Express aur Mongoose dependencies honi chahiye. Backend folder se install karo:
+
+```bash
+cd backend
+npm install express mongoose
+```
+
+Agar `package.json` mein pehle se Express hai, toh sirf `npm install mongoose` bhi kar sakte ho. Dependencies aur lockfile ko project mein commit karo.
+
+### Step 5 — Configure the MongoDB Connection in Node.js
+
+Create or update `backend/server.js`:
+
+```javascript
+const express = require("express");
+const mongoose = require("mongoose");
+
+const app = express();
+const PORT = process.env.PORT || 5000;
+const MONGODB_URI = process.env.MONGODB_URI;
+
+app.use(express.json());
+
+const userSchema = new mongoose.Schema({
+  name: { type: String, required: true }
+});
+
+const User = mongoose.model("User", userSchema);
+
+app.get("/api/users", async (req, res) => {
+  try {
+    const users = await User.find();
+    res.json(users);
+  } catch (error) {
+    console.error("Could not fetch users:", error.message);
+    res.status(500).json({ message: "Internal server error" });
+  }
+});
+
+app.post("/api/users", async (req, res) => {
+  try {
+    const user = await User.create({ name: req.body.name });
+    res.status(201).json(user);
+  } catch (error) {
+    console.error("Could not create user:", error.message);
+    res.status(400).json({ message: "Could not create user" });
+  }
+});
+
+async function startServer() {
+  try {
+    if (!MONGODB_URI) {
+      throw new Error("MONGODB_URI environment variable is missing");
+    }
+
+    await mongoose.connect(MONGODB_URI);
+    console.log("Connected to MongoDB");
+
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`Backend running on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error("Startup failed:", error.message);
+    process.exit(1);
+  }
+}
+
+startServer();
+```
+
+**Code ko samjho:**
+
+1. `require("mongoose")`: Mongoose library load karta hai.
+2. `process.env.MONGODB_URI`: Connection string environment se read karta hai; credentials code mein hardcode nahi karta.
+3. `mongoose.Schema(...)`: User document ka structure define karta hai.
+4. `mongoose.connect(MONGODB_URI)`: MongoDB se connection establish karta hai.
+5. `await`: Connection successful hone ka wait karta hai.
+6. `app.listen(...)`: Successful database connection ke baad API server start karta hai.
+7. `0.0.0.0`: Backend ko container ke network interfaces par listen karata hai.
+8. `User.find()` aur `User.create()`: MongoDB se data read aur insert karte hain.
+
+Is example mein database connection fail ho toh process exit karta hai. Compose mein restart policy configured ho toh container dobara start ho sakta hai. Production application mein graceful shutdown, retry strategy, logging aur secret management bhi plan karo.
+
+### Step 6 — Configure MongoDB and Backend in Docker Compose
+
+Project root ke `compose.yaml` mein services configure karo. Agar Q187 ka frontend service already hai, use bhi isi file mein rakho:
+
+```yaml
+services:
+  frontend:
+    build: ./frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    environment:
+      PORT: 5000
+      MONGODB_URI: mongodb://${MONGO_ROOT_USERNAME}:${MONGO_ROOT_PASSWORD}@mongo:27017/myapp?authSource=admin
+    depends_on:
+      mongo:
+        condition: service_healthy
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:7
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD}
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mongosh",
+          "--quiet",
+          "--username",
+          "${MONGO_ROOT_USERNAME}",
+          "--password",
+          "${MONGO_ROOT_PASSWORD}",
+          "--authenticationDatabase",
+          "admin",
+          "--eval",
+          "db.adminCommand('ping').ok"
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  mongo_data:
+```
+
+**Compose configuration ko samjho:**
+
+- `mongo`: MongoDB service ka naam. Backend URI mein isi naam ko hostname banaya hai.
+- `image: mongo:7`: MongoDB image use karta hai. Real projects mein version ko apni compatibility aur upgrade policy ke hisaab se pin karo.
+- `MONGO_INITDB_ROOT_USERNAME` aur `MONGO_INITDB_ROOT_PASSWORD`: First initialization par root user create karne ke liye official image ke environment variables hain.
+- `MONGODB_URI`: Backend ko connection URI deta hai. `authSource=admin` batata hai ki is example ka user `admin` authentication database mein authenticate hota hai.
+- `condition: service_healthy`: Backend ko MongoDB healthcheck pass hone ke baad start karne ko kehta hai.
+- `mongo_data:/data/db`: Named volume database files ko container recreate hone par bhi persist rakhta hai.
+- `restart: unless-stopped`: Restart policy apply karta hai.
+
+**Security note:** Ye local learning example root MongoDB account ko application se use karta hai. Production mein application ke liye least-privilege database user banao, credentials secret manager ya protected environment configuration se do, aur root credentials ko application ke saath share na karo. Password mein URI-reserved characters hon toh username/password ko URI ke liye correctly percent-encode karo.
+
+### Step 7 — Create the Environment File
+
+Project root mein `.env` file banao:
+
+```dotenv
+MONGO_ROOT_USERNAME=appadmin
+MONGO_ROOT_PASSWORD=change_this_local_password
+```
+
+Ye local learning example ke credentials hain—deployment se pehle strong unique secret use karo. `.env` ko Git mein commit mat karo; `.gitignore` mein add karo:
+
+```gitignore
+.env
+```
+
+Compose file mein `${MONGO_ROOT_USERNAME}` aur `${MONGO_ROOT_PASSWORD}` variables ko Compose interpolate karta hai. Backend ko final `MONGODB_URI` environment variable milta hai.
+
+Note: Agar password mein `@`, `:`, `/`, `?` jaise reserved URI characters hain, connection URI banate waqt credentials ko URL-encode karna zaroori hai.
+
+### Step 8 — Understand the Connection String
+
+```text
+mongodb://USERNAME:PASSWORD@mongo:27017/myapp?authSource=admin
+```
+
+| Part | Meaning |
+|---|---|
+| `mongodb://` | MongoDB protocol |
+| `USERNAME:PASSWORD` | Authentication credentials |
+| `mongo` | Docker Compose service hostname |
+| `27017` | MongoDB container port |
+| `myapp` | Application database |
+| `authSource=admin` | User ko admin authentication database mein verify karo |
+
+MongoDB service ka naam `mongo` hai, isliye URI mein hostname bhi `mongo` hai. Agar service ka naam `database` hota, toh hostname `database` hota.
+
+### Step 9 — Build and Start the Application
+
+Project root se run karo:
+
+```bash
+docker compose config
+docker compose up -d --build
+docker compose ps
+```
+
+- `docker compose config`: Resolved Compose configuration validate/show karta hai. Is output mein expanded secrets aa sakte hain, isliye output share karte waqt caution rakho.
+- `docker compose up -d --build`: Images build karke services background mein start karta hai.
+- `docker compose ps`: Container status aur health dikhata hai.
+
+Backend logs check karo:
+
+```bash
+docker compose logs -f backend
+```
+
+Expected message:
+
+```text
+Connected to MongoDB
+Backend running on port 5000
+```
+
+MongoDB logs dekhne ke liye:
+
+```bash
+docker compose logs -f mongo
+```
+
+### Step 10 — Test the API
+
+Agar Q187 wali frontend + Nginx setup bhi running hai, browser mein `http://localhost:8080` kholo. Direct API test ke liye:
+
+```bash
+curl http://localhost:8080/api/users
+```
+
+User create karne ke liye:
+
+```bash
+curl -X POST http://localhost:8080/api/users \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Amit"}'
+```
+
+Response mein newly created user ka document aana chahiye. Phir `GET /api/users` se saved users dekh sakte ho.
+
+Agar frontend/Nginx setup nahi hai, backend port ko local testing ke liye Compose mein publish karo, for example `"5000:5000"`, phir `http://localhost:5000/api/users` test karo. Is direct-port setup ko public production exposure ke liye bina security review ke use mat karo.
+
+### Step 11 — Why Do We Use a Docker Volume?
+
+```yaml
+volumes:
+  - mongo_data:/data/db
+```
+
+MongoDB database files container ke writable layer mein hi rakhenge toh container replace hone par data lose ho sakta hai. Named volume `mongo_data` database files ko container lifecycle se alag persist karta hai.
+
+**Important:** `docker compose down` normally named volume ko preserve karta hai. `docker compose down -v` named volumes delete kar sakta hai, isliye ise tabhi run karo jab data delete karna intentional ho.
+
+### Step 12 — Common Errors and Troubleshooting
+
+**1. `ECONNREFUSED 127.0.0.1:27017`**
+
+- URI mein `localhost` use toh nahi kiya?
+- Container-to-container URI mein `mongo:27017` use karo.
+
+**2. `getaddrinfo ENOTFOUND mongo`**
+
+- Compose service ka naam exactly `mongo` hai?
+- Backend aur MongoDB same Compose network par hain?
+- `docker compose ps` se dono services check karo.
+
+**3. Authentication failed**
+
+- Username/password variables check karo.
+- URI mein `authSource=admin` configured hai?
+- MongoDB volume pehle se initialized hai toh init environment variables existing database users ka password automatically reset nahi karte. Existing credentials/volume state verify karo.
+
+**4. Backend MongoDB se pehle start ho gaya**
+
+- `depends_on` with `condition: service_healthy` aur valid healthcheck use karo.
+- Startup ke baad database temporarily unavailable ho sakta hai, isliye production mein retry/recovery strategy bhi rakho.
+
+**5. MongoDB data restart ke baad missing hai**
+
+- `mongo_data:/data/db` volume configured hai?
+- Galti se `docker compose down -v` toh nahi chalaya?
+- Correct Compose project aur volume inspect karo.
+
+Useful commands:
+
+```bash
+docker compose ps
+docker compose logs backend
+docker compose logs mongo
+docker volume ls
+```
+
+### Step 13 — Interview-Ready Answer
+
+“I would put the Node.js backend and MongoDB in the same Docker Compose network. I would define MongoDB as a Compose service, then pass a connection URI to Node.js through an environment variable, for example `mongodb://mongo:27017/myapp`. Here, `mongo` is the Compose service name, not localhost. Using Mongoose, I would await the database connection before starting the API server. I would use a persistent volume for database files, configure health checks and startup dependencies, protect credentials, and troubleshoot with Compose status and logs.”
+
+### Quick Revision
+
+- **MongoDB default port:** `27017`
+- **Compose hostname:** MongoDB service name, e.g. `mongo`
+- **Connection URI:** `mongodb://mongo:27017/myapp`
+- **Node.js library:** Mongoose or MongoDB Node.js driver
+- **Environment variable:** `MONGODB_URI`
+- **Persistent data:** Named volume mounted at `/data/db`
+- **Readiness:** MongoDB healthcheck + `depends_on: condition: service_healthy`
+- **Avoid:** `localhost:27017` from inside backend container
+- **Debug:** `docker compose ps`, `docker compose logs backend`, `docker compose logs mongo`
+
+`React → Node.js backend → mongodb://mongo:27017/myapp → MongoDB container`
+
