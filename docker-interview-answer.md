@@ -17706,3 +17706,329 @@ docker compose down
 
 `MongoDB Image → Container → Persistent Volume → Network → Express Backend`
 
+## Q185. How would you run React, Node.js, and MongoDB as separate Docker containers?
+
+### 1. English Definition
+
+Running React, Node.js/Express, and MongoDB as separate Docker containers means packaging each component independently and connecting them through a Docker network. Docker Compose can manage all three services, their configuration, port mappings, and persistent database storage.
+
+### 2. Easy Hinglish Explanation
+
+Maan lo tumhari MERN application mein teen components hain:
+
+- **React container:** Frontend UI show karega.
+- **Node.js/Express container:** API requests handle karega.
+- **MongoDB container:** Database mein data store karega.
+
+Har component ka apna container hoga, lekin Docker network ke through backend aur database aapas mein communicate karenge.
+
+```text
+Browser
+   |
+   v
+React Container (Nginx, port 80)
+   |
+   | /api requests
+   v
+Node.js / Express Container (port 5000)
+   |
+   v
+MongoDB Container (port 27017)
+   |
+   v
+Named Volume (persistent database data)
+```
+
+Browser React frontend ko access karta hai. React API request backend ko bhejta hai, aur backend MongoDB se data read ya write karta hai.
+
+### 3. Project Structure
+
+Assume karo ki tumhare paas React + Vite frontend aur Express backend hai:
+
+```text
+mern-app/
+├── compose.yaml
+├── .env
+├── frontend/
+│   ├── Dockerfile
+│   ├── nginx.conf
+│   ├── package.json
+│   ├── package-lock.json
+│   └── src/
+└── backend/
+    ├── Dockerfile
+    ├── package.json
+    ├── package-lock.json
+    └── src/
+        └── server.js
+```
+
+Frontend ka Dockerfile Q182 aur backend ka Dockerfile Q183 mein banaya tha. Yahan hum in dono images ko MongoDB ke saath ek Compose application mein run karenge.
+
+### 4. Backend Configuration
+
+Backend ko environment variable se MongoDB URI read karna chahiye. Example `backend/src/server.js` ka basic structure:
+
+```javascript
+const express = require("express");
+const mongoose = require("mongoose");
+
+const app = express();
+app.use(express.json());
+
+app.get("/api/health", (req, res) => {
+  res.json({ status: "ok" });
+});
+
+async function start() {
+  await mongoose.connect(process.env.MONGODB_URI);
+
+  app.get("/api/users", (req, res) => {
+    res.json([
+      { id: 1, name: "Amit" },
+      { id: 2, name: "Rahul" }
+    ]);
+  });
+
+  const port = process.env.PORT || 5000;
+  app.listen(port, "0.0.0.0", () => {
+    console.log(`Backend listening on port ${port}`);
+  });
+}
+
+start().catch((error) => {
+  console.error("Backend startup failed:", error);
+  process.exit(1);
+});
+```
+
+Yeh example API response demonstrate karta hai. Real application mein user data MongoDB models/collections se read karna chahiye.
+
+### 5. Configure Nginx to Forward API Requests
+
+React browser se relative API URL, jaise `/api/users`, call karega. Nginx request ko backend service par forward karega.
+
+Example `frontend/nginx.conf`:
+
+```nginx
+server {
+    listen 80;
+    server_name _;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    location /api/ {
+        proxy_pass http://backend:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+```
+
+Yahan `backend` Docker Compose service ka naam hai. Nginx isi naam ko Docker network par resolve kar sakta hai. Browser ko internal Docker hostname `backend` directly access nahi karna hota; browser request Nginx ke through bhejta hai.
+
+React code mein:
+
+```javascript
+const response = await fetch("/api/users");
+const users = await response.json();
+console.log(users);
+```
+
+### 6. Create the Environment File
+
+Project root mein `.env` file create karo:
+
+```dotenv
+MONGO_INITDB_ROOT_USERNAME=admin
+MONGO_INITDB_ROOT_PASSWORD=local_dev_password
+```
+
+Yeh credentials sirf local learning example ke liye hain. `.env` ko Git repository mein commit mat karo. Add it to the root `.gitignore`:
+
+```text
+.env
+```
+
+Example password alphanumeric rakha gaya hai taaki connection URI encoding ka issue na ho. Real credentials mein special characters ho sakte hain; unhe connection URI mein use karne se pehle correctly URL-encode karo. Production mein secrets manager ya secure secrets mechanism use karo.
+
+### 7. Create docker-compose.yaml / compose.yaml
+
+Project root mein `compose.yaml` create karo:
+
+```yaml
+services:
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+    environment:
+      PORT: 5000
+      MONGODB_URI: "mongodb://${MONGO_INITDB_ROOT_USERNAME}:${MONGO_INITDB_ROOT_PASSWORD}@mongo:27017/myapp?authSource=admin"
+    depends_on:
+      mongo:
+        condition: service_healthy
+    restart: unless-stopped
+
+  mongo:
+    image: mongo:8
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+    volumes:
+      - mongodb_data:/data/db
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mongosh",
+          "--quiet",
+          "-u",
+          "$$MONGO_INITDB_ROOT_USERNAME",
+          "-p",
+          "$$MONGO_INITDB_ROOT_PASSWORD",
+          "--authenticationDatabase",
+          "admin",
+          "--eval",
+          "db.adminCommand('ping').ok"
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+
+volumes:
+  mongodb_data:
+```
+
+#### Compose file ko samjho
+
+- `frontend`: React frontend build hota hai aur host port 8080 par available hota hai.
+- `backend`: Node.js API run hoti hai aur MongoDB URI environment variable se milti hai.
+- `mongo`: MongoDB server run karta hai.
+- `mongodb_data`: Named volume database data persist karta hai.
+- `depends_on`: Startup ordering configure karta hai. MongoDB ke health check ke saath backend ko database healthy hone ke baad start karne ki condition di gayi hai.
+- `restart: unless-stopped`: Container failure ya Docker daemon restart ke baad restart policy apply karta hai.
+
+**Production security note:** Example backend ko MongoDB root credentials deta hai, jo local learning ko simple rakhta hai. Production mein application ke liye least-privilege database user create karo aur uske credentials separately manage karo. Database port host par publish nahi kiya gaya, isliye MongoDB ko host port mapping ki zaroorat nahi hai; Compose network par backend service us tak pahunch sakti hai.
+
+### 8. Build and Start All Three Containers
+
+Project root se run karo:
+
+```bash
+docker compose up -d --build
+```
+
+Is command se Compose frontend aur backend images build karega, phir services ko background mein start karega.
+
+Container status:
+
+```bash
+docker compose ps
+```
+
+Logs:
+
+```bash
+docker compose logs -f
+```
+
+Sirf backend ke logs:
+
+```bash
+docker compose logs -f backend
+```
+
+Frontend browser mein open karo:
+
+```text
+http://localhost:8080
+```
+
+API ko frontend ke Nginx proxy ke through test karne ke liye:
+
+```text
+http://localhost:8080/api/health
+http://localhost:8080/api/users
+```
+
+### 9. Docker Networking — Important Interview Concept
+
+Compose default network create karta hai, jisme services apne service names se ek doosre ko reach kar sakti hain.
+
+| Request source | Destination | Hostname / URL |
+|---|---|---|
+| Browser | Frontend | `http://localhost:8080` |
+| Nginx inside frontend container | Backend | `http://backend:5000` |
+| Backend container | MongoDB | `mongo:27017` |
+
+**Important difference:** Host machine par run ho raha Node.js backend MongoDB ke liye `localhost:27017` use kar sakta hai only if MongoDB port host par publish kiya gaya ho. Lekin backend container ke andar `localhost` backend container ko hi refer karta hai. Container-to-container communication ke liye service name use karo.
+
+### 10. Useful Management Commands
+
+Stop and remove containers/network:
+
+```bash
+docker compose down
+```
+
+Database volume ko preserve karte hue containers remove ho jayenge.
+
+Rebuild after code changes:
+
+```bash
+docker compose up -d --build
+```
+
+MongoDB logs:
+
+```bash
+docker compose logs -f mongo
+```
+
+**Warning:** `docker compose down -v` named volumes bhi delete kar sakta hai, jisse local database data lose ho sakta hai. Persistent data ki zaroorat ho toh ise carefully use karo.
+
+### 11. Common Problems
+
+- **Frontend API request fail:** Nginx config mein `proxy_pass http://backend:5000;` aur backend service name verify karo.
+- **Backend MongoDB se connect nahi hota:** URI hostname `mongo` hona chahiye, `localhost` nahi.
+- **Backend jaldi start hokar exit ho raha hai:** Backend logs check karo aur database health/authentication verify karo.
+- **MongoDB password change karne ke baad login fail:** Existing initialized volume par initialization environment variables password automatically update nahi karte; database user password ko explicitly update karna hota hai.
+- **Data missing after cleanup:** Check karo ki `mongodb_data` volume delete toh nahi hua.
+- **React route refresh par 404:** Nginx mein `try_files $uri $uri/ /index.html;` verify karo.
+
+### 12. Interview-Ready Answer
+
+“I would use Docker Compose to run React, Node.js/Express, and MongoDB as three separate services. The React frontend would be built into static assets and served by Nginx. Nginx would proxy API requests to the backend using the Compose service name. The backend would connect to MongoDB using the hostname `mongo` on the internal Docker network, with its connection URI provided through environment configuration. I would use a named volume for database persistence, a health check for MongoDB readiness, and avoid publishing the database port unless needed. For production, I would use least-privilege database credentials, secure secrets management, restricted networking, and backups.”
+
+### 13. Quick Revision
+
+- **Three services:** `frontend`, `backend`, `mongo`.
+- **Compose command:** `docker compose up -d --build`.
+- **Browser URL:** `http://localhost:8080`.
+- **Nginx to backend:** `http://backend:5000`.
+- **Backend to MongoDB:** `mongo:27017`.
+- **Persistence:** Named volume mounted at MongoDB's `/data/db`.
+- **Networking:** Compose service names work inside the shared Docker network.
+- **Security:** Do not commit secrets; use a dedicated application database user in production.
+
+`React Container → Nginx Proxy → Express Container → MongoDB Container → Named Volume`
+
