@@ -19618,3 +19618,203 @@ Environment variables hardcoding se better hain, lekin har environment mein comp
 
 `Secret Manager → Authorized backend workload → Least-privilege MongoDB user → Database`
 
+## Q192. How would you persist MongoDB data when a container is stopped, removed, or recreated?
+
+### Step 1 — English Definition
+
+To persist MongoDB data across container stops, removals, or recreations, I would use a Docker named volume mounted at MongoDB's data directory, /data/db. The volume stores database files outside the container's writable layer, allowing a replacement container to reuse the same data.
+
+### Step 2 — Understand the Problem in Simple Hinglish
+
+Maan lo MongoDB container mein users, products aur orders ka data save ho raha hai. Container aur database data same cheez nahi hain.
+
+Agar database files sirf container ke writable layer mein hain, toh container remove karne par woh data lose ho sakta hai. Lekin agar MongoDB ke data directory ko Docker volume se mount kar diya, toh data container ke lifecycle se alag persist karta hai.
+
+    MongoDB Container
+           |
+           | reads/writes database files
+           v
+    /data/db (mount point)
+           |
+           v
+    Docker Named Volume: mongo_data
+           |
+           +-- survives container removal
+           +-- can be reused by a replacement container
+
+- Container stop hua: volume ka data safe rehta hai.
+- Container remove hua: named volume separately exist karta hai.
+- Naya container same volume ke saath create hua: MongoDB purana data access kar sakta hai.
+
+### Step 3 — Configure a Named Volume in Docker Compose
+
+Create or update compose.yaml:
+
+    services:
+      mongo:
+        image: mongo:7
+        restart: unless-stopped
+        volumes:
+          - mongo_data:/data/db
+
+    volumes:
+      mongo_data:
+
+Line-by-line explanation:
+
+- mongo: Docker Compose service name.
+- image: mongo:7: MongoDB container image.
+- restart: unless-stopped: Restart policy; data persistence ka mechanism nahi hai.
+- mongo_data:/data/db: Named volume mongo_data ko MongoDB ke default data directory /data/db par mount karta hai.
+- Top-level volumes section Compose ko named volume manage karne deta hai.
+
+MongoDB ki actual database files /data/db mein likhi jaati hain. Kyunki ye path volume par mounted hai, files container ke writable layer mein nahi, volume ke storage mein persist hoti hain.
+
+### Step 4 — Start MongoDB and Insert Sample Data
+
+Start the service:
+
+    docker compose up -d
+    docker compose ps
+
+Connect to the MongoDB shell:
+
+    docker compose exec mongo mongosh
+
+MongoDB shell mein:
+
+    use myapp
+
+    db.users.insertOne({
+      name: "Amit",
+      role: "developer"
+    })
+
+    db.users.find()
+
+Document ko note kar lo. Ab container lifecycle test karenge.
+
+### Step 5 — Stop the Container
+
+    docker compose stop mongo
+
+Container stop ho gaya, lekin named volume mongo_data remove nahi hota. Start karne ke baad data phir available hona chahiye:
+
+    docker compose start mongo
+    docker compose exec mongo mongosh myapp --eval "db.users.find().toArray()"
+
+Expected result mein inserted document dikhna chahiye.
+
+### Step 6 — Remove and Recreate the Container
+
+Container ko remove karne ka example:
+
+    docker compose rm -sf mongo
+
+Service ko dobara create/start karo:
+
+    docker compose up -d mongo
+    docker compose exec mongo mongosh myapp --eval "db.users.find().toArray()"
+
+Same Compose project aur same named volume use hone par MongoDB existing data access kar sakta hai. Data container mein nahi, mongo_data volume mein persist hua tha.
+
+You can also recreate a service after changing its configuration:
+
+    docker compose up -d --force-recreate mongo
+
+### Step 7 — Named Volume vs Container Writable Layer
+
+| Storage location | Container remove/recreate karne par |
+|---|---|
+| Container writable layer | Container remove hone par lost |
+| Named volume mounted at /data/db | Volume retain ho toh data persists |
+| Bind mount to a host directory | Host directory retain ho toh data persists |
+
+Named volume generally Docker-managed persistent storage ke liye convenient default hai. Bind mount tab useful hota hai jab host ka specific directory use karna ho, lekin path, permissions aur host dependency manage karni padti hai.
+
+### Step 8 — Important Warning: docker compose down -v
+
+Normally:
+
+    docker compose down
+
+Containers aur Compose-created network remove karta hai, lekin named volumes ko normally preserve karta hai.
+
+Lekin:
+
+    docker compose down -v
+
+Compose project ke declared named volumes aur attached anonymous volumes ko remove kar sakta hai. Agar MongoDB ka mongo_data volume remove ho gaya, toh us volume mein stored data bhi delete ho sakta hai.
+
+**Production database par down -v tabhi use karo jab data deletion intentional ho aur backup/recovery plan verified ho.** Named volumes ko automatic backup samajhna galat hai.
+
+### Step 9 — Verify the Volume
+
+List Docker volumes:
+
+    docker volume ls
+
+Compose project ka volume inspect karne ke liye:
+
+    docker volume inspect <project>_mongo_data
+
+Compose project name ke according actual volume name vary kar sakta hai. Inspect output mein mountpoint jaise details aa sakte hain; Docker-managed volume files ko manually edit karna recommended nahi hai.
+
+### Step 10 — Named Volume Is Not a Backup
+
+Volume container recreation ke against persistence deta hai, lekin volume delete ho gaya, host/storage corrupt ho gaya, ya accidental data deletion hui toh volume akela recovery guarantee nahi karta.
+
+Production mein:
+- Regular MongoDB backups/snapshots schedule karo.
+- Backup restore periodically test karo.
+- Retention policy aur recovery point/recovery time objectives define karo.
+- Backups ko primary database volume se separate location par store karo.
+- Sensitive backups ko encrypt aur access-control karo.
+
+Example logical backup using mongodump from an authorized environment:
+
+    mongodump --uri="$MONGODB_URI" --out="./mongo-backup"
+
+Backup directory ko secure storage mein copy karo. Production-scale backups ke liye MongoDB deployment type, consistency requirements, point-in-time recovery support aur backup tooling ke according plan banao. Backup commands mein credentials expose na hone dein.
+
+### Step 11 — Troubleshooting
+
+**1. Data disappeared after recreating container**
+- Confirm karo mongo_data:/data/db configured tha.
+- Check karo same Compose project/volume reuse hua.
+- Verify karo volume delete nahi hua, especially down -v se.
+
+**2. New empty database dikh rahi hai**
+- Ho sakta hai naya/empty volume attach hua ho.
+- Actual volume name aur Compose project name inspect karo.
+- Confirm karo application same MongoDB instance/database use kar rahi hai.
+
+**3. Permission errors**
+- Host bind mount use kar rahe ho toh directory ownership/permissions check karo.
+- MongoDB container ke data directory ko manually modify karne se bacho.
+
+**4. Container restart hua but data missing**
+- restart: unless-stopped data store nahi karta; storage volume configuration verify karo.
+- MongoDB logs check karo:
+
+    docker compose ps
+    docker compose logs mongo
+    docker volume ls
+
+### Step 12 — Interview-Ready Answer
+
+“I would persist MongoDB data by mounting a Docker named volume at MongoDB's data directory, /data/db. In Docker Compose, I would define a volume such as mongo_data and mount it using mongo_data:/data/db. The volume exists independently of the container, so stopping, removing or recreating the container does not delete the data as long as the same volume is retained and reused. I would avoid docker compose down -v unless deleting the volume is intentional, and I would maintain separate tested backups because a volume is not a backup.”
+
+### Quick Revision
+
+- **Named volume:** mongo_data
+- **MongoDB data path:** /data/db
+- **Compose mount:** mongo_data:/data/db
+- **Container stop/remove:** Volume persists independently.
+- **Recreate container:** Reuse the same volume to recover existing data.
+- **docker compose down:** Normally preserves named volumes.
+- **docker compose down -v:** Can delete the named volume and its data.
+- **Backup:** Separate scheduled backup and tested restore are still required.
+
+    MongoDB container → /data/db → named volume mongo_data → persistent database files
+
