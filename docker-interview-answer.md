@@ -21391,3 +21391,302 @@ Important distinctions:
 - Validate: `docker compose -f compose.yaml -f compose.prod.yaml config`.
 - Reliability: persistent volumes, health checks, retry logic, HTTPS and monitoring.
 
+
+## Q200. How would you deploy a Dockerized MERN application on an AWS EC2 instance?
+
+### 1. English Definition
+
+Deploying a Dockerized MERN application on AWS EC2 means running the React frontend, Node.js/Express backend, and MongoDB database as containers (or using a managed database), on an EC2 virtual machine. Docker packages the application and its dependencies consistently, while EC2 provides the compute infrastructure.
+
+### 2. Easy Hinglish Explanation
+
+Maan lo aapka MERN project local machine par chal raha hai:
+
+- **React** — user ko website/UI dikhata hai.
+- **Node.js + Express** — API aur business logic handle karta hai.
+- **MongoDB** — application ka data store karta hai.
+- **Docker Compose** — containers ko ek saath configure/run karne mein help karta hai.
+- **AWS EC2** — cloud ka virtual server hai jahan hum Dockerized application deploy karenge.
+
+High-level flow:
+
+```text
+User's Browser
+      |
+      | HTTP/HTTPS :80 / :443
+      v
+AWS Security Group
+      |
+      v
+EC2 Instance
+  |-- Nginx / React frontend container
+  |-- Node.js / Express API container
+  |-- MongoDB container (small/demo setup only)
+      |
+      +---- Docker network: backend API <-> database
+```
+
+**Production recommendation:** For a real production application, prefer Amazon DocumentDB or MongoDB Atlas / another properly managed MongoDB service rather than storing the only database copy inside the EC2 instance. If MongoDB runs in a container, use a persistent volume and a tested backup/restore process.
+
+### 3. Step-by-Step Deployment
+
+#### Step 1: Prepare the MERN project
+
+A simple repository structure could look like this:
+
+```text
+mern-app/
+├── frontend/
+│   ├── Dockerfile
+│   ├── nginx.conf
+│   └── src/
+├── backend/
+│   ├── Dockerfile
+│   ├── package.json
+│   └── src/
+├── compose.yaml
+└── .env                 # server-side secrets; do not commit
+```
+
+Use production Dockerfiles. Build the React app into static files and serve them through Nginx; run the Node.js API separately. The React browser code must call the public API URL or a relative path such as `/api`, not a Docker-only hostname such as `http://backend:5000`. Docker service names are resolvable by containers on the Compose network, not by a user's browser.
+
+#### Step 2: Launch an EC2 instance
+
+In the AWS Console:
+
+1. Open **EC2 → Launch instance**.
+2. Select a supported Linux AMI, such as Amazon Linux 2023 or Ubuntu LTS.
+3. Choose an instance size suitable for your workload and budget.
+4. Create/select a key pair and securely store the private key.
+5. Configure a security group with only the required inbound rules:
+   - SSH (TCP 22): restrict the source to **your own public IP**; do not expose SSH to the whole internet.
+   - HTTP (TCP 80): allow public web traffic if serving HTTP.
+   - HTTPS (TCP 443): allow public web traffic when TLS is configured.
+   - Do **not** expose Node.js port 5000 or MongoDB port 27017 publicly.
+6. Launch the instance and note its public IP/DNS name.
+
+If using an IAM role, attach only the permissions the instance needs. Do not place AWS access keys in the Docker image or source code.
+
+#### Step 3: Connect to EC2
+
+From a terminal, use the appropriate command for your AMI and key path. For an Ubuntu AMI, for example:
+
+```bash
+chmod 400 my-key.pem
+ssh -i my-key.pem ubuntu@YOUR_EC2_PUBLIC_IP
+```
+
+For Amazon Linux, the SSH username is commonly `ec2-user` instead of `ubuntu`. Use the username documented for the chosen AMI.
+
+#### Step 4: Install Docker and the Compose plugin
+
+For **Ubuntu**, one straightforward lab setup is:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y docker.io docker-compose-v2
+sudo systemctl enable --now docker
+sudo docker --version
+sudo docker compose version
+```
+
+Package names and availability can differ by Ubuntu release. If `docker-compose-v2` is unavailable, follow Docker's official installation instructions for that OS/release and install the Compose plugin. On Amazon Linux, follow the matching Amazon Linux/Docker installation instructions instead of blindly using Ubuntu commands.
+
+Use `sudo docker ...` initially, or configure Docker group access only after understanding that membership in the `docker` group effectively grants root-level control of the host.
+
+#### Step 5: Get the application code on EC2
+
+For a Git-based deployment:
+
+```bash
+sudo apt-get install -y git
+git clone YOUR_PRIVATE_OR_PUBLIC_REPOSITORY_URL mern-app
+cd mern-app
+```
+
+For a private repository, use a secure deployment credential or CI/CD mechanism with minimum permissions. Avoid putting a personal access token directly in the clone URL, shell history, or logs.
+
+Alternatively, build images in CI and pull them from Amazon ECR. This is often preferable for repeatable production deployments because EC2 does not need the full source tree or build toolchain.
+
+#### Step 6: Configure production environment variables
+
+Create a server-side `.env` file or supply secrets through a secret-management system. Example:
+
+```dotenv
+NODE_ENV=production
+PORT=5000
+MONGODB_URI=mongodb://mongo:27017/mernapp
+```
+
+The URI above is only for the example where MongoDB is a Compose service named `mongo`. If you use Atlas or another managed database, set `MONGODB_URI` to that provider's connection string and configure network access, TLS, and credentials appropriately.
+
+Restrict access to the environment file:
+
+```bash
+chmod 600 .env
+```
+
+Ensure `.env` is in `.gitignore` and never bake secrets into Dockerfiles, image layers, or frontend environment variables. Values compiled into a React bundle are public to browser users.
+
+#### Step 7: Configure Docker Compose for production
+
+A simplified example using Nginx for the frontend, Node.js for the API, and a MongoDB container for a **small demo**:
+
+```yaml
+services:
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - public
+      - app
+
+  backend:
+    build:
+      context: ./backend
+    env_file:
+      - .env
+    expose:
+      - "5000"
+    depends_on:
+      - mongo
+    restart: unless-stopped
+    networks:
+      - app
+
+  mongo:
+    image: mongo:7
+    volumes:
+      - mongo_data:/data/db
+    restart: unless-stopped
+    networks:
+      - app
+    # No host port mapping: MongoDB is not exposed publicly.
+
+networks:
+  public:
+  app:
+    internal: true
+
+volumes:
+  mongo_data:
+```
+
+Important caveats:
+
+- This is a teaching example, not a complete hardened production Compose file.
+- `depends_on` by itself controls startup ordering; it does not guarantee that MongoDB is ready to accept connections. Add a MongoDB health check and use `depends_on: condition: service_healthy` where supported, and make the Node.js application retry transient database connection failures.
+- For a managed MongoDB service, remove the `mongo` service and `mongo_data` volume and configure the backend's `MONGODB_URI` with the managed connection string.
+- The sample frontend is the public entry point. For production TLS, use a properly configured Nginx reverse proxy/certificate setup or an AWS load balancer with HTTPS.
+- The internal network is useful for backend/database isolation, but verify network requirements for your chosen database and services.
+- For an actual production system, consider immutable image tags, health checks, logging, monitoring, backups, resource limits, and a deployment/rollback strategy.
+
+#### Step 8: Build and start the application
+
+From the directory containing `compose.yaml`:
+
+```bash
+sudo docker compose config
+sudo docker compose build
+sudo docker compose up -d
+sudo docker compose ps
+```
+
+Then inspect logs if needed:
+
+```bash
+sudo docker compose logs --tail=100
+sudo docker compose logs -f backend
+sudo docker compose logs -f frontend
+```
+
+If using prebuilt images from ECR, authenticate the EC2 instance to ECR using an IAM role and pull the intended immutable image tags before deploying, rather than building from source on the server.
+
+#### Step 9: Test the deployment
+
+1. Open `http://YOUR_EC2_PUBLIC_IP` in a browser if HTTP is configured.
+2. Test a public API endpoint, for example `http://YOUR_EC2_PUBLIC_IP/api/health`, if Nginx routes `/api` to the backend.
+3. Verify the frontend can call the API and that the API can connect to MongoDB.
+4. Confirm that ports 5000 and 27017 are not publicly reachable.
+5. Check `docker compose ps` and service logs.
+
+If the app is behind an HTTPS-enabled load balancer or domain, test that URL instead of relying on the raw IP.
+
+#### Step 10: Configure a domain and HTTPS
+
+For a production deployment:
+
+1. Point your domain's DNS record to the load balancer or intended public endpoint.
+2. Configure TLS with AWS Certificate Manager on an Application Load Balancer, or configure certificates on the host/reverse proxy.
+3. Redirect HTTP to HTTPS.
+4. Keep the EC2 instance and database private wherever possible; expose only the intended web entry point.
+5. Renew/manage certificates and test HTTPS after deployment.
+
+#### Step 11: Make deployments repeatable
+
+For a more reliable workflow, use GitHub Actions or another CI/CD tool to test the application, build versioned images, scan them, push them to Amazon ECR, and deploy a chosen version to EC2. Store credentials in GitHub/AWS secrets or IAM roles, not in the repository. Keep a known-good image tag so you can roll back.
+
+### 4. How the Request Flows
+
+```text
+Browser
+  |
+  | GET /
+  v
+EC2 public endpoint :80 / :443
+  |
+  v
+Nginx / React frontend
+  |
+  | fetch('/api/products')
+  v
+Nginx reverse-proxy rule for /api
+  |
+  v
+Node.js + Express container :5000
+  |
+  | MongoDB driver using MONGODB_URI
+  v
+MongoDB container or managed MongoDB
+  |
+  v
+Response returns to browser
+```
+
+**Key concept:** The browser can access only the public endpoint. The backend and database communicate over the Docker network or an explicitly configured private network; their internal service names and ports do not need to be exposed to the internet.
+
+### 5. Common Problems and Fixes
+
+| Problem | Likely cause | Fix |
+|---|---|---|
+| Website does not open | Port 80/443 is blocked or container is down | Check security group, `docker compose ps`, and logs |
+| SSH connection fails | Wrong username/key or port 22 source rule | Verify AMI username, key permissions, and source IP |
+| Frontend loads but API fails | Wrong API URL or Nginx proxy config | Use a public/relative API path and check `proxy_pass` |
+| Backend cannot connect to MongoDB | Wrong URI, service name, credentials, or network | Check `MONGODB_URI`, Docker network, and DB readiness |
+| Works locally but not on EC2 | Local-only URL, missing env vars, architecture/build mismatch | Review production config and build the correct image |
+| Container exits repeatedly | Application startup error or missing dependency | Run `docker compose logs backend` |
+| Data disappears after recreation | Database has no persistent volume or backup | Use persistent storage and test backups/restores |
+| EC2 disk fills up | Old images, logs, or unused layers | Monitor disk usage and clean up safely |
+| Deployment exposes secrets | Secrets committed or copied into image | Rotate leaked credentials and use secret management |
+
+### 6. Interview-Ready Answer (English)
+
+“I would deploy a Dockerized MERN application on an AWS EC2 instance by first launching a Linux EC2 instance with a restricted security group. I would install Docker and Docker Compose, then either pull versioned images from Amazon ECR or obtain the application code and build the images. I would configure production environment variables securely and use Docker Compose to run the React frontend behind Nginx and the Node.js/Express backend on a private Docker network. MongoDB would preferably be hosted by a managed service; if it runs in a container for a small deployment, I would use persistent storage and backups. I would expose only HTTP/HTTPS, keep the API and database ports private, configure a domain and TLS, verify health checks and logs, and automate future deployments through CI/CD with versioned images and a rollback plan.”
+
+### 7. Quick Revision
+
+- **EC2:** virtual server where the containers run.
+- **Docker:** packages application and dependencies.
+- **Docker Compose:** defines and runs multiple services together.
+- **Security group:** controls inbound/outbound network traffic.
+- **ECR:** stores Docker images.
+- **Nginx:** serves React static files and/or reverse-proxies API requests.
+- **Private Docker network:** lets backend and database communicate without public port exposure.
+- **Persistent volume / managed database:** protects database data from container recreation.
+- **HTTPS, monitoring, backups, CI/CD and rollback:** important production practices.
+
