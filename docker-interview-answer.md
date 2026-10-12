@@ -21988,3 +21988,131 @@ Keep the previous known-good tag so you can roll back by restoring that tag in C
 - Images do not contain running container state or MongoDB data.
 - Never bake secrets into images; supply them at runtime.
 - Use versioned tags, private networking, persistent/managed data, HTTPS, health checks, backups, and rollback.
+
+## Q202. How would you update a Dockerized MERN application with a new version?
+
+### English definition
+Updating a Dockerized MERN application means building and publishing new versioned images, updating the deployment configuration to reference those images, recreating the affected containers, and validating the release while preserving configuration and persistent data. A safe update includes health checks and a rollback plan.
+
+### Hinglish explanation
+Maan lo production par MERN app ka version `1.0.0` chal raha hai aur ab `1.1.0` release karna hai. Sirf Git par code push karne se running container automatically update nahi hota. New images build aur push karni hongi, Compose file mein image tags update karne honge, phir new containers start karne honge. Database ka persistent data aur production secrets ko image/container replacement se alag rakhna zaroori hai.
+
+### Release flow
+```text
+Code change
+   |
+   v
+Build and test images
+   |
+   v
+Tag frontend/backend as 1.1.0
+   |
+   v
+Push images to registry
+   |
+   v
+Update production Compose image tags
+   |
+   v
+docker compose pull
+   |
+   v
+docker compose up -d
+   |
+   v
+Health checks + smoke tests
+   |
+   +---- success ---> keep release
+   |
+   +---- failure ---> restore previous tags and redeploy
+```
+
+### Step 1: Build and push new versioned images
+From the project root, assuming separate frontend and backend Dockerfiles:
+```bash
+docker build -t your-dockerhub-user/mern-frontend:1.1.0 ./frontend
+docker build -t your-dockerhub-user/mern-backend:1.1.0 ./backend
+
+docker login
+docker push your-dockerhub-user/mern-frontend:1.1.0
+docker push your-dockerhub-user/mern-backend:1.1.0
+```
+Run automated tests and scan images before production. In CI/CD, build once and promote the same immutable image to staging and production.
+
+### Step 2: Update production Compose tags
+Before:
+```yaml
+services:
+  frontend:
+    image: your-dockerhub-user/mern-frontend:1.0.0
+  backend:
+    image: your-dockerhub-user/mern-backend:1.0.0
+```
+
+After:
+```yaml
+services:
+  frontend:
+    image: your-dockerhub-user/mern-frontend:1.1.0
+    restart: unless-stopped
+  backend:
+    image: your-dockerhub-user/mern-backend:1.1.0
+    restart: unless-stopped
+```
+Keep the existing production environment, networks, reverse proxy, health checks, and database configuration. Change only the tags for services being released.
+
+### Step 3: Deploy the new version
+On the deployment server:
+```bash
+docker compose config
+docker compose pull
+docker compose up -d
+docker compose ps
+docker compose logs --tail=100 backend
+docker compose logs --tail=100 frontend
+```
+`docker compose pull` downloads images referenced by the current Compose configuration. `docker compose up -d` recreates containers whose image or configuration changed and leaves unaffected services running when possible. Avoid `docker compose down -v`: the `-v` flag can delete named volumes and cause data loss.
+
+### Step 4: Verify the release
+- Check container status and health checks.
+- Test the frontend homepage and client-side routes.
+- Test key API endpoints and authentication flows.
+- Verify backend-to-MongoDB connectivity and critical database operations.
+- Check Nginx, backend, and application logs.
+- Monitor latency, error rates, CPU/memory, and application-specific metrics.
+- Confirm running containers use the expected image tags or digests.
+
+### Step 5: Roll back if needed
+If `1.1.0` is unhealthy, restore the previous tags in Compose:
+```yaml
+services:
+  frontend:
+    image: your-dockerhub-user/mern-frontend:1.0.0
+  backend:
+    image: your-dockerhub-user/mern-backend:1.0.0
+```
+Then run:
+```bash
+docker compose pull
+docker compose up -d
+docker compose ps
+```
+Rollback is easiest when old images remain available and database changes are backward-compatible. A container rollback cannot automatically undo an incompatible database migration. Prefer expand-and-contract migrations: add compatible schema changes first, deploy code that supports old and new forms, migrate data, and remove old schema only after rollback is no longer required.
+
+### Minimize downtime
+A single-EC2 Compose deployment may briefly interrupt traffic while containers are recreated. For stricter availability, use health checks and a reverse proxy/load balancer with multiple app instances, or deploy blue-green: start the new version separately, test it, then switch traffic. Do not assume Docker Compose alone guarantees zero downtime.
+
+### Common mistakes
+1. Reusing `latest` and not knowing which image is running.
+2. Updating source code but forgetting to build and push a new image.
+3. Running `docker compose up` without pulling the new remote image.
+4. Deleting volumes during deployment.
+5. Changing configuration without recreating containers when required.
+6. Deploying a destructive database migration without backup or rollback planning.
+7. Treating a running container as proof that the application is healthy.
+
+### Interview-ready answer
+“I build and test new frontend/backend images, tag them with a unique release version, and push them to the registry. I update the production Compose file, run `docker compose pull` and `docker compose up -d`, then validate health checks, API behavior, database connectivity, and logs. I retain previous image tags for rollback, preserve database volumes, and use backward-compatible database migrations. If zero downtime is required, I use a rolling or blue-green deployment behind a load balancer.”
+
+### Quick revision
+Build/test → version tag → push → update Compose → pull → recreate → smoke test/monitor → rollback if unhealthy.
