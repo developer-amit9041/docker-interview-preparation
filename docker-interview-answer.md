@@ -19407,3 +19407,214 @@ Docker Compose supports secrets for specific use cases, but availability and pro
 
 `Configuration source → Docker Compose → Container environment → Node.js process.env`
 
+## Q191. How would you store MongoDB credentials and other sensitive information securely?
+
+### Step 1 — English Definition
+
+Sensitive information such as database credentials, JWT signing keys and payment API secrets should be stored in a secure secrets-management system, not hardcoded in application code, committed to Git, or embedded in Docker images. Applications should receive only the secrets they need, with restricted access and regular rotation.
+
+### Step 2 — Understand the Risk in Simple Hinglish
+
+MERN application mein ye secrets ho sakte hain:
+
+- MongoDB username and password
+- `JWT_SECRET`
+- Payment gateway secret key
+- Third-party API credentials
+
+Agar production secret code mein hardcode kar doge, toh GitHub par push hone, Docker image share hone ya logs leak hone par secret expose ho sakta hai.
+
+**Wrong approach:**
+
+```javascript
+// Never hardcode production secrets
+const JWT_SECRET = "my-super-secret";
+const MONGODB_URI =
+  "mongodb://admin:password123@mongo:27017/myapp";
+```
+
+**Correct principle:** Secret ko source code se alag rakho, access restrict karo, aur production mein managed secrets service use karo.
+
+### Step 3 — Never Commit Secrets to Git
+
+Local development mein root `.env` file use kar sakte ho:
+
+```dotenv
+MONGODB_URI=mongodb://localuser:localpassword@mongo:27017/myapp
+JWT_SECRET=local-development-secret-only
+PAYMENT_SECRET_KEY=replace_with_local_test_key
+```
+
+Add these patterns to `.gitignore`:
+
+```gitignore
+.env
+.env.*
+!.env.example
+```
+
+Share a safe template instead, for example `.env.example`:
+
+```dotenv
+MONGODB_URI=
+JWT_SECRET=
+PAYMENT_SECRET_KEY=
+```
+
+`.env.example` mein actual secret values mat rakho. Agar secret already Git mein commit/push ho gaya hai, file delete karna enough nahi: secret revoke/rotate karo aur repository history, logs aur other copies mein exposure assess karo.
+
+### Step 4 — Use a Secrets Manager in Production
+
+Production mein managed secret store prefer karo, jaise AWS Secrets Manager, AWS Systems Manager Parameter Store with appropriate access controls, ya cloud/platform ka equivalent secret manager.
+
+Typical flow:
+
+```text
+Administrator stores secret securely
+              |
+              v
+Secret manager (access policy + audit)
+              |
+              v
+Application workload identity / IAM role
+              |
+              v
+Backend retrieves only authorized secrets
+              |
+              v
+Node.js connects to MongoDB
+```
+
+Agar application AWS par run ho rahi hai, toh EC2 instance role, ECS task role ya suitable workload IAM role use karo. Long-lived AWS access keys ko source code, Docker image ya environment files mein embed mat karo. IAM permissions ko least privilege par rakho: application ko sirf required secret read karne ki permission mile.
+
+### Step 5 — Docker Compose Secrets for Suitable Deployments
+
+Docker Compose local development mein file-based secrets mount kar sakta hai. Example:
+
+```yaml
+services:
+  backend:
+    build: ./backend
+    secrets:
+      - mongodb_uri
+      - jwt_secret
+
+secrets:
+  mongodb_uri:
+    file: ./secrets/mongodb_uri.txt
+  jwt_secret:
+    file: ./secrets/jwt_secret.txt
+```
+
+Secret files mein respective value rakho aur un files ko Git mein commit mat karo. Backend container mein Compose secret files aam taur par `/run/secrets/<secret_name>` par available hoti hain.
+
+Node.js mein:
+
+```javascript
+const fs = require("node:fs");
+
+function readSecret(name) {
+  return fs.readFileSync(`/run/secrets/${name}`, "utf8").trim();
+}
+
+const MONGODB_URI = readSecret("mongodb_uri");
+const JWT_SECRET = readSecret("jwt_secret");
+```
+
+**Important limitation:** Local file-backed Compose secrets ka security level underlying files, host permissions aur deployment setup par depend karta hai. Sirf Compose mein `secrets:` likhne se local secret file magically encrypted managed vault nahi ban jaati. Production ke liye platform support aur secret storage/access controls verify karo.
+
+### Step 6 — Do Not Bake Secrets into Docker Images
+
+**Wrong Dockerfile:**
+
+```dockerfile
+FROM node:22-alpine
+WORKDIR /app
+COPY . .
+ENV JWT_SECRET=my-production-secret
+ARG PAYMENT_SECRET_KEY
+```
+
+Secret ko `ENV`, `ARG`, copied `.env` file, source file ya build layer mein bake karna avoid karo. Image inspect, export, cache ya share hone par values leak ho sakti hain; build arguments ko bhi secret vault ka replacement mat samjho.
+
+Safer pattern:
+
+```dockerfile
+FROM node:22-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --omit=dev
+COPY server.js ./
+CMD ["node", "server.js"]
+```
+
+Image mein application code aur required runtime dependencies rakho. Runtime par deployment platform se configuration aur secrets provide karo. Build context mein local `.env` files accidentally copy na hon, iske liye `.dockerignore` bhi configure karo:
+
+```dockerignore
+.env
+.env.*
+secrets/
+.git/
+node_modules/
+```
+
+### Step 7 — Create a Least-Privilege MongoDB User
+
+Application ko MongoDB root/admin credentials dena avoid karo. Application database ke liye restricted user create karo aur sirf required database permissions do.
+
+Example concept:
+
+```javascript
+// Illustrative MongoDB shell commands; run as an authorized admin.
+use myapp
+
+db.createUser({
+  user: "mern_app",
+  pwd: passwordPrompt(),
+  roles: [
+    { role: "readWrite", db: "myapp" }
+  ]
+})
+```
+
+Isse application user ko `myapp` database par `readWrite` permission milti hai, root-level administration nahi. Exact roles app ki needs ke according choose karo. Connection URI mein correct authentication database specify karo if needed, for example `authSource=admin` for an admin-created user or `authSource=myapp` for a user authenticated against `myapp`.
+
+### Step 8 — Apply Access Control and Rotation
+
+Security checklist:
+
+1. **Least privilege:** Har service ko sirf required secrets aur permissions do.
+2. **Rotation:** Database passwords aur API keys ko policy ke according rotate karo; old credentials revoke karo.
+3. **Audit:** Secret reads aur permission changes monitor karo.
+4. **Encryption in transit:** Remote MongoDB connection ke liye TLS configure aur certificate verification enable rakho.
+5. **Logs:** Passwords, full connection strings, JWTs, API keys ya request authorization headers log mat karo.
+6. **Separate environments:** Development, staging aur production ke secrets alag rakho.
+7. **Frontend safety:** React/Vite bundle mein server secrets kabhi mat include karo.
+8. **Incident response:** Secret leak hone par immediately revoke/rotate karo, affected logs and repository history inspect karo.
+
+### Step 9 — What About Environment Variables?
+
+Environment variables hardcoding se better hain, lekin har environment mein complete secret-management solution nahi hain. Container environment inspect karne wale authorized users, debugging tools ya accidental logs values expose kar sakte hain.
+
+- Non-sensitive configuration (for example, port or feature flag): environment variables are usually appropriate.
+- Sensitive values: use a platform secret manager or properly mounted secret file where supported.
+- Never print secrets for debugging.
+- Do not assume a variable is secret simply because its name ends with `_SECRET`.
+
+### Step 10 — Interview-Ready Answer
+
+“I never hardcode MongoDB credentials, JWT secrets or payment API keys in source code or Docker images. For local development, I keep secrets in an ignored environment file or use appropriate Compose secrets. In production, I prefer a managed secrets service such as AWS Secrets Manager and use workload IAM roles with least-privilege access. I create a dedicated MongoDB application user instead of using the root account, restrict secret access, avoid logging credentials, use TLS for remote database connections, and rotate secrets if they are exposed.”
+
+### Quick Revision
+
+- Never hardcode or commit secrets.
+- Local: ignored `.env` or properly protected file-backed secrets.
+- Production: managed secret manager + workload identity/IAM.
+- Docker: never bake secrets into image layers, `ARG`, or `ENV`.
+- MongoDB: dedicated least-privilege application user; avoid root credentials.
+- Frontend: no database passwords, JWT signing secrets, or payment secret keys.
+- Operations: restrict access, audit, rotate, use TLS, and never log secrets.
+- If a secret leaks: revoke/rotate it immediately and investigate exposure.
+
+`Secret Manager → Authorized backend workload → Least-privilege MongoDB user → Database`
+
