@@ -20811,3 +20811,168 @@ Nginx is not automatically a complete security layer. Production deployments sti
                 v
           React static files
 
+## Q197. How would you serve a React production build using Nginx inside Docker?
+
+### Step 1 — English Definition
+
+A React production build can be served using Nginx inside Docker by building the React application into static HTML, CSS, and JavaScript files, copying those files into an Nginx image, and exposing Nginx's HTTP port.
+
+### Step 2 — Understand the Flow in Simple Hinglish
+
+Development mein hum usually `npm run dev` use karte hain. Production ke liye React app ka optimized build banate hain using `npm run build`.
+
+Vite project mein output generally `dist/` folder hota hai. Nginx in static files ko browser ko serve karta hai.
+
+    React source code
+          |
+          v
+    npm run build
+          |
+          v
+    dist/ (HTML, CSS, JS, assets)
+          |
+          v
+    Nginx Docker image
+          |
+          v
+    Browser receives the app
+
+### Step 3 — Create a Multi-Stage Dockerfile
+
+For a Vite React app, create `frontend/Dockerfile`:
+
+    # Stage 1: Build the React application
+    FROM node:22-alpine AS build
+    WORKDIR /app
+
+    COPY package*.json ./
+    RUN npm ci
+
+    COPY . .
+    RUN npm run build
+
+    # Stage 2: Serve the production build with Nginx
+    FROM nginx:alpine
+    COPY --from=build /app/dist /usr/share/nginx/html
+
+    EXPOSE 80
+
+Explanation:
+- `FROM node:22-alpine AS build`: uses Node.js to install dependencies and build the React application.
+- `WORKDIR /app`: sets the working directory.
+- `COPY package*.json ./` and `RUN npm ci`: copy dependency manifests and install reproducible dependencies from the lockfile.
+- `COPY . .`: copies the application source.
+- `RUN npm run build`: creates optimized static production files.
+- `FROM nginx:alpine`: starts a new, smaller runtime stage containing Nginx.
+- `COPY --from=build /app/dist /usr/share/nginx/html`: copies only the built output into Nginx's default document root.
+- `EXPOSE 80`: documents the port the containerized web server listens on; it does not publish that port on the host by itself.
+
+This is a multi-stage build. The final image contains Nginx and the static build, not the Node.js build environment or source dependencies.
+
+Note: This Dockerfile assumes Vite outputs to `dist/`. If Create React App or a custom build outputs to `build/`, adjust the source path to `/app/build`.
+
+### Step 4 — Add a .dockerignore File
+
+Create `frontend/.dockerignore`:
+
+    node_modules
+    dist
+    build
+    .git
+    .env*
+    npm-debug.log
+
+This avoids copying local dependencies, old build output, Git history and local environment files into the build context. If a particular non-secret environment file is intentionally required at build time, handle it explicitly rather than copying all local environment files indiscriminately.
+
+### Step 5 — Optional Nginx Configuration for React Router
+
+If the app uses client-side routes such as `/dashboard` or `/profile`, create `frontend/nginx.conf`:
+
+    server {
+        listen 80;
+        server_name _;
+
+        root /usr/share/nginx/html;
+        index index.html;
+
+        location / {
+            try_files $uri $uri/ /index.html;
+        }
+    }
+
+Then add this line to the Nginx stage of the Dockerfile, after the `FROM nginx:alpine` line:
+
+    COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+The `try_files` directive serves an existing static file when available and otherwise returns `index.html`, allowing React Router to handle the route. Without this fallback, directly refreshing a client-side route can result in a 404. Do not use this fallback indiscriminately for API routes; when Nginx also proxies an API, configure a separate `location /api/` block.
+
+### Step 6 — Run the Container
+
+Build the image:
+
+    docker build -t react-nginx-app ./frontend
+
+Run it:
+
+    docker run --name react-frontend -p 8080:80 -d react-nginx-app
+
+Open the application in the browser:
+
+    http://localhost:8080
+
+The mapping `8080:80` means host port 8080 forwards to container port 80. `EXPOSE 80` alone would not create this host mapping.
+
+### Step 7 — Use Docker Compose (Optional)
+
+Example root `compose.yaml` for a standalone frontend:
+
+    services:
+      frontend:
+        build: ./frontend
+        ports:
+          - "8080:80"
+        restart: unless-stopped
+
+Run:
+
+    docker compose up -d --build
+    docker compose ps
+    docker compose logs -f frontend
+
+### Step 8 — Verify and Troubleshoot
+
+Check container status:
+
+    docker ps
+
+Validate Nginx configuration:
+
+    docker exec react-frontend nginx -t
+
+View logs:
+
+    docker logs react-frontend
+
+Common issues:
+- **Nginx welcome page appears:** confirm the Dockerfile copied the build into `/usr/share/nginx/html` and that the expected image was rebuilt.
+- **Blank page or missing JS/CSS:** inspect browser developer tools and ensure asset paths and build-time base path are correct.
+- **React route refresh returns 404:** configure `try_files $uri $uri/ /index.html;`.
+- **Port is already in use:** change host mapping, for example `8081:80`.
+- **Build fails at `npm ci`:** ensure a compatible lockfile exists and matches `package.json`.
+- **Build output directory not found:** check whether the framework outputs `dist` or `build`.
+
+### Step 9 — Interview-Ready Answer
+
+“I use a multi-stage Docker build. In the first stage, a Node.js image installs dependencies and runs `npm run build) to create optimized static assets. In the second stage, I use an Nginx image and copy those assets into `/usr/share/nginx/html`. I expose port 80 in the container and publish it with a mapping such as `8080:80`. For React Router, I configure an Nginx fallback to `index.html` so direct navigation and page refreshes work correctly.”
+
+### Quick Revision
+
+- **Build:** `npm run build`.
+- **Vite output:** `dist/` (unless configured otherwise).
+- **Nginx document root:** `/usr/share/nginx/html`.
+- **Multi-stage build:** Node.js builds; Nginx serves.
+- **Container port:** 80.
+- **Host mapping:** `8080:80`.
+- **SPA fallback:** `try_files $uri $uri/ /index.html;`.
+- **EXPOSE:** documentation/metadata; does not publish a host port by itself.
+
