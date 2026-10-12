@@ -16590,7 +16590,7 @@ If it exits too quickly, \`docker exec\` will not work on the stopped container.
 
 ---
 
-# Q181. How would you Dockerize a complete MERN application?
+## Q181. How would you Dockerize a complete MERN application?
 
 ## 1. English Interview Definition
 
@@ -16977,7 +16977,7 @@ MongoDB data container ke temporary writable layer ke bajaye Docker-managed volu
 
 Yaad rakho: Dockerfile image banata hai, image se container run hota hai, Docker Compose multiple services manage karta hai, Docker network services ko connect karta hai aur named volume database data persist karta hai.
 
-# Q182. How would you create a Dockerfile for a React frontend?
+## Q182. How would you create a Dockerfile for a React frontend?
 
 ## 1. English Definition
 
@@ -17174,7 +17174,7 @@ docker rm -f react-app
 
 `Dockerfile → Multi-stage Build → dist/ → Nginx → Port Mapping → Browser`
 
-# Q183. How would you create a Dockerfile for a Node.js/Express backend?
+## Q183. How would you create a Dockerfile for a Node.js/Express backend?
 
 ## 1. English Definition
 
@@ -17496,7 +17496,7 @@ docker run -d --name node-backend -p 5000:5000 mern-backend:v2
 
 `Dockerfile → Node.js Image → Install Dependencies → Copy Code → Run Express → Publish Port → Test API`
 
-# Q184. How would you run MongoDB in a Docker container for a MERN application?
+## Q184. How would you run MongoDB in a Docker container for a MERN application?
 
 ## 1. English Definition
 
