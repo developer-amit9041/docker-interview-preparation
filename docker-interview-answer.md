@@ -22479,3 +22479,184 @@ The `docker compose ps` output shows service state and health when health checks
 - `depends_on: condition: service_healthy` can gate startup on dependency health in supported Compose deployments.
 - Monitor with `docker compose ps`, `docker inspect`, and logs.
 
+## Q204. How would you troubleshoot a Node.js container that cannot connect to MongoDB?
+
+### English Definition
+To troubleshoot a Node.js container that cannot connect to MongoDB, verify the connection URI, Docker network connectivity, service DNS name, MongoDB readiness, port configuration, credentials, and database access rules. Then inspect application and MongoDB logs to identify the specific failure.
+
+### Hinglish explanation
+Agar Node.js backend MongoDB se connect nahi ho raha, toh pehle error ka type samjho. Common causes hain:
+
+- Galat hostname ya connection URI.
+- Dono containers alag Docker networks par hain.
+- MongoDB abhi ready nahi hua.
+- Galat username/password ya authentication database.
+- Wrong port, firewall rule, ya external database access restriction.
+
+Docker Compose mein backend ko MongoDB ke **service name** se connect karna chahiye, jaise `mongodb:27017`, na ki `localhost:27017`.
+
+### 1. Check the connection URI
+
+If MongoDB is another service in the same Compose network:
+
+```env
+MONGODB_URI=mongodb://mongodb:27017/mernapp
+```
+
+Here, `mongodb` is the Compose service name and Docker's internal DNS resolves it to the MongoDB container. Inside the Node.js container, `localhost` means the Node.js container itself, not the MongoDB container.
+
+If MongoDB requires authentication, use the correct credentials and authentication database, for example:
+
+```text
+mongodb://<user>:<password>@mongodb:27017/mernapp?authSource=admin
+```
+
+URL-encode special characters in usernames or passwords. Keep real credentials in protected environment configuration or a secrets manager; do not commit them to Git or bake them into an image.
+
+### 2. Inspect Compose service state and logs
+
+```bash
+docker compose ps
+docker compose logs --tail=100 backend
+docker compose logs --tail=100 mongodb
+```
+
+Look for errors such as `ECONNREFUSED`, `ENOTFOUND`, `Authentication failed`, or server-selection timeouts. Each points to a different category of issue.
+
+### 3. Check Docker networks and service names
+
+```bash
+docker network ls
+docker network inspect <compose_network_name>
+docker inspect <backend_container_name>
+docker inspect <mongodb_container_name>
+```
+
+Confirm that both services are attached to a shared network and that the URI hostname matches the actual MongoDB Compose service name. Compose typically creates a default project network and registers service names in its internal DNS.
+
+Example Compose setup:
+
+```yaml
+services:
+  backend:
+    build: ./backend
+    environment:
+      MONGODB_URI: mongodb://mongodb:27017/mernapp
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+  mongodb:
+    image: mongo:7
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+volumes:
+  mongo_data:
+```
+
+The `depends_on` health condition helps control initial startup order. Your backend should still retry transient connection failures because services can become unavailable after startup too.
+
+### 4. Check whether MongoDB is ready and listening
+
+```bash
+docker compose exec mongodb mongosh --quiet --eval "db.adminCommand('ping')"
+```
+
+A successful ping indicates the MongoDB process is responding to that command. If it fails, inspect MongoDB logs and container health before debugging the Node.js URI further.
+
+Do not assume that a running MongoDB container is already ready to accept connections.
+
+### 5. Test DNS and network connectivity from the backend container
+
+If diagnostic tools are installed in the backend image, try:
+
+```bash
+docker compose exec backend node -e "require('dns').lookup('mongodb', (e, a) => { console.log(e || a); process.exit(e ? 1 : 0); })"
+```
+
+This checks whether the service name resolves. To test TCP connectivity from Node.js:
+
+```bash
+docker compose exec backend node -e "const net=require('net');const s=net.connect(27017,'mongodb',()=>{console.log('TCP connected');s.end()});s.setTimeout(3000,()=>{console.error('timeout');s.destroy();process.exitCode=1});s.on('error',e=>{console.error(e.message);process.exitCode=1})"
+```
+
+If DNS fails, check service naming and network attachment. If DNS works but TCP is refused or times out, investigate MongoDB readiness, port, network policy, and listening state. A TCP test does not validate MongoDB authentication or query permissions.
+
+### 6. Interpret common errors
+
+| Error | Likely cause | What to check |
+|---|---|---|
+| `ECONNREFUSED` | No process accepting connections at the target address/port, or MongoDB is not ready | MongoDB logs, port, readiness, hostname |
+| `ENOTFOUND mongodb` | Service name cannot be resolved | Compose service name and shared network |
+| `Authentication failed` | Invalid credentials or authentication database | User/password, `authSource`, URL encoding |
+| Server-selection timeout | Network path, DNS, firewall, or server availability issue | URI, network, security rules, logs |
+| Works on host but not in container | Host and container use different network namespaces or addresses | Use the Compose service name for another container |
+| Connection succeeds locally but not to cloud MongoDB | External allowlist, TLS, routing, or credential issue | Provider access rules, TLS settings, outbound connectivity |
+
+### 7. Verify the Node.js connection code
+
+Example using Mongoose:
+
+```javascript
+const mongoose = require("mongoose");
+
+async function connectDatabase() {
+  const uri = process.env.MONGODB_URI;
+
+  if (!uri) {
+    throw new Error("MONGODB_URI is not configured");
+  }
+
+  await mongoose.connect(uri, {
+    serverSelectionTimeoutMS: 5000,
+  });
+
+  console.log("MongoDB connected");
+}
+
+connectDatabase().catch((err) => {
+  console.error("MongoDB connection failed:", err.message);
+  process.exit(1);
+});
+```
+
+This example exits on initial connection failure, allowing a container restart policy to restart the process. In production, use deliberate retry/backoff behavior when appropriate, handle shutdown signals gracefully, and ensure the application does not report readiness before required dependencies are available.
+
+### 8. If MongoDB is hosted outside Docker
+
+For MongoDB Atlas or another managed database, do not use the Compose service hostname. Use the provider's connection string and verify:
+
+- The server has outbound network access to the database.
+- The server's public egress IP is allowed by the provider's network access rules.
+- Database credentials and authentication database are correct.
+- TLS requirements are satisfied.
+- DNS resolution works from the container.
+
+Avoid exposing MongoDB's port publicly unless there is a specific, secured requirement. For a Compose-only internal database, you generally do not need to publish port 27017 to the host.
+
+### Recommended troubleshooting order
+1. Read backend and MongoDB logs.
+2. Validate the URI and hostname.
+3. Confirm both services share a Docker network.
+4. Check MongoDB health and run a ping.
+5. Test DNS and TCP from the backend container.
+6. Verify credentials, authentication database, TLS, and external access rules.
+7. Fix startup retry/readiness handling and retest.
+
+### Interview-ready answer
+“I first inspect the backend and MongoDB logs and classify the error. In Docker Compose, I verify that the backend uses the MongoDB service name, such as `mongodb:27017`, rather than `localhost`, and that both services share a network. I then check MongoDB health, test DNS and TCP connectivity from the backend container, and verify credentials, `authSource`, TLS, and any external database allowlist. Finally, I add readiness checks and robust retry/shutdown handling so transient startup issues do not break the deployment.”
+
+### Quick revision
+- Same Compose network: use `mongodb:27017`.
+- `localhost` inside backend container means backend itself.
+- Check `docker compose ps` and service logs first.
+- Separate DNS, TCP, authentication, and readiness failures.
+- Keep credentials secret and MongoDB off the public internet unless securely required.
+
