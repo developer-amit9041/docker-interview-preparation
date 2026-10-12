@@ -22356,3 +22356,126 @@ The `docker compose ps` output can show health status for services that define h
 - `interval`, `timeout`, `retries`, `start_period`: tune the health probe.
 - `condition: service_healthy`: wait for a dependency to pass its health check during startup.
 - **Remember:** health status and restart policy are different; a failed health check does not, by itself, trigger a Docker restart.
+## Q203. How would you configure container restart policies and health checks for a MERN application?
+
+### English Definition
+A restart policy controls when Docker restarts a container after it exits. A health check periodically tests whether an application is functioning correctly. For a MERN deployment, restart policies improve recovery from process failures, while health checks help detect services that are running but not ready or healthy.
+
+### Hinglish explanation
+Restart policy aur health check alag cheezein hain:
+
+- **Restart policy:** Container ka process exit ho jaye toh Docker usko dobara start kare ya nahi?
+- **Health check:** Container ke andar application sach mein kaam kar rahi hai ya sirf container running state mein hai?
+
+Example: Node.js process start ho gaya, isliye container `running` dikh raha hai, lekin MongoDB connection fail hai. Health check is problem ko detect kar sakta hai. Lekin Docker Compose ka health check unhealthy container ko apne aap restart nahi karta; restart policies primarily container process exit hone par apply hoti hain.
+
+### Example: Docker Compose configuration
+
+```yaml
+services:
+  frontend:
+    build: ./frontend
+    ports:
+      - "80:80"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  backend:
+    build: ./backend
+    environment:
+      NODE_ENV: production
+      PORT: "5000"
+      MONGODB_URI: mongodb://mongodb:27017/mernapp
+    expose:
+      - "5000"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:5000/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+  mongodb:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+volumes:
+  mongo_data:
+```
+
+This is an example; ensure the frontend image contains `wget`, and that the backend actually implements `GET /health`. For a Node.js version without global `fetch`, use an available HTTP client or a small health-check script. Avoid making the health endpoint perform expensive database queries on every probe; use a lightweight readiness endpoint and, if useful, a separate dependency check.
+
+### Restart policy options
+
+| Policy | Meaning |
+|---|---|
+| `no` | Do not automatically restart the container; this is the default |
+| `on-failure` | Restart when the container exits with a non-zero exit code; an optional retry limit can be set |
+| `always` | Always restart after exit; an explicit manual stop is respected until the Docker daemon or container is restarted |
+| `unless-stopped` | Restart after exit unless the container was explicitly stopped by the user or administrator |
+
+For many long-running Compose services, `unless-stopped` is a sensible default. Choose based on operational requirements rather than blindly applying the same policy everywhere.
+
+### What the health-check fields mean
+
+- `test`: command that returns exit code 0 when healthy and non-zero when unhealthy.
+- `interval`: time between checks.
+- `timeout`: maximum duration of one check.
+- `retries`: consecutive failures before Docker marks the container unhealthy.
+- `start_period`: startup grace period during which early failures do not count toward the retry threshold.
+
+### Add a health endpoint to Express
+
+```javascript
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "ok" });
+});
+```
+
+A liveness endpoint checks whether the application process can respond. A readiness endpoint should indicate whether the application is ready to accept real traffic; it may include essential dependency readiness when appropriate. Keep these concepts separate if your deployment needs to distinguish a live process from a service ready for requests.
+
+### Verify health and restart behavior
+
+```bash
+docker compose up -d
+docker compose ps
+docker inspect --format='{{json .State.Health}}' <container_name>
+docker compose logs --tail=100 backend
+```
+
+The `docker compose ps` output shows service state and health when health checks are configured. Use logs to investigate why a check fails.
+
+### Common mistakes
+1. Assuming `restart: unless-stopped` automatically fixes an unhealthy process that remains running.
+2. Using a health check endpoint that does not exist.
+3. Calling `localhost` from the host when the check actually runs inside the container, or vice versa.
+4. Using commands such as `curl` or `wget` in an image where they are not installed.
+5. Setting a very short startup grace period for an application that needs time to initialize.
+6. Treating a successful HTTP response from a shallow liveness endpoint as proof that MongoDB and all application workflows are healthy.
+
+### Interview-ready answer
+“I configure restart policies such as `unless-stopped` for long-running MERN services and define health checks for Nginx, the Node.js API, and MongoDB. Health checks use lightweight commands or endpoints with suitable intervals, timeouts, retries, and startup grace periods. I monitor both container state and application logs. I also know that an unhealthy status does not, by itself, cause Docker Compose to restart a still-running container; restart policies mainly react to container exits.”
+
+### Quick revision
+- Restart policy = what Docker does when a container exits.
+- Health check = whether the service is responding correctly.
+- `depends_on: condition: service_healthy` can gate startup on dependency health in supported Compose deployments.
+- Monitor with `docker compose ps`, `docker inspect`, and logs.
+
