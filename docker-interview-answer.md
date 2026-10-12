@@ -22778,3 +22778,277 @@ If the correct image is already published, pull that intended tag first, then re
 3. docker inspect <container> — inspect exit code, OOM status, command and restart count.
 4. Check startup command, environment, network, mounts and memory.
 5. Fix the root cause, rebuild/pull, recreate and verify.
+
+
+## Q205. How would you debug a React frontend that cannot communicate with the backend after Docker deployment?
+
+### English Definition
+To debug communication between a deployed React frontend and a backend, verify the browser's actual API URL, frontend runtime/build configuration, reverse-proxy routing, Docker network connectivity, backend port binding, CORS policy, and server logs. Diagnose the request from the browser toward the backend one layer at a time.
+
+### Hinglish explanation
+Maan lo React frontend browser mein open ho raha hai, lekin login ya API call fail ho rahi hai. Docker deployment ke baad common reason hota hai ki frontend galat URL call kar raha hai, Nginx proxy configuration incorrect hai, containers same Docker network par nahi hain, ya backend sirf `localhost` par listen kar raha hai.
+
+**Sabse important concept:** Browser mein chalne wala React code browser se request bhejta hai. Docker Compose ka service name, jaise `backend`, container-to-container communication ke liye hota hai; browser aam taur par `http://backend:5000` ko resolve nahi kar sakta.
+
+### Request flow
+
+```text
+Browser
+  |
+  | GET /api/users
+  v
+Public URL / Nginx
+  |
+  | proxy_pass http://backend:5000
+  v
+Backend container (Express)
+  |
+  v
+MongoDB
+```
+
+If the frontend and backend are exposed separately, the browser instead calls the public backend URL. The correct approach depends on your deployment architecture.
+
+### 1. Check the browser's Network tab first
+
+Open DevTools → **Network** → reproduce the failed action → select the API request. Inspect:
+- **Request URL:** Is it the correct public URL or relative path?
+- **Status:** Is it `404`, `502/504`, `401/403`, or a CORS/network error?
+- **Response:** Does it come from Nginx, Express, or another service?
+- **Console:** Is the browser reporting mixed content, DNS, TLS, or CORS problems?
+
+The error gives a direction:
+- `ERR_NAME_NOT_RESOLVED`: hostname/DNS issue.
+- `ERR_CONNECTION_REFUSED`: no reachable listener or wrong port.
+- `404`: incorrect API route or proxy path.
+- `502/504`: proxy cannot reach the upstream, or the upstream is timing out.
+- CORS error: browser origin is not permitted by backend policy; first confirm the request URL and server response.
+- `401/403`: usually authentication/authorization rather than Docker networking.
+
+### 2. Verify the React API URL
+
+A common mistake is hardcoding a development URL:
+
+```js
+// Fragile for production if the browser cannot reach this address:
+fetch("http://localhost:5000/api/users");
+```
+
+In a user's browser, `localhost` means **that user's own computer**, not the EC2 server or backend container.
+
+If Nginx serves React and proxies `/api` to the backend, use a relative URL:
+
+```js
+fetch("/api/users");
+```
+
+For Axios:
+
+```js
+import axios from "axios";
+
+export const api = axios.create({
+  baseURL: "/api",
+});
+```
+
+Then call `api.get("/users")`.
+
+If the frontend and backend are intentionally on separate public origins, configure a browser-reachable URL such as `https://api.example.com`, and configure HTTPS and CORS appropriately. Do **not** put a private Compose hostname like `http://backend:5000` into browser-side React code.
+
+### 3. Check Nginx reverse-proxy configuration
+
+If Nginx serves the React build and proxies API calls, a configuration might look like this:
+
+```nginx
+server {
+    listen 80;
+    server_name _;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    location /api/ {
+        proxy_pass http://backend:5000;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+With this example, `/api/users` is proxied to the backend as `/api/users`. The trailing slash behavior of `proxy_pass` can change how URI paths are forwarded, so ensure it matches the routes defined in Express.
+
+Inspect Nginx configuration and logs:
+
+```bash
+docker compose exec frontend nginx -t
+docker compose logs --tail=100 frontend
+```
+
+The service name `frontend` assumes the Compose service is named that. Use your actual service name.
+
+### 4. Confirm Compose services share a network
+
+Example simplified Compose configuration:
+
+```yaml
+services:
+  frontend:
+    image: your-dockerhub-user/mern-frontend:1.0.0
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - app_network
+
+  backend:
+    image: your-dockerhub-user/mern-backend:1.0.0
+    expose:
+      - "5000"
+    environment:
+      PORT: "5000"
+      NODE_ENV: production
+    networks:
+      - app_network
+
+networks:
+  app_network:
+    driver: bridge
+```
+
+Compose provides DNS discovery by service name on a shared network, so Nginx can resolve `backend` and reach its port `5000`. The backend does not need a published host port when only other containers access it; `expose` documents the internal port but is not a firewall rule.
+
+Check services and networks:
+
+```bash
+docker compose ps
+docker network ls
+docker network inspect <project>_app_network
+```
+
+Use the actual network name shown by `docker network ls`. Confirm both containers are attached to the intended network.
+
+### 5. Confirm the backend listens on the correct interface and port
+
+In Express:
+
+```js
+const PORT = process.env.PORT || 5000;
+
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`API listening on port ${PORT}`);
+});
+```
+
+Inside a container, listening only on `127.0.0.1` can prevent other containers from reaching the application. Binding to `0.0.0.0` makes it listen on the container's network interfaces.
+
+Check backend logs:
+
+```bash
+docker compose logs --tail=100 backend
+docker compose exec backend sh
+```
+
+If the image has diagnostic tools installed, test the health endpoint or inspect listening ports from inside the container. Minimal production images may not include `curl`, `wget`, or `netstat`; do not assume those commands are present.
+
+### 6. Check whether CORS is actually the issue
+
+CORS matters when browser JavaScript calls a different origin—for example, `https://app.example.com` calling `https://api.example.com`. Different ports also count as different origins.
+
+Example Express configuration when separate origins are intentional:
+
+```js
+import cors from "cors";
+
+app.use(cors({
+  origin: ["https://app.example.com"],
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+  credentials: true,
+}));
+```
+
+For cookie-based authentication, configure the client to send credentials and configure the server with an explicit allowed origin and `credentials: true`. Do not combine credentialed requests with `Access-Control-Allow-Origin: *`.
+
+If frontend and backend share the same origin and requests go through `/api`, CORS may not be needed at all. Avoid using `cors()` as a blind fix before identifying the actual request URL and response.
+
+### 7. Check production environment variables
+
+React variables are often injected at **build time**. For example, a Vite variable such as `VITE_API_URL` is typically embedded into the generated static assets during `npm run build`. Setting it only on the Nginx container at runtime usually does not rewrite the already-built JavaScript.
+
+For a Vite build:
+
+```dockerfile
+FROM node:22-alpine AS build
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+ARG VITE_API_URL=/api
+ENV VITE_API_URL=$VITE_API_URL
+RUN npm run build
+
+FROM nginx:alpine
+COPY --from=build /app/dist /usr/share/nginx/html
+```
+
+Build with the correct public URL if you are not using a relative path:
+
+```bash
+docker build --build-arg VITE_API_URL=https://api.example.com -t your-dockerhub-user/mern-frontend:1.0.0 ./frontend
+```
+
+Never place secrets in React environment variables: anything embedded in frontend assets can be viewed by users. For runtime-configurable frontend URLs, use an intentional runtime configuration file or serve API requests through a same-origin reverse proxy.
+
+### 8. A practical troubleshooting checklist
+
+Run commands from the directory containing your production Compose file:
+
+```bash
+# Container status and logs
+docker compose ps
+docker compose logs --tail=100 frontend
+docker compose logs --tail=100 backend
+
+# Validate rendered Compose configuration
+docker compose config
+
+# Inspect network attachments
+docker network ls
+docker inspect <frontend-container>
+docker inspect <backend-container>
+```
+
+Then test the public API URL from a browser or a machine that can reach it. If available, test the backend health endpoint from within the frontend container or with a temporary diagnostic container attached to the same Docker network. A request from the host is not identical to a request from another container, so test the relevant network path.
+
+### Common causes and fixes
+
+| Symptom | Likely cause | What to check |
+|---|---|---|
+| Browser calls `localhost:5000` | Development URL shipped to production | Use `/api` behind Nginx or a public API URL |
+| `502 Bad Gateway` | Nginx cannot reach backend | Upstream service name, port, network, backend logs |
+| `404 Not Found` | Proxy path and Express route do not match | Nginx `proxy_pass` URI behavior and Express routes |
+| CORS error | Cross-origin request not allowed | Exact origin, preflight response, credentials settings |
+| Connection refused | Backend stopped or listening on wrong interface/port | Container status, logs, `0.0.0.0` binding |
+| Works locally but not in production | Different build-time URL or environment | Production build arguments and generated frontend assets |
+| API works, but React route refresh gives 404 | SPA fallback missing | Nginx `try_files $uri $uri/ /index.html;` |
+| HTTPS page calls HTTP API | Mixed-content blocking | Serve the API through HTTPS or same-origin HTTPS proxy |
+
+### Interview-ready answer
+“I debug a React-to-backend communication failure by inspecting the browser Network tab and Console first, then checking the API URL, HTTP status, Nginx proxy rules, Docker network, backend port binding, environment configuration, and logs. I remember that browser-side React code cannot normally resolve a Compose service name such as `backend`; that name is for container-to-container traffic. In production I often use a same-origin relative path like `/api` and let Nginx proxy it to the backend service. I verify the full request path and health endpoints before changing CORS or exposing additional ports.”
+
+### Quick revision
+1. Inspect the browser request URL and status.
+2. Do not use browser-side `localhost` or private Compose service names.
+3. Route `/api` through Nginx, or use the correct public API URL.
+4. Verify shared Docker network, service name, port, and `0.0.0.0` binding.
+5. Check CORS only if the browser request is cross-origin.
+6. Rebuild React when build-time variables change.
+7. Check logs and test the same network path that is failing.
