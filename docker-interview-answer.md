@@ -20144,3 +20144,257 @@ This is a learning/single-host Compose example, not a complete high-availability
 
     Browser → Frontend/Nginx → Backend/Express → MongoDB
 
+## Q194. How would you configure service names, ports, networks, and volumes in Docker Compose?
+
+### Step 1 — English Definition
+
+In Docker Compose, service names identify application services, ports publish container ports to the host, networks enable communication between containers, and volumes persist data beyond a container's lifecycle.
+
+### Step 2 — Understand the MERN Example in Simple Hinglish
+
+Maan lo application mein three services hain:
+
+    Frontend (React + Nginx) — container port 80
+             |
+             | /api requests
+             v
+    Backend (Node.js + Express) — container port 5000
+             |
+             | MongoDB connection
+             v
+    MongoDB — container port 27017
+             |
+             v
+    Named volume for persistent database files
+
+Har service ka apna naam hota hai. Same Docker network par ek service doosri service ko uske service name se reach kar sakti hai. Host port publish karne ka purpose host/browser se access dena hai; internal container communication ke liye host port publish karna mandatory nahi hai.
+
+### Step 3 — Complete Docker Compose Example
+
+Example compose.yaml:
+
+    services:
+      frontend:
+        build: ./frontend
+        ports:
+          - "8080:80"
+        networks:
+          - app_network
+        depends_on:
+          - backend
+        restart: unless-stopped
+
+      backend:
+        build: ./backend
+        expose:
+          - "5000"
+        environment:
+          PORT: 5000
+          MONGODB_URI: mongodb://mongo:27017/myapp
+        networks:
+          - app_network
+          - data_network
+        depends_on:
+          - mongo
+        restart: unless-stopped
+
+      mongo:
+        image: mongo:7
+        expose:
+          - "27017"
+        volumes:
+          - mongo_data:/data/db
+        networks:
+          - data_network
+        restart: unless-stopped
+
+    networks:
+      app_network:
+      data_network:
+
+    volumes:
+      mongo_data:
+
+This example separates frontend-facing traffic from database-facing traffic: frontend and backend share app_network, while backend and MongoDB share data_network. MongoDB is not attached to app_network, so the frontend cannot directly reach it through that network. Backend can reach both networks. This is a simple network-segmentation example, not a complete security boundary by itself.
+
+### Step 4 — Service Names
+
+In the services section:
+
+    services:
+      frontend:
+      backend:
+      mongo:
+
+The names frontend, backend and mongo are Compose service names. On a shared Compose network, Docker's internal DNS resolves those names to the appropriate service containers.
+
+Examples:
+- Frontend Nginx proxies API requests to http://backend:5000.
+- Backend connects to MongoDB at mongodb://mongo:27017/myapp.
+
+Do not use localhost to refer to another container. Inside the backend container, localhost refers to the backend container itself. If a service is renamed, update references that use its old service name.
+
+### Step 5 — Ports and Port Mapping
+
+Port mapping format:
+
+    HOST_PORT:CONTAINER_PORT
+
+Example:
+
+    ports:
+      - "8080:80"
+
+This maps host port 8080 to container port 80. User opens http://localhost:8080 in the browser, and traffic is forwarded to the frontend container's port 80.
+
+Another example, for local development only:
+
+    ports:
+      - "5000:5000"
+
+This publishes backend container port 5000 on host port 5000. You can then call http://localhost:5000 if the backend listens on 0.0.0.0:5000.
+
+If backend does not need direct host access, do not publish its port unnecessarily. Containers on a shared network can still reach backend:5000.
+
+### Step 6 — ports vs expose
+
+**ports** publishes a container port on the host:
+
+    ports:
+      - "8080:80"
+
+**expose** documents an internal service port without publishing it on the host:
+
+    expose:
+      - "5000"
+
+Neither setting is required for basic container-to-container communication on a shared network; the target application must still listen on the correct interface and port. In this example, expose is descriptive, while ports creates host access.
+
+Avoid publishing MongoDB publicly unless there's a specific requirement and suitable access controls. If you need local-only database access for development, consider binding to loopback, for example 127.0.0.1:27017:27017, and do not use that as a substitute for authentication or firewall controls.
+
+### Step 7 — Networks
+
+A network lets services communicate with each other. Compose creates a default network automatically, so a simple project can often omit an explicit networks section.
+
+Explicit network example:
+
+    networks:
+      app_network:
+      data_network:
+
+Then attach services:
+
+    frontend:
+      networks:
+        - app_network
+
+    backend:
+      networks:
+        - app_network
+        - data_network
+
+    mongo:
+      networks:
+        - data_network
+
+In this topology:
+- frontend can reach backend by service name because both share app_network.
+- backend can reach mongo because both share data_network.
+- frontend has no direct shared network with mongo.
+- backend acts as the bridge between the application-facing and database-facing parts, at the application level.
+
+Network membership controls connectivity, but it does not replace application authentication, MongoDB authorization, firewall policies, or secret management.
+
+### Step 8 — Volumes
+
+MongoDB needs persistent storage. Configure a named volume:
+
+    services:
+      mongo:
+        image: mongo:7
+        volumes:
+          - mongo_data:/data/db
+
+    volumes:
+      mongo_data:
+
+The named volume mongo_data is mounted at MongoDB's data directory /data/db. Database files persist outside the container's writable layer.
+
+Three common storage choices:
+
+| Type | Example | Typical use |
+|---|---|---|
+| Named volume | mongo_data:/data/db | Docker-managed persistent database storage |
+| Bind mount | ./mongo-data:/data/db | Specific host directory; requires host path/permission management |
+| Anonymous volume | /data/db | Docker-managed volume without a chosen stable name |
+
+For MongoDB, a named volume is a convenient default. It is not a backup: use separate backups and test restores. Normal docker compose down usually preserves named volumes, but docker compose down -v can delete Compose-managed named volumes.
+
+### Step 9 — Start and Inspect
+
+From the directory containing compose.yaml:
+
+    docker compose config
+    docker compose up -d --build
+    docker compose ps
+
+View service logs:
+
+    docker compose logs -f backend
+    docker compose logs -f mongo
+
+List networks and volumes:
+
+    docker network ls
+    docker volume ls
+
+Inspect a network or volume if needed:
+
+    docker network inspect <network_name>
+    docker volume inspect <volume_name>
+
+Actual generated network and volume names commonly include the Compose project name.
+
+### Step 10 — Common Mistakes
+
+**1. Backend cannot reach MongoDB**
+- Use mongo:27017, not localhost:27017.
+- Ensure backend and mongo share at least one network.
+- Check MongoDB readiness, credentials and application logs.
+
+**2. Browser cannot access frontend**
+- Verify the port mapping, such as 8080:80.
+- Ensure Nginx is listening on port 80 and the host port is available.
+
+**3. Backend not reachable from frontend**
+- Confirm both services share a network.
+- Check Nginx upstream uses backend:5000.
+- Ensure Express listens on 0.0.0.0:5000 inside the container.
+
+**4. MongoDB data disappears**
+- Verify mongo_data:/data/db is mounted.
+- Reuse the same named volume.
+- Avoid down -v unless deletion is intentional and data is backed up.
+
+**5. Port conflict**
+- Change the host side of the mapping, e.g. 8081:80, while keeping the container port correct.
+
+### Step 11 — Interview-Ready Answer
+
+“In Docker Compose, I configure each component as a named service. I use ports to publish only the endpoints that need host access, such as mapping host port 8080 to frontend container port 80. Services communicate through a shared Docker network using service names, such as backend:5000 or mongo:27017. For persistence, I mount a named volume like mongo_data at MongoDB's /data/db directory. For larger applications, I can separate frontend-facing and database-facing traffic into different networks and avoid publishing internal ports unnecessarily.”
+
+### Quick Revision
+
+- **Service name:** Internal DNS hostname on a shared Compose network.
+- **ports:** HOST_PORT:CONTAINER_PORT; publishes a port to the host.
+- **expose:** Documents an internal port; does not publish it on the host.
+- **Network:** Enables service-to-service connectivity; services must share a network.
+- **Volume:** Stores data outside the container writable layer.
+- **MongoDB hostname:** mongo:27017 from a peer container on the same network.
+- **MongoDB persistence:** mongo_data:/data/db.
+- **Security:** Publish only required ports, restrict network access, use credentials and maintain separate backups.
+
+    Browser → localhost:8080 → frontend
+    frontend → backend:5000 → mongo:27017
+    MongoDB files → named volume mongo_data
+
