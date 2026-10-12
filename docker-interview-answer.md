@@ -22116,3 +22116,243 @@ A single-EC2 Compose deployment may briefly interrupt traffic while containers a
 
 ### Quick revision
 Build/test → version tag → push → update Compose → pull → recreate → smoke test/monitor → rollback if unhealthy.
+
+
+## Q203. How would you configure container restart policies and health checks for a MERN application?
+
+### English Definition
+A Docker restart policy controls when Docker should restart a container after it exits. A health check periodically tests whether the application inside a container is functioning correctly. In a MERN deployment, restart policies help recover from process failures, while health checks help detect services that are running but not ready or healthy.
+
+### Easy Hinglish Explanation
+Maan lo aapki MERN application mein Node.js backend container chal raha hai. Kisi error ki wajah se Node process crash ho gaya. **Restart policy** Docker ko batati hai ki container ko dobara start karna chahiye ya nahi.
+
+Lekin ek doosri situation bhi ho sakti hai: container running hai, par backend MongoDB se connect nahi kar pa raha ya API response nahi de raha. Isliye **health check** chahiye. Health check application ko test karta hai aur status ko `healthy`, `unhealthy`, ya initial period mein `starting` mark kar sakta hai.
+
+Yaad rakho:
+- **Restart policy:** container exit hone par Docker kya kare?
+- **Health check:** container ke andar application sahi kaam kar rahi hai ya nahi?
+- Health check fail hone se Docker ki normal restart policy automatically container ko restart nahi karti. Restart policies primarily container process exit hone par apply hoti hain. Unhealthy container ko restart karne ke liye external automation/orchestrator ya explicit monitoring action chahiye.
+
+### 1. Docker restart policy options
+
+| Policy | Meaning | Typical use |
+|---|---|---|
+| `no` | Automatically restart nahi karega; default policy | Temporary/test containers |
+| `on-failure` | Non-zero exit code par restart; optional retry limit de sakte hain | Jobs ya processes jahan failure exit code meaningful ho |
+| `always` | Container stop/exit hone par restart; Docker daemon restart ke baad bhi generally restart hota hai | Services that should stay running |
+| `unless-stopped` | `always` jaisa, lekin manually stopped container ko Docker daemon restart ke baad automatically start nahi karta | Common production service choice |
+
+Example:
+```bash
+docker run -d --name mern-backend --restart unless-stopped mern-backend:1.0.0
+```
+
+Compose file mein:
+```yaml
+services:
+  backend:
+    image: your-dockerhub-user/mern-backend:1.0.0
+    restart: unless-stopped
+```
+
+Restart policy crash recovery mein help karti hai, lekin application ke root cause ko fix nahi karti. Repeated crashes ko logs aur metrics se investigate karo.
+
+### 2. Add a health endpoint to the Node.js backend
+
+Express backend mein ek lightweight readiness endpoint expose kar sakte ho. Example:
+
+```javascript
+const express = require("express");
+const mongoose = require("mongoose");
+
+const app = express();
+
+app.get("/health", (req, res) => {
+  const mongoReady = mongoose.connection.readyState === 1;
+
+  if (!mongoReady) {
+    return res.status(503).json({
+      status: "not-ready",
+      database: "disconnected"
+    });
+  }
+
+  return res.status(200).json({
+    status: "ok",
+    database: "connected"
+  });
+});
+```
+
+Is example mein Mongoose ka `readyState === 1` connected state ko indicate karta hai. Ensure karo ki Mongoose connection initialize ho chuka ho aur server is route ko sahi port par expose karta ho. Agar health endpoint database connectivity check nahi karna chahiye, toh liveness aur readiness endpoints ko separate rakho.
+
+- **Liveness check:** process/application respond kar rahi hai?
+- **Readiness check:** application traffic handle karne ke liye ready hai, including required dependencies?
+
+Har health check mein expensive database queries ya external API calls repeatedly run karne se bacho.
+
+### 3. Configure a backend health check in Docker Compose
+
+Example assumes the backend image includes Node.js and uses port 5000:
+
+```yaml
+services:
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "5000"
+    ports:
+      - "5000:5000"
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:5000/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+```
+
+The command uses Node's built-in `fetch`, available in modern Node.js versions such as Node 18+. If your runtime is older or `fetch` is unavailable, use a health-check command supported by your image, or install an appropriate tool. Do not assume `curl` is present in minimal Alpine images unless you install it.
+
+Health check fields:
+- `interval: 30s`: checks approximately every 30 seconds.
+- `timeout: 5s`: a check taking longer than five seconds fails.
+- `retries: 3`: consecutive failures mark the container unhealthy.
+- `start_period: 20s`: startup grace period during which early failures do not count toward the retry threshold.
+
+Docker records health status; it does not automatically restart a container solely because it becomes unhealthy.
+
+### 4. Add health checks for the React/Nginx frontend and MongoDB
+
+For a frontend image based on Nginx, use a command that exists in the image. For example, if the image includes `wget`:
+
+```yaml
+services:
+  frontend:
+    image: your-dockerhub-user/mern-frontend:1.0.0
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+```
+
+For MongoDB using the official MongoDB image with `mongosh` available:
+
+```yaml
+services:
+  mongodb:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "127.0.0.1:27017/test", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+```
+
+Use health-check commands that are actually present in the exact image version you deploy. For authenticated MongoDB, configure the probe in a way that safely authenticates without exposing credentials in logs or image layers.
+
+### 5. Use health status for startup ordering
+
+Compose can wait for a dependency's health check when configured with `condition: service_healthy`:
+
+```yaml
+services:
+  mongodb:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "127.0.0.1:27017/test", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      MONGODB_URI: mongodb://mongodb:27017/mernapp
+      PORT: "5000"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:5000/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  mongo_data:
+```
+
+In this example, Compose waits for MongoDB to become healthy before creating the backend, and waits for the backend to become healthy before creating the frontend. Verify that your Compose version supports these conditions.
+
+**Important limitation:** `depends_on` startup ordering is not a permanent dependency supervisor. If MongoDB becomes unavailable later, Compose does not automatically restart the backend just because its health check fails. The backend should also implement resilient database connection handling, retry/backoff where appropriate, and graceful error handling.
+
+### 6. Start and inspect health status
+
+```bash
+docker compose up -d
+docker compose ps
+docker inspect --format='{{json .State.Health}}' <container-name>
+docker compose logs --tail=100 backend
+```
+
+The `docker compose ps` output can show health status for services that define health checks. Use `docker inspect` to inspect detailed health-check results and recent probe output.
+
+### Common mistakes
+
+1. Setting `restart: always` and assuming it restarts containers that are merely marked unhealthy.
+2. Using `curl` or `wget` in a minimal image without verifying the binary exists.
+3. Checking only that a TCP port is open instead of checking meaningful application readiness.
+4. Making a health endpoint return HTTP 200 even when a required dependency is unavailable, when readiness depends on that dependency.
+5. Assuming `depends_on` solves dependency failures that happen after startup.
+6. Using overly aggressive intervals and timeouts that produce false failures during normal startup or brief load spikes.
+7. Ignoring repeated restarts instead of checking logs, resource limits, and exit codes.
+
+### Interview-ready answer (English)
+“I configure a suitable restart policy such as `unless-stopped` for long-running MERN services and add Docker health checks that verify meaningful application behavior. The Node.js backend can expose a readiness endpoint, while MongoDB can be checked with a ping command and Nginx with an HTTP request. In Docker Compose, I can use `depends_on: condition: service_healthy` for startup ordering. Restart policies recover from process exits, whereas health checks report whether a container is healthy; an unhealthy status alone does not automatically restart it. I also inspect logs and implement resilient dependency handling.”
+
+### Quick revision
+- `restart: unless-stopped`: restart a service unless it was manually stopped.
+- `healthcheck`: detects whether the service responds as expected.
+- `interval`, `timeout`, `retries`, `start_period`: tune the health probe.
+- `condition: service_healthy`: wait for a dependency to pass its health check during startup.
+- **Remember:** health status and restart policy are different; a failed health check does not, by itself, trigger a Docker restart.
