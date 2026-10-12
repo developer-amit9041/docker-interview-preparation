@@ -22537,3 +22537,244 @@ Avoid exposing MongoDB's port publicly unless there is a specific, secured requi
 - Separate DNS, TCP, authentication, and readiness failures.
 - Keep credentials secret and MongoDB off the public internet unless securely required.
 
+
+
+## Q206. How would you troubleshoot a Docker container that keeps restarting or exits immediately?
+
+### English Definition
+A Docker container that repeatedly restarts or exits immediately usually has a main process that crashes, finishes unexpectedly, fails during startup, or is repeatedly restarted by a restart policy or an external orchestrator. Troubleshooting involves checking container state, exit code, logs, startup command, environment, dependencies, permissions, resource limits, and health-check behavior.
+
+### Easy Hinglish Explanation
+Docker container tab tak run karta hai jab tak uska **main process** run kar raha hota hai. Agar Node.js application mein startup error aata hai aur Node process exit ho jata hai, toh container bhi exit ho jayega. Agar restart policy configured hai, Docker usse dobara start kar sakta hai—isi wajah se container baar-baar restart hota dikh sakta hai.
+
+**Rule:** Pehle logs aur state check karo; bina root cause samjhe container delete ya rebuild mat karo.
+
+### Troubleshooting flow
+
+~~~text
+Container exits / restarts
+          |
+          v
+   docker ps -a
+          |
+          v
+    Read container logs
+          |
+          v
+Inspect exit code, command, env,
+network, mounts and resources
+          |
+          v
+    Fix root cause
+          |
+          v
+ Recreate and verify container
+~~~
+
+### Step 1: Check container status
+
+~~~bash
+docker ps -a
+docker ps -a --filter name=backend
+~~~
+
+- **Up:** container process is currently running.
+- **Exited (1):** process exited with an error; check logs.
+- **Exited (0):** process finished normally, but a server container may have the wrong command.
+- **Restarting:** a restart loop may be happening.
+- **Created:** the container has not successfully started.
+
+These statuses are clues, not the final diagnosis.
+
+### Step 2: Read logs
+
+~~~bash
+docker logs backend
+docker logs --tail=100 backend
+docker logs --follow backend
+
+# Docker Compose
+docker compose logs --tail=100 backend
+docker compose logs -f backend
+~~~
+
+Look for errors such as:
+- **Cannot find module:** dependency or source file is missing from the image.
+- **ECONNREFUSED / MongoDB timeout:** wrong database hostname/port, network issue, authentication problem, or database not ready.
+- **Missing environment variable:** production configuration was not supplied.
+- **EACCES / permission denied:** incorrect file or directory permissions.
+- **Syntax error / uncaught exception:** application startup failed.
+- **EADDRINUSE:** the application port is already occupied inside the container.
+
+If logs are empty, inspect the command and entrypoint; the process may exit before producing logs or write logs somewhere else.
+
+### Step 3: Inspect exit code and restart count
+
+~~~bash
+docker inspect backend --format '{{json .State}}'
+docker inspect backend --format 'Exit={{.State.ExitCode}} Error={{.State.Error}} OOMKilled={{.State.OOMKilled}} Restarts={{.RestartCount}}'
+docker inspect backend --format 'Path={{.Path}} Args={{json .Args}}'
+~~~
+
+- **ExitCode=0:** command completed normally; verify it is intended to run a server.
+- **ExitCode=1:** often an application or configuration error; use logs to find the exact reason.
+- **OOMKilled=true:** the process was killed because of memory pressure.
+- **RestartCount increasing:** the container is repeatedly failing or being restarted.
+
+Do not diagnose from the exit code alone; correlate it with logs and container state.
+
+### Step 4: Check Dockerfile command and Node.js startup
+
+A backend Dockerfile might contain:
+
+~~~dockerfile
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+EXPOSE 5000
+CMD ["npm", "start"]
+~~~
+
+The package.json start script should point to the correct server file:
+
+~~~json
+{
+  "scripts": {
+    "start": "node server.js"
+  }
+}
+~~~
+
+And the server must actually start listening:
+
+~~~javascript
+const express = require("express");
+const app = express();
+const PORT = process.env.PORT || 5000;
+
+app.get("/health", (_req, res) => {
+  res.status(200).json({ status: "ok" });
+});
+
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`API listening on port ${PORT}`);
+});
+~~~
+
+Common mistakes include a wrong start script, missing server file, a command that completes and exits, or an application listening on the wrong port/interface. For a containerized backend, listening on 0.0.0.0 allows connections through the container network. EXPOSE documents a port; it does not publish it to the host by itself.
+
+### Step 5: Check environment variables and dependencies
+
+~~~bash
+docker inspect backend --format '{{range .Config.Env}}{{println .}}{{end}}'
+~~~
+
+**Security note:** this command can print credentials. Do not paste its output into public tickets or logs.
+
+In Docker Compose, use the service name as the hostname when services share a Compose network:
+
+~~~yaml
+services:
+  backend:
+    build: ./backend
+    environment:
+      PORT: "5000"
+      MONGODB_URI: mongodb://mongodb:27017/mernapp
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+  mongodb:
+    image: mongo:7
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+~~~
+
+This example assumes the official MongoDB image supports mongosh and both services share the Compose network. Configure database authentication and secrets appropriately for production.
+
+Important:
+- From the backend container, use **mongodb** as the hostname—not localhost.
+- Inside a container, localhost means that same container.
+- depends_on without a health condition does not guarantee that MongoDB is ready.
+- The application should handle temporary database unavailability and retry connections when appropriate.
+
+### Step 6: Check memory and resource limits
+
+~~~bash
+docker stats
+docker inspect backend --format 'OOMKilled={{.State.OOMKilled}}'
+docker events --since 10m
+~~~
+
+If the container is being killed due to memory pressure, investigate memory leaks, large data loads, host memory, and container limits. Increasing limits without understanding the memory usage may only hide the underlying problem.
+
+A health check failing does not necessarily mean the process crashed. An unhealthy container can remain running; an orchestrator or external automation may be responsible for restarting it.
+
+### Step 7: Check mounts, files and permissions
+
+~~~bash
+docker inspect backend --format '{{json .Mounts}}'
+docker inspect backend --format '{{json .Config.Entrypoint}} {{json .Config.Cmd}}'
+~~~
+
+A bind mount can hide files copied into the image. For example, mounting the host directory ./backend over /app can hide the image's node_modules directory if dependencies were installed only in the image.
+
+Check that:
+- Required source/build files exist inside the image.
+- .dockerignore does not exclude required files.
+- Mounted paths are correct.
+- The runtime user has the required permissions.
+- The working directory, entrypoint and command point to the correct files.
+
+### Step 8: Reproduce the issue
+
+For diagnosis, start a temporary shell from the image:
+
+~~~bash
+docker run --rm -it --entrypoint sh your-backend-image:tag
+~~~
+
+Inside the shell, inspect files and configuration and try the intended startup command manually. This assumes the image contains sh. For Compose, docker compose run --rm --entrypoint sh backend may help; ensure its environment and mounts match the deployment closely enough to reproduce the problem.
+
+Do not remove persistent volumes or run destructive cleanup commands as the first troubleshooting step.
+
+### Step 9: Fix and recreate the container
+
+After changing the Dockerfile, code, or Compose configuration:
+
+~~~bash
+docker compose build backend
+docker compose up -d --force-recreate backend
+docker compose ps
+docker compose logs --tail=100 backend
+~~~
+
+If the correct image is already published, pull that intended tag first, then recreate the service. Use the appropriate Compose file and project directory for the target environment.
+
+### Common causes and fixes
+
+| Symptom | Possible cause | What to check |
+|---|---|---|
+| Exited (1) | Application/configuration error | Logs and startup command |
+| Exited (0) | Main command finished normally | CMD, entrypoint and server startup |
+| Restarting repeatedly | Process crash plus restart policy | Logs, exit code and restart count |
+| OOMKilled=true | Memory pressure | docker stats, host memory and application usage |
+| Cannot find module | Missing dependency/file or hidden directory | Dockerfile copy steps, build stage and mounts |
+| MongoDB connection errors | Wrong host, network, credentials or DB not ready | URI, service DNS, health and authentication |
+| Permission denied | Runtime user or mount permissions | Ownership, file modes and mount paths |
+| Unhealthy | Health-check command/path fails | Health-check output and readiness endpoint |
+
+### Interview-ready answer (English)
+“When a Docker container keeps restarting or exits immediately, I first inspect docker ps -a, docker logs, and docker inspect to identify the exit code, error, restart count, and whether it was OOM-killed. Then I check the Dockerfile command and entrypoint, application startup, environment variables, dependencies, network connectivity, mounts, permissions, and resource limits. After fixing the root cause, I rebuild or pull the correct image, recreate the container, and verify its health and logs. I do not assume the restart policy is the root cause; it may simply be repeating the underlying failure.”
+
+### Quick revision
+1. docker ps -a — check status.
+2. docker logs <container> — find the error.
+3. docker inspect <container> — inspect exit code, OOM status, command and restart count.
+4. Check startup command, environment, network, mounts and memory.
+5. Fix the root cause, rebuild/pull, recreate and verify.
