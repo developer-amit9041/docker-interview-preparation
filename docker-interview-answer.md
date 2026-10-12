@@ -21690,3 +21690,301 @@ Response returns to browser
 - **Persistent volume / managed database:** protects database data from container recreation.
 - **HTTPS, monitoring, backups, CI/CD and rollback:** important production practices.
 
+
+
+## Q201. How would you push MERN application images to Docker Hub and run them on another server?
+
+### 1. English Definition
+
+Docker Hub is a container image registry used to store and distribute Docker images. To run a Dockerized MERN application on another server, build images for the React frontend and Node.js/Express backend, tag them with the Docker Hub repository name, push them to Docker Hub, and pull and run those images on the target server using Docker Compose.
+
+### 2. Easy Hinglish Explanation
+
+Bhai, maan lo MERN application aapke laptop par ready hai aur ab aap use doosre Linux server ya AWS EC2 par chalana chahte ho. Aapko har baar server par source code copy karke build karna zaroori nahi. Aap images Docker Hub par upload kar do; doosra server un images ko download karke containers run kar lega.
+
+1. **Build:** frontend aur backend ki Docker images banao.
+2. **Tag:** image ko Docker Hub username/repository ke naam se tag karo.
+3. **Push:** images Docker Hub par upload karo.
+4. **Pull:** doosra server images download kare.
+5. **Run:** Docker Compose se containers start karo.
+
+~~~text
+Developer Laptop
+  |-- Build React frontend image
+  |-- Build Node.js backend image
+  |
+  v
+Docker Hub
+  |-- developer-amit9041/mern-frontend:1.0.0
+  |-- developer-amit9041/mern-backend:1.0.0
+  |
+  v
+Another Server / AWS EC2
+  |-- docker compose pull
+  |-- docker compose up -d
+  |
+  v
+React + Nginx ---> Node.js/Express ---> MongoDB
+~~~
+
+**Important:** Docker Hub par images upload hoti hain, database data nahi. MongoDB data ko separately managed database ya persistent storage and backups se handle karna hota hai.
+
+### 3. Prerequisites and project structure
+
+~~~text
+mern-app/
+├── frontend/
+│   ├── Dockerfile
+│   ├── nginx.conf
+│   └── package.json
+├── backend/
+│   ├── Dockerfile
+│   ├── package.json
+│   └── src/
+└── compose.yaml
+~~~
+
+You need a Docker Hub account, Docker on your development machine, Docker Engine and the Compose plugin on the target server, and production-ready Dockerfiles. Replace the example Docker Hub username below if your actual username differs.
+
+### 4. Step 1 — Build the React frontend image
+
+Example frontend/Dockerfile for a Vite React app:
+
+~~~dockerfile
+FROM node:22-alpine AS build
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+FROM nginx:alpine AS production
+COPY --from=build /app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80
+~~~
+
+For Create React App, the output directory is commonly build instead of dist; adjust the copy path. Configure Nginx with an SPA fallback such as try_files $uri $uri/ /index.html; so React client-side routes work on refresh.
+
+Build the image from the project root:
+
+~~~bash
+docker build -t developer-amit9041/mern-frontend:1.0.0 ./frontend
+~~~
+
+### 5. Step 2 — Build the Node.js backend image
+
+Example backend/Dockerfile for a JavaScript Express app:
+
+~~~dockerfile
+FROM node:22-alpine
+WORKDIR /app
+ENV NODE_ENV=production
+
+COPY package*.json ./
+RUN npm ci --omit=dev
+COPY --chown=node:node . .
+USER node
+
+EXPOSE 5000
+CMD ["npm", "start"]
+~~~
+
+This assumes package.json has a valid start script and the app listens on port 5000. Adapt the copied files/build steps if you use TypeScript or need compiled output.
+
+~~~bash
+docker build -t developer-amit9041/mern-backend:1.0.0 ./backend
+~~~
+
+Use explicit version tags such as 1.0.0. Avoid relying only on latest in production because versioned tags make releases easier to identify and roll back.
+
+### 6. Step 3 — Test and inspect images
+
+~~~bash
+docker image ls
+docker run --rm -p 8080:80 developer-amit9041/mern-frontend:1.0.0
+~~~
+
+Open http://localhost:8080 to smoke-test the frontend. Test the backend with its required environment variables and database connectivity too. A successful image build alone does not prove the app can connect to MongoDB.
+
+### 7. Step 4 — Log in and push to Docker Hub
+
+On your development machine:
+
+~~~bash
+docker login
+docker push developer-amit9041/mern-frontend:1.0.0
+docker push developer-amit9041/mern-backend:1.0.0
+~~~
+
+Authenticate using a suitable access token where possible. Ensure the repositories exist or your account has permission to create/push them. Use private repositories for private application images.
+
+**Never bake secrets into images.** Do not copy production .env files into images. Add .env, node_modules, and other local-only files to .dockerignore as appropriate. React/Vite variables compiled into browser assets are public; never put database passwords or private API keys in them.
+
+### 8. Step 5 — Create a Compose file for the target server
+
+On the target server, Compose should reference the pushed images instead of building from source:
+
+~~~yaml
+services:
+  frontend:
+    image: developer-amit9041/mern-frontend:1.0.0
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - public
+      - app
+
+  backend:
+    image: developer-amit9041/mern-backend:1.0.0
+    env_file:
+      - .env
+    expose:
+      - "5000"
+    restart: unless-stopped
+    networks:
+      - app
+      - data
+
+  # Demo setup only; prefer a managed database for production.
+  mongo:
+    image: mongo:7
+    volumes:
+      - mongo_data:/data/db
+    restart: unless-stopped
+    networks:
+      - data
+
+networks:
+  public:
+  app:
+  data:
+    internal: true
+
+volumes:
+  mongo_data:
+~~~
+
+This is a teaching baseline, not a complete hardened production configuration. Add a MongoDB health check and backend retry logic; depends_on alone does not guarantee MongoDB is ready. For MongoDB Atlas or another managed service, remove the mongo service and configure the backend with that provider's connection string, TLS, credentials, and network access rules.
+
+Example server-side .env for the demo:
+
+~~~dotenv
+NODE_ENV=production
+PORT=5000
+MONGODB_URI=mongodb://mongo:27017/mernapp
+~~~
+
+That URI is valid only when MongoDB is the Compose service named mongo. Keep .env out of Git and protect it with restrictive permissions. Never bake credentials into an image.
+
+**Browser networking point:** React code running in a user's browser cannot resolve the Docker-only hostname backend. Configure React to call a public URL or a relative path such as /api, and configure Nginx to reverse-proxy /api/ to http://backend:5000/ when using a same-origin API.
+
+### 9. Step 6 — Install Docker on the target server
+
+For a supported Ubuntu server, one possible setup is:
+
+~~~bash
+sudo apt-get update
+sudo apt-get install -y docker.io docker-compose-v2
+sudo systemctl enable --now docker
+sudo docker --version
+sudo docker compose version
+~~~
+
+Package availability differs by OS release. If docker-compose-v2 is unavailable, install the Compose plugin using Docker's official instructions for that distribution. Use the matching instructions for Amazon Linux or another OS instead of assuming Ubuntu commands apply.
+
+### 10. Step 7 — Pull and run the images on the other server
+
+For private images, authenticate on the target server. Public images may be pulled without login, though anonymous pull limits can apply.
+
+~~~bash
+sudo docker login
+sudo docker compose config
+sudo docker compose pull
+sudo docker compose up -d
+sudo docker compose ps
+~~~
+
+Copy compose.yaml and the production .env to the server through a secure deployment method before starting the services.
+
+- config validates the Compose configuration and helps reveal missing variables.
+- pull downloads the image tags referenced by Compose.
+- up -d creates or recreates containers in the background.
+- ps shows service status.
+
+If Compose refers to prebuilt images, the server does not need the application's source code or build context.
+
+### 11. Step 8 — Configure networking and verify
+
+For an internet-facing AWS EC2 server:
+- Allow inbound TCP 80 and/or 443 in the security group for public web traffic.
+- Restrict SSH port 22 to a trusted IP or use a managed access method.
+- Do not expose backend port 5000 or MongoDB port 27017 to the public internet.
+- Configure HTTPS through Nginx with certificates or an AWS load balancer.
+- Verify the website, API requests, and database connection.
+
+Useful diagnostics:
+
+~~~bash
+sudo docker compose logs --tail=100
+sudo docker compose logs -f backend
+sudo docker image ls
+~~~
+
+Avoid printing or sharing environment variables in logs/screenshots because they may contain secrets.
+
+### 12. Updating the application
+
+When code changes, build and push a new version, such as 1.0.1:
+
+~~~bash
+docker build -t developer-amit9041/mern-backend:1.0.1 ./backend
+docker push developer-amit9041/mern-backend:1.0.1
+~~~
+
+Repeat for the frontend if it changed. Update the image tag in the server's compose.yaml, then run:
+
+~~~bash
+sudo docker compose pull
+sudo docker compose up -d
+sudo docker compose ps
+~~~
+
+Keep the previous known-good tag so you can roll back by restoring that tag in Compose and redeploying. For repeatable production releases, automate tests, image builds, vulnerability scans, pushes, and deployments through CI/CD.
+
+### 13. Common mistakes and fixes
+
+**1. Push denied:** Check Docker Hub username, repository name, authentication, and permissions.
+
+**2. Pull access denied:** Confirm the repository and tag exist; authenticate if the repository is private.
+
+**3. New code does not appear:** Build and push a new tag, update Compose, then run pull and up -d. A running container does not automatically update when an image changes in the registry.
+
+**4. Frontend works but API fails:** Check the browser-visible API URL, Nginx proxy rule, backend port, and CORS settings. The browser cannot resolve the Compose hostname backend.
+
+**5. Backend cannot connect to MongoDB:** Check MONGODB_URI, service name, network membership, credentials, database readiness, and provider network rules.
+
+**6. Container exits:** Inspect docker compose logs and verify the startup command, required variables, and runtime files.
+
+**7. Database data disappears:** Image push/pull does not transfer database data. Use persistent storage and tested backups, or a managed database with a recovery plan.
+
+**8. Image fails on target architecture:** Build for the target CPU architecture or publish a multi-platform image if building on a different architecture, such as Apple Silicon versus x86-64 EC2.
+
+### 14. Interview-Ready Answer
+
+“I build production images for the React frontend and Node.js backend, tag them with my Docker Hub username and a version, authenticate with Docker Hub, and push both images. On the target server, I install Docker and the Compose plugin, securely provide the Compose file and runtime environment variables, authenticate if repositories are private, and run docker compose pull followed by docker compose up -d. I expose only the required public ports, keep the API and database private, use persistent or managed database storage, verify service status and logs, and deploy future versions with explicit tags so rollback is possible.”
+
+### 15. Quick Revision
+
+- docker build -t user/repo:tag . — build and tag an image.
+- docker login — authenticate with Docker Hub.
+- docker push user/repo:tag — upload the image.
+- docker pull user/repo:tag — download an image on another server.
+- docker compose pull — pull the images listed in Compose.
+- docker compose up -d — start services in the background.
+- Images do not contain running container state or MongoDB data.
+- Never bake secrets into images; supply them at runtime.
+- Use versioned tags, private networking, persistent/managed data, HTTPS, health checks, backups, and rollback.
