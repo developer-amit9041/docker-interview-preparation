@@ -20144,178 +20144,6 @@ This is a learning/single-host Compose example, not a complete high-availability
 
     Browser → Frontend/Nginx → Backend/Express → MongoDB
 
-## Q195. How would you ensure MongoDB is ready before the Node.js backend connects to it?
-
-### Step 1 — English Definition
-
-We can ensure MongoDB is ready before the Node.js backend connects by configuring a Docker Compose health check and using `depends_on` with `condition: service_healthy`. The backend should also handle connection failures and retry when necessary.
-
-### Step 2 — Understand the Problem in Simple Hinglish
-
-Bhai, container start hona aur application ready hona same baat nahi hai.
-
-Example:
-1. Docker MongoDB container start karta hai.
-2. MongoDB process abhi initialize ho raha hota hai.
-3. Backend turant connection try karta hai.
-4. MongoDB connections accept karne ke liye ready nahi hota, toh backend ko connection error mil sakta hai.
-
-Is problem ko **startup race condition** kehte hain. Sirf `depends_on: - mongo` likhne se startup order milta hai, lekin MongoDB healthy hone ki guarantee nahi hoti.
-
-### Step 3 — Docker Compose Configuration
-
-Example `compose.yaml`:
-
-```yaml
-services:
-  mongo:
-    image: mongo:7
-    volumes:
-      - mongo_data:/data/db
-    healthcheck:
-      test: ["CMD", "mongosh", "--quiet", "127.0.0.1:27017/test", "--eval", "db.adminCommand('ping').ok"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-      start_period: 10s
-
-  backend:
-    build: ./backend
-    environment:
-      MONGODB_URI: mongodb://mongo:27017/myapp
-    depends_on:
-      mongo:
-        condition: service_healthy
-    restart: unless-stopped
-
-volumes:
-  mongo_data:
-```
-
-### Step 4 — Health Check Kaise Kaam Karta Hai?
-
-- **`test`:** MongoDB container ke andar `mongosh` command chalakar ping run karta hai.
-- **`interval: 5s`:** Har 5 seconds baad health check run hota hai.
-- **`timeout: 3s`:** Agar attempt 3 seconds mein complete na ho, woh fail hota hai.
-- **`retries: 10`:** Repeated failures ke baad container unhealthy mark ho sakta hai.
-- **`start_period: 10s`:** MongoDB ko initialize hone ke liye startup grace period milta hai.
-
-Ping successful hota hai jab `db.adminCommand('ping').ok` ka result 1 ho. Ye example official MongoDB 7 image ke liye hai, jisme `mongosh` available hota hai.
-
-### Step 5 — `depends_on` vs `service_healthy`
-
-Short syntax:
-
-```yaml
-depends_on:
-  - mongo
-```
-
-Ye sirf service startup order control karta hai; readiness ka wait nahi karta.
-
-Health-aware syntax:
-
-```yaml
-depends_on:
-  mongo:
-    condition: service_healthy
-```
-
-Is configuration mein Compose backend start karne se pehle MongoDB ka health check pass hone ka wait karta hai.
-
-### Step 6 — Node.js Backend Mein Connection Errors Handle Karna
-
-Mongoose example:
-
-```javascript
-const mongoose = require("mongoose");
-
-async function connectDatabase() {
-  const uri = process.env.MONGODB_URI;
-
-  if (!uri) {
-    throw new Error("MONGODB_URI is not configured");
-  }
-
-  await mongoose.connect(uri, {
-    serverSelectionTimeoutMS: 5000,
-  });
-
-  console.log("MongoDB connected successfully");
-}
-
-connectDatabase().catch((err) => {
-  console.error("MongoDB connection failed:", err.message);
-  process.exit(1);
-});
-```
-
-Is example mein initial connection fail hone par process exit karta hai; `restart: unless-stopped` Docker ko backend container restart karne deta hai. Production mein bounded ya exponential-backoff retry logic bhi implement kar sakte hain. Tight infinite retry loop se bacho.
-
-Health check startup ko coordinate karta hai, lekin database baad mein bhi temporarily unavailable ho sakta hai. Isliye runtime disconnects aur reconnects ko bhi handle karo.
-
-### Step 7 — Run and Verify
-
-```bash
-docker compose up -d --build
-docker compose ps
-docker compose logs -f mongo
-docker compose logs -f backend
-```
-
-MongoDB ki health details dekhne ke liye:
-
-```bash
-docker inspect --format='{{json .State.Health}}' <mongo_container_name>
-```
-
-### Step 8 — Common Mistakes
-
-**Mistake 1: Sirf short `depends_on` use karna**
-- Isse readiness guarantee nahi hoti.
-- `condition: service_healthy` aur health check use karo.
-
-**Mistake 2: Sirf container running check karna**
-- Running container abhi initialize ho raha ho sakta hai.
-- MongoDB ping jaise application-level health check use karo.
-
-**Mistake 3: Backend mein `localhost:27017` use karna**
-- Backend container ke andar `localhost` backend khud hota hai.
-- Same Compose network aur `mongo` service name hone par `mongo:27017` use karo.
-
-**Mistake 4: Sochna ki startup readiness permanent availability guarantee karti hai**
-- MongoDB baad mein restart ya unreachable ho sakta hai.
-- Runtime error handling aur reconnect strategy rakho.
-
-### Step 9 — Interview-Ready Answer
-
-“I would configure a MongoDB health check in Docker Compose and set the Node.js backend's `depends_on` condition to `service_healthy`. The health check can use `mongosh` to execute a ping command and verify MongoDB is responding. Compose waits for MongoDB to become healthy before starting the backend. I would also implement connection-error handling and retry logic because the database can become unavailable after startup.”
-
-### Quick Revision
-
-- **Problem:** Container started hona means database ready hona nahi hai.
-- **Health check:** Verify karta hai ki MongoDB respond kar raha hai.
-- **`service_healthy`:** Dependency ka health check pass hone ka wait karta hai.
-- **Short `depends_on`:** Sirf startup order.
-- **Connection URI:** `mongodb://mongo:27017/myapp`.
-- **Runtime reliability:** Connection failures handle karo aur safe retry/restart strategy rakho.
-
-```text
-Compose starts MongoDB
-        |
-        v
-Health check runs ping
-        |
-   Healthy?
-   /      \\
- No        Yes
- |          |
-Retry    Start backend
-             |
-             v
-    Connect to mongo:27017
-```
-
 ## Q194. How would you configure service names, ports, networks, and volumes in Docker Compose?
 
 ### Step 1 — English Definition
@@ -20570,3 +20398,174 @@ Actual generated network and volume names commonly include the Compose project n
     frontend → backend:5000 → mongo:27017
     MongoDB files → named volume mongo_data
 
+## Q195. How would you ensure MongoDB is ready before the Node.js backend connects to it?
+
+### Step 1 — English Definition
+
+We can ensure MongoDB is ready before the Node.js backend connects by configuring a Docker Compose health check and using `depends_on` with `condition: service_healthy`. The backend should also handle connection failures and retry when necessary.
+
+### Step 2 — Understand the Problem in Simple Hinglish
+
+Bhai, container start hona aur application ready hona same baat nahi hai.
+
+Example:
+1. Docker MongoDB container start karta hai.
+2. MongoDB process abhi initialize ho raha hota hai.
+3. Backend turant connection try karta hai.
+4. MongoDB connections accept karne ke liye ready nahi hota, toh backend ko connection error mil sakta hai.
+
+Is problem ko **startup race condition** kehte hain. Sirf `depends_on: - mongo` likhne se startup order milta hai, lekin MongoDB healthy hone ki guarantee nahi hoti.
+
+### Step 3 — Docker Compose Configuration
+
+Example `compose.yaml`:
+
+```yaml
+services:
+  mongo:
+    image: mongo:7
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "127.0.0.1:27017/test", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  backend:
+    build: ./backend
+    environment:
+      MONGODB_URI: mongodb://mongo:27017/myapp
+    depends_on:
+      mongo:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  mongo_data:
+```
+
+### Step 4 — Health Check Kaise Kaam Karta Hai?
+
+- **`test`:** MongoDB container ke andar `mongosh` command chalakar ping run karta hai.
+- **`interval: 5s`:** Har 5 seconds baad health check run hota hai.
+- **`timeout: 3s`:** Agar attempt 3 seconds mein complete na ho, woh fail hota hai.
+- **`retries: 10`:** Repeated failures ke baad container unhealthy mark ho sakta hai.
+- **`start_period: 10s`:** MongoDB ko initialize hone ke liye startup grace period milta hai.
+
+Ping successful hota hai jab `db.adminCommand('ping').ok` ka result 1 ho. Ye example official MongoDB 7 image ke liye hai, jisme `mongosh` available hota hai.
+
+### Step 5 — `depends_on` vs `service_healthy`
+
+Short syntax:
+
+```yaml
+depends_on:
+  - mongo
+```
+
+Ye sirf service startup order control karta hai; readiness ka wait nahi karta.
+
+Health-aware syntax:
+
+```yaml
+depends_on:
+  mongo:
+    condition: service_healthy
+```
+
+Is configuration mein Compose backend start karne se pehle MongoDB ka health check pass hone ka wait karta hai.
+
+### Step 6 — Node.js Backend Mein Connection Errors Handle Karna
+
+Mongoose example:
+
+```javascript
+const mongoose = require("mongoose");
+
+async function connectDatabase() {
+  const uri = process.env.MONGODB_URI;
+
+  if (!uri) {
+    throw new Error("MONGODB_URI is not configured");
+  }
+
+  await mongoose.connect(uri, {
+    serverSelectionTimeoutMS: 5000,
+  });
+
+  console.log("MongoDB connected successfully");
+}
+
+connectDatabase().catch((err) => {
+  console.error("MongoDB connection failed:", err.message);
+  process.exit(1);
+});
+```
+
+Is example mein initial connection fail hone par process exit karta hai; `restart: unless-stopped` Docker ko backend container restart karne deta hai. Production mein bounded ya exponential-backoff retry logic bhi implement kar sakte hain. Tight infinite retry loop se bacho.
+
+Health check startup ko coordinate karta hai, lekin database baad mein bhi temporarily unavailable ho sakta hai. Isliye runtime disconnects aur reconnects ko bhi handle karo.
+
+### Step 7 — Run and Verify
+
+```bash
+docker compose up -d --build
+docker compose ps
+docker compose logs -f mongo
+docker compose logs -f backend
+```
+
+MongoDB ki health details dekhne ke liye:
+
+```bash
+docker inspect --format='{{json .State.Health}}' <mongo_container_name>
+```
+
+### Step 8 — Common Mistakes
+
+**Mistake 1: Sirf short `depends_on` use karna**
+- Isse readiness guarantee nahi hoti.
+- `condition: service_healthy` aur health check use karo.
+
+**Mistake 2: Sirf container running check karna**
+- Running container abhi initialize ho raha ho sakta hai.
+- MongoDB ping jaise application-level health check use karo.
+
+**Mistake 3: Backend mein `localhost:27017` use karna**
+- Backend container ke andar `localhost` backend khud hota hai.
+- Same Compose network aur `mongo` service name hone par `mongo:27017` use karo.
+
+**Mistake 4: Sochna ki startup readiness permanent availability guarantee karti hai**
+- MongoDB baad mein restart ya unreachable ho sakta hai.
+- Runtime error handling aur reconnect strategy rakho.
+
+### Step 9 — Interview-Ready Answer
+
+“I would configure a MongoDB health check in Docker Compose and set the Node.js backend's `depends_on` condition to `service_healthy`. The health check can use `mongosh` to execute a ping command and verify MongoDB is responding. Compose waits for MongoDB to become healthy before starting the backend. I would also implement connection-error handling and retry logic because the database can become unavailable after startup.”
+
+### Quick Revision
+
+- **Problem:** Container started hona means database ready hona nahi hai.
+- **Health check:** Verify karta hai ki MongoDB respond kar raha hai.
+- **`service_healthy`:** Dependency ka health check pass hone ka wait karta hai.
+- **Short `depends_on`:** Sirf startup order.
+- **Connection URI:** `mongodb://mongo:27017/myapp`.
+- **Runtime reliability:** Connection failures handle karo aur safe retry/restart strategy rakho.
+
+```text
+Compose starts MongoDB
+        |
+        v
+Health check runs ping
+        |
+   Healthy?
+   /      \\
+ No        Yes
+ |          |
+Retry    Start backend
+             |
+             v
+    Connect to mongo:27017
+```
