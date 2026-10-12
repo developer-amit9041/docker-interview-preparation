@@ -17496,3 +17496,213 @@ docker run -d --name node-backend -p 5000:5000 mern-backend:v2
 
 `Dockerfile → Node.js Image → Install Dependencies → Copy Code → Run Express → Publish Port → Test API`
 
+# Q184. How would you run MongoDB in a Docker container for a MERN application?
+
+## 1. English Definition
+
+Running MongoDB in a Docker container means packaging the MongoDB database server in a Docker image and running it as an isolated container. A persistent Docker volume can store database files so that data survives container removal or recreation.
+
+## 2. Easy Hinglish Explanation
+
+Maan lo tum MERN application bana rahe ho:
+
+- **M** — MongoDB: database
+- **E** — Express.js: backend framework
+- **R** — React: frontend
+- **N** — Node.js: JavaScript runtime
+
+Normally MongoDB ko apne laptop par install karna padta hai. Docker use karne par MongoDB ki image download karke container run kar sakte ho; host machine par MongoDB install karna zaroori nahi hai.
+
+Important baat: MERN application mein React normally MongoDB se directly connect nahi karta. React API request Express backend ko bhejta hai, aur Express MongoDB se baat karta hai.
+
+## 3. Step 1 — Pull the MongoDB Image
+
+```bash
+docker pull mongo:8
+```
+
+Ye MongoDB 8 ki image download karega. Image ek template ki tarah hai; actual database server container run hone par start hota hai.
+
+Image verify karo:
+
+```bash
+docker images
+```
+
+Apne application ke saath compatible MongoDB version choose karo aur version ko deliberately manage karo.
+
+## 4. Step 2 — Create a Persistent Volume
+
+```bash
+docker volume create mongodb_data
+```
+
+Ye Docker ka named volume banata hai jisme MongoDB database files store karega.
+
+Volume check karne ke liye:
+
+```bash
+docker volume ls
+```
+
+**Volume kyun zaroori hai?** Container remove karne par uske writable layer ka data lose ho sakta hai. Named volume database files ko container lifecycle se alag rakhta hai. Container remove/recreate karne par bhi same volume reuse kiya ja sakta hai.
+
+## 5. Step 3 — Run the MongoDB Container
+
+Local development ke liye authentication enabled example:
+
+```bash
+docker run -d --name mongodb --restart unless-stopped -p 127.0.0.1:27017:27017 -e MONGO_INITDB_ROOT_USERNAME=admin -e MONGO_INITDB_ROOT_PASSWORD=change_this_password -v mongodb_data:/data/db mongo:8
+```
+
+Is command ke important parts:
+
+| Option | Meaning |
+|---|---|
+| `-d` | Container ko background mein run karta hai. |
+| `--name mongodb` | Container ka naam set karta hai. |
+| `--restart unless-stopped` | Docker restart hone par container ko restart karne ki policy set karta hai. |
+| `-p 127.0.0.1:27017:27017` | MongoDB port ko sirf host ke loopback interface par publish karta hai. |
+| `MONGO_INITDB_ROOT_USERNAME` | Initial root username set karta hai. |
+| `MONGO_INITDB_ROOT_PASSWORD` | Initial root password set karta hai. |
+| `-v mongodb_data:/data/db` | Named volume ko MongoDB data directory se attach karta hai. |
+| `mongo:8` | Use hone wali MongoDB image aur tag. |
+
+**Security note:** Example password ko apne local environment ke liye replace karo. Real credentials ko Git repository mein commit mat karo. Ye initialization environment variables initial database setup ke liye hote hain; existing initialized data volume par inhe change karne se existing database password automatically update nahi hota. Production mein secrets manager aur restricted database users use karo.
+
+## 6. Step 4 — Verify the Container
+
+Container running hai ya nahi:
+
+```bash
+docker ps
+```
+
+Startup logs check karo:
+
+```bash
+docker logs mongodb
+```
+
+MongoDB shell open karo:
+
+```bash
+docker exec -it mongodb mongosh -u admin -p --authenticationDatabase admin
+```
+
+Command password prompt karegi. Shell ke andar databases dekhne ke liye:
+
+```javascript
+show dbs
+```
+
+Container ke health/status aur logs ko check karna useful hai. Sirf `docker ps` mein container running dikhna ye guarantee nahi karta ki application ka database connection correctly configured hai.
+
+## 7. Step 5 — Connect a Node.js/Express Backend
+
+Agar Node.js backend **host machine par** run ho raha hai, toh local connection URI is tarah ho sakti hai:
+
+```text
+mongodb://admin:YOUR_PASSWORD@127.0.0.1:27017/myapp?authSource=admin
+```
+
+Node.js code mein URI ko environment variable se read karo:
+
+```javascript
+const mongoose = require("mongoose");
+
+async function connectDatabase() {
+  await mongoose.connect(process.env.MONGODB_URI);
+  console.log("MongoDB connected");
+}
+
+connectDatabase().catch((error) => {
+  console.error("MongoDB connection failed:", error.message);
+  process.exit(1);
+});
+```
+
+Environment variable ko securely configure karo; real password ko source code mein hardcode mat karo. Root user local demonstration ke liye hai. Real application ke liye dedicated, least-privilege database user create karna better hai.
+
+### Agar backend bhi Docker container mein hai toh?
+
+Agar backend aur MongoDB separate containers mein same Docker network par hain, toh MongoDB ke liye `localhost` use **nahi** karna. Backend container ka `localhost` usi backend container ko refer karta hai.
+
+Docker Compose mein MongoDB service ka naam `mongo` ho, toh URI ka hostname `mongo` hoga:
+
+```text
+mongodb://APP_USER:APP_PASSWORD@mongo:27017/myapp?authSource=myapp
+```
+
+Yahan `APP_USER` aur `APP_PASSWORD` ko actual application database user ke credentials se replace karo. `authSource` us database ko identify karta hai jahan user authenticate hota hai; ise apne user-creation setup ke according set karo.
+
+## 8. Alternative — Use Docker Compose
+
+Agar MERN backend aur MongoDB dono containers mein run kar rahe ho, toh Compose configuration services aur network ko manage karna easy banati hai.
+
+Example `compose.yaml` for a local development database:
+
+```yaml
+services:
+  mongo:
+    image: mongo:8
+    container_name: mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: change_this_password
+    volumes:
+      - mongodb_data:/data/db
+    ports:
+      - "127.0.0.1:27017:27017"
+
+volumes:
+  mongodb_data:
+```
+
+Start karo:
+
+```bash
+docker compose up -d
+```
+
+Logs dekhne ke liye:
+
+```bash
+docker compose logs -f mongo
+```
+
+Stop karne ke liye:
+
+```bash
+docker compose down
+```
+
+**Important:** `docker compose down` by default named volume ko delete nahi karta. `docker compose down -v` named volumes remove kar sakta hai—database data delete hone ka risk hai. Is command ko carefully use karo. Compose file mein example password sirf local learning ke liye hai; production credentials ko secure secrets configuration se provide karo. Application ko root credentials dene ke bajaye dedicated application database user use karo.
+
+## 9. Common Errors
+
+- **Port already in use:** Host port change karo, jaise `127.0.0.1:27018:27017`, aur host-side URI mein port `27018` use karo.
+- **Authentication failed:** Username, password aur `authSource` verify karo.
+- **Backend container se connection refused:** `localhost` ke bajaye MongoDB service/container ka network hostname use karo; confirm karo ki dono same Docker network par hain.
+- **Data container recreate karne ke baad missing:** Verify karo ki same named volume attach kiya gaya hai.
+- **MongoDB startup fail:** `docker logs mongodb` se error details check karo.
+- **Database public internet par accessible:** MongoDB port ko publicly expose mat karo. Local-only testing mein loopback binding use karo; production mein private network, firewall rules aur authentication configure karo.
+
+## 10. Interview-Ready Answer
+
+“I would pull an official MongoDB image and run it as a Docker container. I would configure authentication, publish the database port only when required, and mount a named Docker volume at MongoDB's data directory so that data persists across container recreation. I would verify the container using Docker logs and connect to it from the Node.js backend using a MongoDB connection string stored in an environment variable. If the backend also runs in Docker Compose, I would connect to MongoDB using its Compose service name rather than localhost. For production, I would use a dedicated least-privilege database user, protect credentials, restrict network access, and maintain tested backups.”
+
+## 11. Quick Revision
+
+- `docker pull mongo:8`: MongoDB image download karta hai.
+- `docker volume create mongodb_data`: Persistent volume banata hai.
+- `docker run ... mongo:8`: MongoDB container start karta hai.
+- `-v mongodb_data:/data/db`: Database files persist karta hai.
+- `-p 127.0.0.1:27017:27017`: Local host access publish karta hai.
+- Host backend: `127.0.0.1` use kar sakta hai.
+- Compose backend: MongoDB service name, jaise `mongo`, use karta hai.
+- Production: dedicated DB user, secure credentials, restricted network aur tested backups.
+
+`MongoDB Image → Container → Persistent Volume → Network → Express Backend`
+
